@@ -841,7 +841,8 @@ router.post('/painel/produtos/excluir-plano', clientPanelAuth, postProdutosExclu
 // ----- UPLOAD DE IMAGENS -----
 router.post('/admin/upload', requireAuth, upload.single('foto'), async (req, res) => {
   if (!req.file) return res.redirect('/admin/produtos?msg=' + encodeURIComponent('Nenhum arquivo recebido.') + '&type=err');
-  const tenantId = tenantIdFromReq(req, req.body.tenant || req.query.tenant);
+  let tenantId = tenantIdFromReq(req, req.body.tenant || req.query.tenant || req.cookies?.rpz_tenant);
+  if (!Number.isFinite(tenantId)) tenantId = 0;
   try {
     const url = await saveUploadedImage(tenantId, req.file);
     res.redirect(`${req.clientMode ? '/painel' : '/admin'}/produtos?msg=` + encodeURIComponent(`Imagem enviada! Copie a URL: ${url}`));
