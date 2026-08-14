@@ -23,6 +23,26 @@ const storage = multer.diskStorage({
 const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
 
 // ======================================================
+//  UPLOAD DE IMAGENS (Vercel Blob em produção; disco local em dev)
+// ======================================================
+async function saveUploadedImage(tenantId, file) {
+  const token = process.env.BLOB_READ_WRITE_TOKEN;
+  if (token) {
+    const { put } = require('@vercel/blob');
+    const buf = require('fs').readFileSync(file.path);
+    const result = await put(`tenant-${tenantId}/${file.filename}`, buf, {
+      access: 'public',
+      contentType: file.mimetype,
+      token,
+      addRandomSuffix: false,
+    });
+    try { require('fs').unlinkSync(file.path); } catch (_) {}
+    return result.url;
+  }
+  return `/images/${file.filename}`;
+}
+
+// ======================================================
 //  AUTENTICAÇÃO DO ADMIN (SaaS)
 // ======================================================
 const SESSION_TTL = 12 * 60 * 60 * 1000;
@@ -691,6 +711,12 @@ async function pageProdutos(req, res) {
   }).join('');
 
   res.send(layout('Produtos', clientMode ? '/painel/produtos' : '/admin/produtos', `${tenantSelector(tenant.id, tenants, clientMode)}${flash}
+    <div class="panel"><h2>📤 Enviar foto de produto <span class="right"><button class="btn small" onclick="document.getElementById('fileInput').click()">Escolher arquivo</button></span></h2>
+      <form method="POST" action="${clientMode ? '/painel' : '/admin'}/upload" enctype="multipart/form-data">
+        <input type="file" id="fileInput" name="foto" accept="image/*" required style="display:none" onchange="this.form.submit()">
+      </form>
+      <p style="font-size:12px;color:#64748b">Depois de enviar, <b>copie a URL</b> que aparece no aviso e cole no campo "Imagem" do produto.</p>
+    </div>
     ${catsHtml}`, tenants, tenant, clientMode));
 }
 
@@ -809,6 +835,31 @@ async function postProdutosExcluirPlano(req, res) {
 
 router.post('/admin/produtos/excluir-plano', requireAuth, postProdutosExcluirPlano);
 router.post('/painel/produtos/excluir-plano', clientPanelAuth, postProdutosExcluirPlano);
+
+// ----- UPLOAD DE IMAGENS -----
+router.post('/admin/upload', requireAuth, upload.single('foto'), async (req, res) => {
+  if (!req.file) return res.redirect('/admin/produtos?msg=' + encodeURIComponent('Nenhum arquivo recebido.') + '&type=err');
+  const tenantId = tenantIdFromReq(req, req.body.tenant || req.query.tenant);
+  try {
+    const url = await saveUploadedImage(tenantId, req.file);
+    res.redirect(`${req.clientMode ? '/painel' : '/admin'}/produtos?msg=` + encodeURIComponent(`Imagem enviada! Copie a URL: ${url}`));
+  } catch (e) {
+    console.error('[UPLOAD]', e.message);
+    res.redirect(`/admin/produtos?msg=` + encodeURIComponent('Erro no upload: ' + e.message) + '&type=err');
+  }
+});
+
+router.post('/painel/upload', clientPanelAuth, upload.single('foto'), async (req, res) => {
+  if (!req.file) return res.redirect('/painel/produtos?msg=' + encodeURIComponent('Nenhum arquivo recebido.') + '&type=err');
+  const tenantId = req.tenantSession.id;
+  try {
+    const url = await saveUploadedImage(tenantId, req.file);
+    res.redirect('/painel/produtos?msg=' + encodeURIComponent(`Imagem enviada! Copie a URL: ${url}`));
+  } catch (e) {
+    console.error('[UPLOAD]', e.message);
+    res.redirect('/painel/produtos?msg=' + encodeURIComponent('Erro no upload: ' + e.message) + '&type=err');
+  }
+});
 
 // ----- PEDIDOS -----
 async function pagePedidos(req, res) {
