@@ -49,11 +49,14 @@ async function generateMenuImage(tenantId, cat, products) {
     let imgBuf;
     try {
       const image = p.image || 'placeholder.png';
-      const imgPath = /^https?:\/\//.test(image)
-        ? null
-        : path.join(imagesDir, image);
+      const imgPath = /^https?:\/\//.test(image) ? null : path.join(imagesDir, image);
       if (imgPath && fs.existsSync(imgPath)) {
         imgBuf = await sharp(imgPath).resize(thumb, thumb, { fit: 'cover' }).png().toBuffer();
+      } else if (/^https?:\/\//.test(image)) {
+        // Imagem remota (ex: Vercel Blob) — baixa e redimensiona
+        const axios = require('axios');
+        const resp = await axios.get(image, { responseType: 'arraybuffer', timeout: 8000 });
+        imgBuf = await sharp(Buffer.from(resp.data)).resize(thumb, thumb, { fit: 'cover' }).png().toBuffer();
       } else {
         imgBuf = await sharp(path.join(imagesDir, 'placeholder.png')).resize(thumb, thumb, { fit: 'cover' }).png().toBuffer();
       }
