@@ -29,7 +29,7 @@ Abra no navegador:
 http://localhost:3001/admin
 ```
 
-**Senha padrão:** `respodzap123` (mude no `.env` → `ADMIN_PASSWORD=`)
+**Senha padrão:** definida em `ADMIN_PASSWORD` no `.env` (mude a padrão antes de publicar!)
 
 | Aba | O que faz |
 |---|---|
@@ -173,7 +173,7 @@ npm install
 | `APP_SECRET` | Configurações > Básico > Chave Secreta do App |
 | `PHONE_NUMBER_ID` | WhatsApp > Configuração > API Setup |
 | `ACCESS_TOKEN` | API Setup > Gerar token (temporário 24h) |
-| `VERIFY_TOKEN` | Qualquer string (ex: `respzap-verify-2026`) |
+ | `VERIFY_TOKEN` | Qualquer string segura (ex: `minha-chave-verificacao-2026`) |
 | `BUSINESS_PHONE` | Número do vendedor que recebe leads (sem + ou ()) |
 | `MP_ACCESS_TOKEN` | Mercado Pago Developers > Credenciais > Access Token de produção |
 | `WEBHOOK_URL` | URL pública HTTPS do túnel (ex: `https://xxx.trycloudflare.com`) |
@@ -202,7 +202,7 @@ cloudflared tunnel --url http://localhost:3001
 
 No painel Meta Developer Console (WhatsApp > Configuração):
 - **Webhook URL**: `https://xxx.trycloudflare.com/webhook`
-- **Verify Token**: `respzap-verify-2026`
+ - **Verify Token**: a mesma string definida no `.env` (`VERIFY_TOKEN`)
 
 ---
 

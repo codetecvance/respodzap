@@ -27,19 +27,19 @@ git push -u origin main
 | Variável | Valor |
 |---|---|
 | `DATABASE_URL` | A connection string do Neon (a mesma do `.env`) |
-| `APP_ID` | `2373496340133806` |
+| `APP_ID` | Seu App ID do Meta (Configurações > Básico) |
 | `APP_SECRET` | A chave secreta do app Meta |
-| `VERIFY_TOKEN` | `respzap-verify-2026` |
-| `PHONE_NUMBER_ID` | `1318785167974690` (fallback global — tenant 1) |
+| `VERIFY_TOKEN` | O mesmo do `.env` (ex: qualquer string segura) |
+| `PHONE_NUMBER_ID` | Seu Phone Number ID (fallback global — tenant 1) |
 | `ACCESS_TOKEN` | O token do WhatsApp (o de 60 dias) |
 | `MP_ACCESS_TOKEN` | O token do Mercado Pago (APP_USR-...) |
 | `SMTP_HOST` | `smtp.gmail.com` |
 | `SMTP_PORT` | `465` |
-| `SMTP_USER` | `codetecvance@gmail.com` |
+| `SMTP_USER` | Seu e-mail Gmail (remetente) |
 | `SMTP_PASS` | A senha de app do Gmail |
-| `NOTIFY_EMAIL` | `codetecvance@gmail.com` |
+| `NOTIFY_EMAIL` | Seu e-mail de notificações |
 | `ADMIN_PASSWORD` | Sua senha do painel |
-| `BUSINESS_PHONE` | `554888732807` (notificações administrativas) |
+| `BUSINESS_PHONE` | Seu número (notificações administrativas) |
 | `WEBHOOK_URL` | `https://respodzap.vercel.app` |
 | `NODE_ENV` | `production` |
 
@@ -51,7 +51,7 @@ Clique em **Deploy** (ou `vercel --prod` na pasta). A URL será `https://respodz
 
 No painel Meta (WhatsApp → Configuração → Webhook):
 - **URL de retorno de chamada**: `https://respodzap.vercel.app/webhook`
-- **Verificar token**: `respzap-verify-2026`
+- **Verificar token**: o mesmo `VERIFY_TOKEN` definido nas variáveis do Vercel
 - Campo assinado: `messages`
 
 > Todos os números (de todos os clientes) apontam para **esta mesma URL** — o roteador identifica cada cliente pelo `phone_number_id`.

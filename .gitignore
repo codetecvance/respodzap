@@ -4,3 +4,6 @@ data/
 *.log
 .DS_Store
 public/images/menu/
+
+.vercel
+.env*
