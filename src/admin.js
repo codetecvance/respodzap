@@ -175,7 +175,10 @@ function tenantSelector(activeTenantId, tenants, clientMode) {
 
 function tenantIdFromReq(req, fallback) {
   if (req.clientMode) return req.tenantSession.id;
-  return Number(fallback);
+  const v = Number(fallback);
+  if (Number.isFinite(v) && v > 0) return v;
+  const cookie = Number(req.cookies?.rpz_tenant);
+  return Number.isFinite(cookie) && cookie > 0 ? cookie : NaN;
 }
 
 // ======================================================
@@ -695,7 +698,7 @@ async function pageProdutos(req, res) {
       return `
       <div class="panel" style="margin-bottom:14px"><h2>✏️ ${esc(p.name)} ${p.plans?.length ? `<span class="badge info">${p.plans.length} plano(s)</span>` : ''} ${statusBadge(p.available ? 'ok' : 'no')}</h2>
       <form method="POST" action="${base}/produtos/salvar" class="grid2">
-        <input type="hidden" name="ci" value="${ci}"><input type="hidden" name="pi" value="${pi}">
+        <input type="hidden" name="tenant" value="${tenant.id}"><input type="hidden" name="ci" value="${ci}"><input type="hidden" name="pi" value="${pi}">
         <div>
           <label>NOME</label><input type="text" name="name" value="${esc(p.name)}" required>
           <label>PREÇO (R$)</label><input type="text" name="price" value="${p.price}">
@@ -724,6 +727,7 @@ async function pageProdutos(req, res) {
       ${prods.join('')}
       <details style="margin-top:8px"><summary style="cursor:pointer;font-size:13px;color:#2563eb;font-weight:600">+ Adicionar novo produto</summary>
       <form method="POST" action="${clientMode ? '/painel' : '/admin'}/produtos/novo" class="grid2" style="margin-top:12px">
+        <input type="hidden" name="tenant" value="${tenant.id}">
         <input type="hidden" name="ci" value="${ci}">
         <div><label>ID ÚNICO</label><input type="text" name="id" required><label>NOME</label><input type="text" name="name" required><label>PREÇO (R$)</label><input type="text" name="price" required>
           <label><input type="checkbox" name="digital" style="width:auto"> Produto digital</label></div>
@@ -974,7 +978,7 @@ async function pagePerguntas(req, res) {
       <td style="text-align:center"><input type="checkbox" name="q[${esc(qid)}][${qi}][optional]" ${question.optional ? 'checked' : ''}></td>
       <td style="text-align:center"><button class="btn red small" type="submit" formaction="${base}/perguntas/remover?qid=${esc(qid)}&qi=${qi}" formnovalidate>🗑</button></td></tr>`).join('') || '<tr><td colspan="5" style="color:#64748b">Sem perguntas.</td></tr>';
     return `<div class="panel"><h2>${esc(q.label || qid)} <span class="badge info">${esc(qid)}</span></h2>
-      <form method="POST" action="${base}/perguntas/salvar">
+      <form method="POST" action="${base}/perguntas/salvar"><input type="hidden" name="tenant" value="${tenant.id}">
         <table><thead><tr><th>Chave</th><th>Campo do lead</th><th>Pergunta</th><th>Opcional</th><th></th></tr></thead><tbody>${rows}</tbody></table>
         <div style="display:flex;gap:8px;margin-top:12px"><button class="btn" type="submit">💾 Salvar</button>
         <button class="btn gray" type="submit" formaction="${base}/perguntas/nova?qid=${esc(qid)}" formnovalidate>+ Nova pergunta</button></div>
@@ -1044,7 +1048,7 @@ async function pageMensagens(req, res) {
   const fields = Object.entries(data.messages || {}).map(([key, value]) => `
     <div class="panel"><h2>${esc(key)}</h2><textarea name="msgs[${esc(key)}]" style="min-height:80px">${esc(value)}</textarea></div>`).join('');
   res.send(layout('Mensagens', clientMode ? '/painel/mensagens' : '/admin/mensagens', `${tenantSelector(tenant.id, tenants, clientMode)}
-    <form method="POST" action="${clientMode ? '/painel' : '/admin'}/mensagens/salvar">
+    <form method="POST" action="${clientMode ? '/painel' : '/admin'}/mensagens/salvar"><input type="hidden" name="tenant" value="${tenant.id}">
       ${fields}<button class="btn" type="submit">💾 Salvar mensagens</button></form>`, tenants, tenant, clientMode));
 }
 
@@ -1076,7 +1080,7 @@ async function pageConfig(req, res) {
   const c = data.company || {};
   const addr = c.address || {};
   res.send(layout('Configurações', clientMode ? '/painel/config' : '/admin/config', `${tenantSelector(tenant.id, tenants, clientMode)}
-    <form method="POST" action="${clientMode ? '/painel' : '/admin'}/config/salvar">
+    <form method="POST" action="${clientMode ? '/painel' : '/admin'}/config/salvar"><input type="hidden" name="tenant" value="${tenant.id}">
       <div class="panel"><h2>🏪 Loja</h2><div class="grid3">
         <div><label>FRETE (R$)</label><input type="text" name="store[delivery_fee]" value="${s.delivery_fee ?? 0}"></div>
         <div><label>FRETE GRÁTIS ACIMA (R$)</label><input type="text" name="store[delivery_free_full]" value="${s.delivery_free_full ?? 0}"></div>
