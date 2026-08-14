@@ -1,0 +1,268 @@
+{
+  "company": {
+    "name": "CodetecVance",
+    "display_name": "Bot de Vendas da CodetecVance",
+    "phone": "+55 48 9604-2634",
+    "email": "codetecvance@gmail.com",
+    "instagram": "@codetecvance",
+    "website": "https://codetecvance.vercel.app",
+    "address": {
+      "street": "Antonio Francisco da silveira 312",
+      "neighborhood": "Pantanal",
+      "city": "Florianópolis",
+      "state": "SC",
+      "zip": "88040160"
+    },
+    "business_hours": "Seg a Sex: 09h às 21h | Sáb: 09h às 17h",
+    "seller_email": "codetecvance@gmail.com"
+  },
+  "categories": [
+    {
+      "id": "sistemas",
+      "name": "Sistemas",
+      "description": "Sistemas e SaaS para o seu negócio",
+      "emoji": "🖥️",
+      "products": [
+        {
+          "id": "badclicks",
+          "name": "BadClicks",
+          "short_description": "Proteção contra cliques fraudulentos no Google Ads",
+          "long_description": "💸 Cada clique falso no seu anúncio é dinheiro jogado fora.\r\n\r\nO BadClicks bloqueia bots, concorrentes e cliques via VPN antes deles gastarem seu orçamento no Google Ads. ⚡\r\n\r\nAnálise em milissegundos + bloqueio com 1 clique na conta inteira + dashboard com economia estimada.\r\n",
+          "price": 289,
+          "image": "badclicks.jpg",
+          "unit": "mês",
+          "digital": true,
+          "available": true,
+          "plans": [
+            {
+              "id": "starter",
+              "name": "Starter",
+              "price": 159,
+              "period": "mês",
+              "popular": false,
+              "payment_link": "https://mpago.li/2dSAoJ3",
+              "redirect_link": "",
+              "features": "1 conta de Google Ads"
+            },
+            {
+              "id": "pro",
+              "name": "Pro",
+              "price": 289,
+              "period": "mês",
+              "popular": true,
+              "payment_link": "https://mpago.li/1mYfFWH",
+              "redirect_link": "",
+              "features": "Até 5 contas"
+            },
+            {
+              "id": "plano-3",
+              "name": "Agência",
+              "price": null,
+              "period": "mês",
+              "popular": false,
+              "payment_link": "https://wa.me/5548988732807",
+              "redirect_link": "",
+              "features": "Contas ilimitadas"
+            }
+          ],
+          "sob_consulta": false
+        },
+        {
+          "id": "codetecvance-crm",
+          "name": "CodetecVance CRM",
+          "short_description": "PDV, caixa e financeiro offline-first",
+          "long_description": "PDV, caixa, financeiro, produtos, clientes e relatórios em um só sistema. Funciona até sem internet, sincroniza tudo sozinho e se adapta ao seu negócio.\r\n\r\nPlanos: Mensal R$ 119/mês · Anual R$ 1.299/ano",
+          "price": 119,
+          "image": "logo-1786651207635.jpg",
+          "unit": "mês",
+          "digital": true,
+          "available": true,
+          "plans": [
+            {
+              "id": "mensal",
+              "name": "Mensal",
+              "price": 119,
+              "period": "mês",
+              "popular": false,
+              "payment_link": "https://mpago.li/2eNb7rG",
+              "features": "Sistema completo — todos os módulos\nFunciona offline + sincronização\nSuporte via WhatsApp\nCancele quando quiser"
+            },
+            {
+              "id": "anual",
+              "name": "Anual",
+              "price": 1299,
+              "period": "ano",
+              "popular": true,
+              "payment_link": "https://mpago.li/1YWSxkF",
+              "features": "Tudo do plano mensal\nEconomia de 9%\nTreinamento da equipe incluso"
+            }
+          ]
+        },
+        {
+          "id": "batvancecontrol",
+          "name": "BatVancecontrol",
+          "short_description": "Gestão de sucata e baterias com CONAMA 401/2008",
+          "long_description": "🛠️ GERENCIE SUA LOJA DE BATERIAS DE VERDADE, DO ESTOQUE AO FISCAL! 🛠️\r\n\r\nCansado de planilha, caderno de anotações e aquele medo da hora de emitir a nota? O sistema da Baterias Controle resolve tudo em um só lugar:\r\n\r\n✅ Vendas rápidas — PDV simples, sem complicação \r\n✅ Estoque controlado — saiba o que tem e o que precisa comprar \r\n✅ Clientes e fiado — controle completo do cadastro e das contas \r\n✅ Financeiro — fluxo de caixa e fechamento sem dor de cabeça \r\n✅ Fiscal 100% — NFC-e e SAT direto no cupom: MEI, Simples ou Lucro Presumido, com certificado digital e SEFAZ configurados por nós \r\n✅ Acesso de onde estiver — tudo na nuvem, no celular ou no computador\r\n\r\nVocê cuida da loja, a gente cuida do sistema. 👊",
+          "price": 89.9,
+          "image": "logo-1786651207635.jpg",
+          "unit": "mês",
+          "digital": true,
+          "available": true,
+          "plans": [
+            {
+              "id": "mensal",
+              "name": "Mensal",
+              "price": 89.9,
+              "period": "mês",
+              "popular": false,
+              "payment_link": "https://mpago.li/1h7CEUW",
+              "redirect_link": "",
+              "features": "Painel de controle em tempo real\r\nEntrada e saída de sucata\r\nVendas e caixa integrados\r\nEtiquetas, backup e suporte"
+            },
+            {
+              "id": "anual",
+              "name": "Anual",
+              "price": 949,
+              "period": "ano",
+              "popular": true,
+              "payment_link": "https://mpago.li/1qfJxPM",
+              "redirect_link": "",
+              "features": "Tudo do plano mensal\r\nConformidade CONAMA 401/2008 completa\r\nMulti-loja com link privado\r\nPrioridade no suporte"
+            }
+          ],
+          "sob_consulta": false
+        }
+      ]
+    },
+    {
+      "id": "servicos",
+      "name": "Serviços",
+      "description": "Consultorias, instalações e suporte",
+      "emoji": "🔧",
+      "products": [
+        {
+          "id": "instalacao-sistema",
+          "name": "Treinamento",
+          "short_description": "Configuração completa e treinamento da equipe",
+          "long_description": "Instalação do sistema na sua empresa, configuração do ambiente, migração de dados e treinamento completo da sua equipe (até 10 usuários).",
+          "price": 390,
+          "image": "logo-1786651207635.jpg",
+          "unit": "serviço",
+          "available": true,
+          "plans": [
+            {
+              "id": "plano-1",
+              "name": "Mensal",
+              "price": 390,
+              "period": "mês",
+              "popular": false,
+              "payment_link": "https://wa.me/5548988732807",
+              "features": ""
+            }
+          ],
+          "digital": false
+        },
+        {
+          "id": "suporte-mensal",
+          "name": "Suporte Técnico Mensal",
+          "short_description": "Suporte prioritário por WhatsApp e acesso remoto",
+          "long_description": "Atendimento prioritário via WhatsApp, acesso remoto para resolução de problemas e atualizações do sistema. Ideal para quem quer tranquilidade.",
+          "price": 120,
+          "image": "logo-1786651207635.jpg",
+          "unit": "mês",
+          "available": true,
+          "plans": [
+            {
+              "id": "plano-1",
+              "name": "Mensal",
+              "price": 380,
+              "period": "mês",
+              "popular": false,
+              "payment_link": "https://wa.me/5548988732807",
+              "features": "Entre em contato para mais informações"
+            }
+          ],
+          "digital": false
+        }
+      ]
+    },
+    {
+      "id": "cursos-digitais",
+      "name": "Cursos e Conteúdo Digital",
+      "description": "Treinamentos online",
+      "emoji": "📚",
+      "products": []
+    }
+  ],
+  "store": {
+    "currency": "BRL",
+    "currency_symbol": "R$",
+    "min_order": 10,
+    "delivery_free_full": 0,
+    "delivery_fee": 0,
+    "pix_discount_percent": 0,
+    "installments_max": 3,
+    "payment_methods": [
+      {
+        "type": "pix",
+        "label": "PIX (5% desconto)",
+        "discount_percent": 5
+      },
+      {
+        "type": "credit_card",
+        "label": "Cartão de Crédito (até 3x sem juros)"
+      },
+      {
+        "type": "debit_card",
+        "label": "Cartão de Débito"
+      }
+    ]
+  },
+  "questionnaires": {
+    "checkout": {
+      "label": "Perguntas do pedido",
+      "questions": [
+        {
+          "key": "endereço",
+          "field": "delivery_address",
+          "question": "Qual endereço o sistema será instalado?",
+          "optional": true
+        },
+        {
+          "key": "observacao",
+          "field": "",
+          "question": "Alguma observação sobre o pedido? (opcional)",
+          "optional": true
+        }
+      ]
+    }
+  },
+  "messages": {
+    "welcome": "Bem-vindo(a) à CodetecVance!\r\nA CodetecVance nasceu com o intuito de facilitar o dia a dia em sua empresa.\r\nVem ser codetec!\r\nClique em Comprar e conheça nossos sistemas e soluções!!!",
+    "no_categories": "Nenhuma categoria disponível.",
+    "categories_title": "Categorias disponíveis:",
+    "no_products": "Nenhum produto nesta categoria.",
+    "product_not_found": "Produto não encontrado.",
+    "product_detail": "*{nome}*\r\n\r\n{descricao}\r\n\r\n💰 {preco}",
+    "added_to_cart": "✅ \"{produto}\" adicionado ao carrinho!\r\nItens na sacola: {total}",
+    "cart_empty": "Seu carrinho está vazio. Que tal dar uma olhada nos nossos sistemas e soluções?",
+    "cart_title": "*Seu Carrinho de Compras:*",
+    "cart_item": "{n}. {produto} — {qtd}x R$ {preco}",
+    "cart_total": "*Total: R$ {total}*",
+    "checkout_ask_name": "Qual o nome para o pedido?",
+    "checkout_confirm": "Confirme seu pedido:\r\n\r\nCliente: {nome}\r\nSubtotal: R$ {subtotal}\r\nFrete: R$ {frete}\r\n*Total: R$ {total}*",
+    "order_created_payment": "✅ *Pedido #{pedido} criado!*\r\n\r\nValor total: R$ {total}\r\n\r\n*Escolha a forma de pagamento:*",
+    "payment_pix": "✅ *Pedido #{pedido}*\r\n\r\n💵 Pagamento via *PIX*\r\n💰 Total: R$ {total} \r\n\r\n*1️⃣* Escaneie o QR Code abaixo, ou\r\n*2️⃣* Use o *PIX copia e cola*:\r\n\r\n```\r\n{qr}\r\n```\r\n\r\n⏳ Assim que o pagamento for aprovado, você recebe a confirmação automática aqui.",
+    "payment_card": "✅ *Pedido #{pedido}*\r\n\r\n💳 Pagamento via *{tipo}*\r\n💰 Total: R$ {total} (em até 3x sem juros)\r\n\r\nPara pagar, toque no link abaixo:\r\n\r\n🔗 {link}\r\n\r\n⏳ Assim que o pagamento for aprovado, você recebe a confirmação automática aqui.",
+    "payment_error": "Seu pedido foi criado, mas houve um problema ao gerar o pagamento. Um atendente vai te ajudar em instantes.",
+    "payment_confirmed": "🎉 *Pagamento confirmado!*\r\n\r\n{resumo}\r\n\r\nSeu pedido está em andamento. Obrigado por comprar conosco!",
+    "ask_support_name": "Informe seu nome completo:",
+    "ask_support_reason": "Qual o motivo do seu contato?",
+    "support_escalation": "Um dos nossos atendentes vai falar com você em breve pelo WhatsApp!",
+    "no_orders": "Você não tem pedidos ainda.",
+    "order_status": "Seu último pedido: #{pedido} — Status: {status}",
+    "cart_cleared": "Carrinho esvaziado.",
+    "plans_title": "{produto} — escolha o plano:",
+    "plan_detail": "*{produto} — {plano}*\n\n💰 {preco}\n\n{recursos}"
+  }
+}

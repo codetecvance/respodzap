@@ -1,0 +1,38 @@
+{
+  "name": "respodzap",
+  "version": "3.0.0",
+  "description": "SaaS de chatbot para WhatsApp — multi-tenant (Vercel + Neon)",
+  "main": "src/index.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "migrate": "node scripts/migrate-local.js",
+    "leads": "node -e \"require('dotenv').config(); require('./src/db').initDb().then(()=>require('./src/repository').listLeads(1)).then(l=>console.table(l))\""
+  },
+  "keywords": [
+    "whatsapp",
+    "chatbot",
+    "meta",
+    "cloud-api",
+    "vendas",
+    "pix",
+    "mercadopago",
+    "saas"
+  ],
+  "author": "RespVZap",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "axios": "^1.19.0",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "multer": "^2.2.0",
+    "nodemailer": "^9.0.5",
+    "pg": "^8.23.0",
+    "sharp": "^0.34.4",
+    "uuid": "^9.0.0"
+  }
+}
