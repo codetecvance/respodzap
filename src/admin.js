@@ -20,7 +20,9 @@ const storage = multer.diskStorage({
     cb(null, `${base}-${Date.now()}${path.extname(file.originalname).toLowerCase() || '.jpg'}`);
   },
 });
-const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
+const upload = process.env.BLOB_READ_WRITE_TOKEN
+  ? multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } })
+  : multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
 
 // ======================================================
 //  UPLOAD DE IMAGENS (Vercel Blob em produção; disco local em dev)
@@ -29,14 +31,14 @@ async function saveUploadedImage(tenantId, file) {
   const token = process.env.BLOB_READ_WRITE_TOKEN;
   if (token) {
     const { put } = require('@vercel/blob');
-    const buf = require('fs').readFileSync(file.path);
-    const result = await put(`tenant-${tenantId}/${file.filename}`, buf, {
+    const buf = file.buffer || require('fs').readFileSync(file.path);
+    const result = await put(`tenant-${tenantId}/${file.originalname}`, buf, {
       access: 'public',
       contentType: file.mimetype,
       token,
-      addRandomSuffix: false,
+      addRandomSuffix: true,
     });
-    try { require('fs').unlinkSync(file.path); } catch (_) {}
+    try { if (file.path) require('fs').unlinkSync(file.path); } catch (_) {}
     return result.url;
   }
   return `/images/${file.filename}`;
