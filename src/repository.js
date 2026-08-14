@@ -8,6 +8,27 @@ function normalizePhone(phone) {
   return String(phone || '').replace(/\D/g, '');
 }
 
+const crypto = require('crypto');
+
+/**
+ * Gera hash scrypt + salt para senha.
+ */
+function hashPassword(password) {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = crypto.scryptSync(String(password), salt, 32).toString('hex');
+  return `${salt}:${hash}`;
+}
+
+/**
+ * Verifica senha contra o hash armazenado.
+ */
+function verifyPassword(password, stored) {
+  if (!stored || !stored.includes(':')) return false;
+  const [salt, hash] = stored.split(':');
+  const candidate = crypto.scryptSync(String(password), salt, 32).toString('hex');
+  return crypto.timingSafeEqual(Buffer.from(hash, 'hex'), Buffer.from(candidate, 'hex'));
+}
+
 function today() {
   return new Date().toISOString();
 }
@@ -21,11 +42,11 @@ function num(v) {
 // ============================================================
 async function createTenant(data) {
   const r = await query(
-    `INSERT INTO tenants (name, contact_name, contact_phone, phone_number_id, access_token, waba_id, notify_phone, notify_email, status)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+    `INSERT INTO tenants (name, contact_name, contact_phone, phone_number_id, access_token, waba_id, notify_phone, notify_email, status, panel_password)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
     [data.name, data.contact_name || null, data.contact_phone || null, data.phone_number_id || null,
      data.access_token || null, data.waba_id || null, data.notify_phone || null, data.notify_email || null,
-     data.status || 'ativo']
+     data.status || 'ativo', data.panel_password || null]
   );
   return r.rows[0];
 }
@@ -45,8 +66,33 @@ async function getTenantByNumberId(phoneNumberId) {
   return r.rows[0] || null;
 }
 
+/**
+ * Busca tenant pelo WhatsApp de login do painel (contact_phone normalizado,
+ * aceitando com ou sem o DDI 55).
+ */
+async function getTenantByPanelLogin(phone) {
+  const digits = normalizePhone(phone);
+  const candidates = [digits];
+  if (digits.length === 10 || digits.length === 11) candidates.unshift('55' + digits);
+  if ((digits.length === 12 || digits.length === 13) && digits.startsWith('55')) candidates.push(digits.slice(2));
+  for (const cand of candidates) {
+    const r = await query('SELECT * FROM tenants WHERE contact_phone = $1', [cand]);
+    if (r.rows[0]) return r.rows[0];
+  }
+  return null;
+}
+
+/**
+ * Normaliza telefone brasileiro com DDI (55 + 10/11 dígitos).
+ */
+function normalizePhoneBr(phone) {
+  const digits = normalizePhone(phone);
+  if (digits.length === 10 || digits.length === 11) return '55' + digits;
+  return digits;
+}
+
 async function updateTenant(id, fields) {
-  const allowed = ['name', 'contact_name', 'contact_phone', 'phone_number_id', 'access_token', 'waba_id', 'notify_phone', 'notify_email', 'status'];
+  const allowed = ['name', 'contact_name', 'contact_phone', 'phone_number_id', 'access_token', 'waba_id', 'notify_phone', 'notify_email', 'status', 'panel_password'];
   const entries = Object.entries(fields).filter(([k]) => allowed.includes(k));
   if (!entries.length) return getTenant(id);
   const sets = entries.map(([k], i) => `${k} = $${i + 1}`).join(', ');
@@ -415,7 +461,8 @@ async function getTopProducts(tenantId, limit = 5) {
 
 module.exports = {
   // tenants
-  createTenant, getTenants, getTenant, getTenantByNumberId, updateTenant, deleteTenant,
+  createTenant, getTenants, getTenant, getTenantByNumberId, getTenantByPanelLogin, updateTenant, deleteTenant,
+  hashPassword, verifyPassword, normalizePhoneBr,
   // planos e assinaturas
   getPlans, createPlan, deletePlan,
   getSubscriptions, getSubscriptionsByTenant, getActiveSubscription, createSubscription,

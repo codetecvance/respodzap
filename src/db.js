@@ -144,6 +144,9 @@ async function initDb() {
     CREATE INDEX IF NOT EXISTS idx_cart_lead ON cart_items (lead_id);
     CREATE INDEX IF NOT EXISTS idx_payments_order ON payments (order_id);
   `);
+
+  // Migrações leves (rodam a cada inicialização)
+  await query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS panel_password TEXT`);
 }
 
 module.exports = { pool, query, initDb };

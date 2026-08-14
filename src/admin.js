@@ -23,7 +23,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
 
 // ======================================================
-//  AUTENTICAÇÃO
+//  AUTENTICAÇÃO DO ADMIN (SaaS)
 // ======================================================
 const SESSION_TTL = 12 * 60 * 60 * 1000;
 const sessions = new Map();
@@ -47,6 +47,49 @@ function isAuthed(req) {
 function requireAuth(req, res, next) {
   if (isAuthed(req)) return next();
   return res.redirect('/admin/login');
+}
+
+// ======================================================
+//  AUTENTICAÇÃO DO CLIENTE (tenant)
+// ======================================================
+const TENANT_SESSION_TTL = 12 * 60 * 60 * 1000;
+const tenantSessions = new Map(); // token -> { tenantId, expiresAt }
+
+function createTenantSession(tenantId) {
+  const token = crypto.randomBytes(24).toString('hex');
+  tenantSessions.set(token, { tenantId, expiresAt: Date.now() + TENANT_SESSION_TTL });
+  return token;
+}
+
+function getTenantSession(req) {
+  const token = req.cookies?.rpz_tenant_auth;
+  if (!token || !tenantSessions.has(token)) return null;
+  const s = tenantSessions.get(token);
+  if (s.expiresAt < Date.now()) {
+    tenantSessions.delete(token);
+    return null;
+  }
+  return s;
+}
+
+/**
+ * Middleware do painel do cliente: valida sessão + licença ativa.
+ * Define req.clientMode = true e req.tenantSession = tenant.
+ */
+async function clientPanelAuth(req, res, next) {
+  const session = getTenantSession(req);
+  if (!session) return res.redirect('/painel/login');
+  const tenant = await repo.getTenant(session.tenantId);
+  if (!tenant) return res.redirect('/painel/login');
+
+  // Licença vencida → bloqueia o painel do cliente
+  const sub = await repo.getActiveSubscription(tenant.id);
+  const active = sub && (!sub.expires_at || new Date(sub.expires_at).getTime() > Date.now());
+  if (!active) return res.redirect('/painel/bloqueado');
+
+  req.clientMode = true;
+  req.tenantSession = tenant;
+  next();
 }
 
 // ======================================================
@@ -76,6 +119,16 @@ function methodLabel(m) {
   return { pix: '💠 PIX', credit_card: '💳 Crédito', debit_card: '💳 Débito' }[m] || (m || '—');
 }
 
+/**
+ * Resolve o tenant da requisição:
+ * - painel do cliente → tenant da sessão (travado)
+ * - admin → seletor (?tenant= ou cookie)
+ */
+async function resolveTenant(req, res) {
+  if (req.clientMode) return { tenant: req.tenantSession, tenants: [req.tenantSession] };
+  return tenantFromReq(req, res);
+}
+
 async function tenantFromReq(req, res) {
   const id = Number(req.query.tenant || req.cookies?.rpz_tenant);
   const tenants = await repo.getTenants();
@@ -84,7 +137,8 @@ async function tenantFromReq(req, res) {
   return { tenant, tenants };
 }
 
-function tenantSelector(activeTenantId, tenants) {
+function tenantSelector(activeTenantId, tenants, clientMode) {
+  if (clientMode) return '';
   const options = tenants.map(t =>
     `<option value="${t.id}" ${t.id === activeTenantId ? 'selected' : ''}>${esc(t.name)}${t.status !== 'ativo' ? ' (inativo)' : ''}</option>`
   ).join('');
@@ -97,11 +151,25 @@ function tenantSelector(activeTenantId, tenants) {
   </div>`;
 }
 
+function tenantIdFromReq(req, fallback) {
+  if (req.clientMode) return req.tenantSession.id;
+  return Number(fallback);
+}
+
 // ======================================================
 //  LAYOUT
 // ======================================================
-function layout(title, active, content, tenants = [], activeTenantId = null) {
-  const nav = [
+function layout(title, active, content, tenants = [], activeTenantId = null, clientMode = false) {
+  const items = clientMode ? [
+    ['/painel', '📊 Dashboard'],
+    ['/painel/produtos', '🛍 Produtos'],
+    ['/painel/pedidos', '🧾 Pedidos'],
+    ['/painel/leads', '👤 Leads'],
+    ['/painel/perguntas', '❓ Perguntas'],
+    ['/painel/mensagens', '💬 Mensagens'],
+    ['/painel/config', '⚙️ Configurações'],
+    ['/painel/senha', '🔑 Trocar senha'],
+  ] : [
     ['/admin', '📊 Dashboard'],
     ['/admin/clientes', '👥 Clientes'],
     ['/admin/assinaturas', '📋 Assinaturas'],
@@ -111,13 +179,19 @@ function layout(title, active, content, tenants = [], activeTenantId = null) {
     ['/admin/perguntas', '❓ Perguntas'],
     ['/admin/mensagens', '💬 Mensagens'],
     ['/admin/config', '⚙️ Configurações'],
-  ].map(([href, label]) => {
+  ];
+
+  const nav = items.map(([href, label]) => {
     let h = href;
-    if (activeTenantId && ['/admin/produtos', '/admin/pedidos', '/admin/leads', '/admin/perguntas', '/admin/mensagens', '/admin/config'].includes(href)) {
+    if (!clientMode && activeTenantId && ['/admin/produtos', '/admin/pedidos', '/admin/leads', '/admin/perguntas', '/admin/mensagens', '/admin/config'].includes(href)) {
       h += `?tenant=${activeTenantId}`;
     }
     return `<a class="nav-item ${href === active ? 'active' : ''}" href="${h}">${label}</a>`;
   }).join('');
+
+  const brand = clientMode
+    ? `<div class="brand"><div class="logo">${esc((activeTenantId?.name || 'Cliente').slice(0, 2).toUpperCase())}</div><div><b>${esc(activeTenantId?.name || 'Painel')}</b><span>Painel do cliente</span></div></div>`
+    : `<div class="brand"><div class="logo">RZ</div><div><b>RespVZap</b><span>Painel SaaS</span></div></div>`;
 
   return `<!DOCTYPE html>
 <html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
@@ -165,79 +239,44 @@ function layout(title, active, content, tenants = [], activeTenantId = null) {
   .prod-thumb { width: 52px; height: 52px; object-fit: cover; border-radius: 9px; background: #f1f5f9; }
   .img-list .thumb { width: 64px; height: 64px; object-fit: cover; border-radius: 9px; background: #f1f5f9; }
   .filters { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; }
-  .search { flex: 1; min-width: 200px; position: relative; } .search input { padding-left: 34px; }
-  .search::before { content: '🔍'; position: absolute; left: 11px; top: 8px; font-size: 13px; opacity: .6; }
-  .chart-row { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 16px; margin-bottom: 18px; }
-  @media (max-width: 1100px) { .chart-row { grid-template-columns: 1fr; } }
-  .bars { display: flex; align-items: flex-end; gap: 6px; height: 160px; padding-top: 10px; }
-  .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; height: 100%; justify-content: flex-end; }
-  .bar { width: 100%; max-width: 34px; border-radius: 6px 6px 2px 2px; background: linear-gradient(180deg,#3b82f6,#1d4ed8); min-height: 3px; }
-  .bar-col .day { font-size: 9.5px; color: #94a3b8; } .bar-col .qtd { font-size: 9.5px; font-weight: 700; color: #334155; }
-  .donut { width: 130px; height: 130px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto; }
-  .donut .inner { width: 78px; height: 78px; border-radius: 50%; background: #fff; display: flex; align-items: center; justify-content: center; flex-direction: column; }
-  .legend { margin-top: 12px; font-size: 12px; } .legend div { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
-  .legend .dot { width: 10px; height: 10px; border-radius: 3px; }
-  .rank { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px dashed #eef2f7; }
-  .rank:last-child { border-bottom: 0; } .rank .pos { width: 26px; height: 26px; border-radius: 8px; background: #f1f5f9; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; color: #475569; }
-  .rank .pos.top { background: linear-gradient(135deg,#f59e0b,#d97706); color: #fff; } .rank .name { flex: 1; font-size: 13px; }
-  .rank .qtd { font-size: 12px; color: #64748b; } .rank .tot { font-weight: 700; font-size: 13px; }
-  .modal-back { display: none; position: fixed; inset: 0; background: rgba(15,23,42,.55); z-index: 50; align-items: center; justify-content: center; padding: 20px; }
-  .modal-back.open { display: flex; } .modal { background: #fff; border-radius: 16px; max-width: 560px; width: 100%; max-height: 85vh; overflow-y: auto; padding: 24px; }
-  .chat-line { display: flex; margin-bottom: 8px; } .chat-line .bubble { max-width: 80%; padding: 8px 12px; border-radius: 12px; font-size: 13px; }
-  .chat-line.in { justify-content: flex-start; } .chat-line.in .bubble { background: #f1f5f9; }
-  .chat-line.out { justify-content: flex-end; } .chat-line.out .bubble { background: #2563eb; color: #fff; }
-  .chat-line .time { font-size: 9.5px; color: #94a3b8; margin-top: 3px; }
-  .toast { position: fixed; bottom: 22px; right: 22px; background: #0f172a; color: #fff; padding: 12px 18px; border-radius: 12px; font-size: 13px; opacity: 0; transform: translateY(10px); transition: .25s; z-index: 100; max-width: 340px; }
-  .toast.show { opacity: 1; transform: translateY(0); } .toast.ok { background: #15803d; } .toast.err { background: #b91c1c; }
-  .kv { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px dashed #eef2f7; font-size: 13px; }
-  .kv .k { color: #64748b; } .kv b { color: #0f172a; }
   .empty { text-align: center; padding: 30px; color: #94a3b8; font-size: 13px; }
   .inline-form { display: inline; }
   @media (max-width: 900px) { body { flex-direction: column; } aside { width: 100%; height: auto; position: static; } main { padding: 18px; } .grid2, .grid3 { grid-template-columns: 1fr; } }
 </style></head>
 <body>
 <aside>
-  <div class="brand"><div class="logo">RZ</div><div><b>RespVZap</b><span>Painel SaaS</span></div></div>
+  ${brand}
   ${nav}
-  <div class="nav-foot"><a class="nav-item" href="/admin/logout">🚪 Sair</a></div>
+  <div class="nav-foot"><a class="nav-item" href="${clientMode ? '/painel/logout' : '/admin/logout'}">🚪 Sair</a></div>
 </aside>
 <main>
   <h1>${esc(title)}</h1>
   <div class="sub">${esc(pageSub(active))}</div>
   ${content}
 </main>
-<div class="modal-back" id="modalBack"><div class="modal" id="modalContent"></div></div>
-<div class="toast" id="toast"></div>
 <script>
-  function showToast(msg, type='ok'){ const t=document.getElementById('toast'); t.textContent=msg; t.className='toast show '+type; setTimeout(()=>t.className='toast',3200); }
-  window.addEventListener('DOMContentLoaded', ()=>{
-    const f=document.getElementById('flashMsg'); if(f) showToast(f.textContent, f.dataset?.type||'ok');
-    const q=new URLSearchParams(location.search); if(q.get('msg')) showToast(q.get('msg'), q.get('type')||'ok');
-  });
-  function openModal(html){ document.getElementById('modalContent').innerHTML=html; document.getElementById('modalBack').classList.add('open'); }
-  function closeModal(){ document.getElementById('modalBack').classList.remove('open'); }
-  document.getElementById('modalBack').addEventListener('click', e=>{ if(e.target.id==='modalBack') closeModal(); });
+  function showToast(msg, type='ok'){ const t=document.createElement('div'); t.className='toast '+type; t.textContent=msg; t.style.cssText='position:fixed;bottom:22px;right:22px;background:#0f172a;color:#fff;padding:12px 18px;border-radius:12px;font-size:13px;z-index:100'; document.body.appendChild(t); setTimeout(()=>t.remove(),3200); }
+  window.addEventListener('DOMContentLoaded', ()=>{ const f=document.getElementById('flashMsg'); if(f) showToast(f.textContent, f.dataset?.type||'ok'); });
   function copyText(t, btn){ navigator.clipboard.writeText(t).then(()=>{ if(btn){ btn.textContent='✓ Copiado'; setTimeout(()=>btn.textContent='Copiar',1500); } }); }
   function filterTable(inputId, tableId){ const q=(document.getElementById(inputId).value||'').toLowerCase(); document.querySelectorAll('#'+tableId+' tbody tr').forEach(r=>{ r.style.display=r.textContent.toLowerCase().includes(q)?'':'none'; }); }
-  async function loadConversas(leadId, nome){ const r=await fetch('/admin/api/conversacoes?lead_id='+leadId); const data=await r.json(); openModal('<h3>💬 Conversa com '+nome+'</h3>'+(data.length?data.map(m=>'<div class="chat-line '+m.direction+'"><div><div class="bubble">'+m.message.replace(/</g,'&lt;').replace(/\n/g,'<br>')+'</div><div class="time">'+m.created_at+'</div></div></div>').join(''):'<div class="empty">Nenhuma mensagem.</div>')); }
 </script>
 </body></html>`;
 }
 
 function pageSub(active) {
-  return {
-    '/admin': 'Visão geral de toda a operação',
-    '/admin/clientes': 'Crie e gerencie os clientes do SaaS',
-    '/admin/assinaturas': 'Licenças, renovações e vencimentos',
-    '/admin/produtos': 'Catálogo do cliente selecionado',
-    '/admin/pedidos': 'Pedidos do cliente selecionado',
-    '/admin/leads': 'Leads do cliente selecionado',
-    '/admin/perguntas': 'Questionários do cliente selecionado',
-    '/admin/mensagens': 'Mensagens do cliente selecionado',
-    '/admin/config': 'Configurações do cliente selecionado',
-  }[active] || '';
+  const map = {
+    '/admin': 'Visão geral de toda a operação', '/admin/clientes': 'Crie e gerencie os clientes do SaaS',
+    '/admin/assinaturas': 'Licenças, renovações e vencimentos', '/painel': 'Visão geral do seu negócio',
+    '/painel/produtos': 'Seu catálogo', '/painel/pedidos': 'Seus pedidos', '/painel/leads': 'Seus clientes',
+    '/painel/perguntas': 'Seus questionários', '/painel/mensagens': 'Seus textos do bot',
+    '/painel/config': 'Suas configurações', '/painel/senha': 'Altere sua senha de acesso',
+  };
+  return map[active] || '';
 }
 
+// ======================================================
+//  LOGIN DO ADMIN
+// ======================================================
 function loginPage(erro) {
   return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Login — RespVZap</title><style>
@@ -255,9 +294,6 @@ ${erro ? `<div class="erro">${esc(erro)}</div>` : ''}
 </div></body></html>`;
 }
 
-// ======================================================
-//  AUTENTICAÇÃO
-// ======================================================
 router.get('/admin/login', (req, res) => {
   if (isAuthed(req)) return res.redirect('/admin');
   res.send(loginPage(null));
@@ -280,6 +316,68 @@ router.get('/admin/logout', (req, res) => {
 });
 
 // ======================================================
+//  LOGIN DO CLIENTE (tenant)
+// ======================================================
+function clientLoginPage(erro) {
+  return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Painel do Cliente — RespVZap</title><style>
+  * { box-sizing: border-box; } body { font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg,#14532d,#166534); }
+  .login-box { background: #fff; padding: 38px; border-radius: 18px; box-shadow: 0 25px 60px rgba(0,0,0,.35); width: 360px; }
+  .logo { width: 56px; height: 56px; border-radius: 14px; background: linear-gradient(135deg,#22c55e,#15803d); display: flex; align-items: center; justify-content: center; font-weight: 800; color: #fff; font-size: 20px; margin: 0 auto 14px; }
+  h1 { font-size: 20px; text-align: center; margin-bottom: 4px; } p.sub { text-align: center; color: #64748b; font-size: 13px; margin-bottom: 22px; }
+  input { width: 100%; padding: 11px; border: 1px solid #cbd5e1; border-radius: 10px; margin-bottom: 14px; }
+  .btn { width: 100%; background: linear-gradient(135deg,#16a34a,#15803d); color: #fff; border: 0; border-radius: 10px; padding: 12px; font-size: 14px; font-weight: 700; cursor: pointer; }
+  .erro { background: #fee2e2; color: #991b1b; border-radius: 9px; padding: 10px 14px; font-size: 13px; margin-bottom: 14px; text-align: center; }
+</style></head><body><div class="login-box">
+<div class="logo">✓</div><h1>Painel do Cliente</h1><p class="sub">Acesse com seu WhatsApp e senha</p>
+${erro ? `<div class="erro">${esc(erro)}</div>` : ''}
+<form method="POST" action="/painel/login">
+  <input type="text" name="telefone" placeholder="WhatsApp (ex: 5548999999999)" autofocus>
+  <input type="password" name="senha" placeholder="Senha">
+  <button class="btn" type="submit">Entrar</button>
+</form>
+</div></body></html>`;
+}
+
+router.get('/painel/login', (req, res) => {
+  if (getTenantSession(req)) return res.redirect('/painel');
+  res.send(clientLoginPage(null));
+});
+
+router.post('/painel/login', async (req, res) => {
+  const telefone = String(req.body?.telefone || '').replace(/\D/g, '');
+  const senha = String(req.body?.senha || '');
+  const tenant = await repo.getTenantByPanelLogin(telefone);
+  if (!tenant || !repo.verifyPassword(senha, tenant.panel_password)) {
+    await new Promise(r => setTimeout(r, 1000)); // anti força bruta
+    return res.send(clientLoginPage('WhatsApp ou senha incorretos.'));
+  }
+  const token = createTenantSession(tenant.id);
+  res.setHeader('Set-Cookie', `rpz_tenant_auth=${token}; Path=/; HttpOnly; Max-Age=${TENANT_SESSION_TTL / 1000}`);
+  res.redirect('/painel');
+});
+
+router.get('/painel/logout', (req, res) => {
+  const token = req.cookies?.rpz_tenant_auth;
+  if (token) tenantSessions.delete(token);
+  res.setHeader('Set-Cookie', 'rpz_tenant_auth=; Path=/; Max-Age=0');
+  res.redirect('/painel/login');
+});
+
+// Licença vencida → tela de bloqueio
+router.get('/painel/bloqueado', clientPanelAuthForBlockedPage, (req, res) => {
+  res.send(`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Licença expirada</title>
+  <style>body{font-family:'Segoe UI',sans-serif;background:#f1f5f9;display:flex;align-items:center;justify-content:center;min-height:100vh}.box{background:#fff;border-radius:16px;padding:40px;max-width:440px;text-align:center;border:1px solid #e2e8f0}.btn{display:inline-block;margin-top:16px;background:#2563eb;color:#fff;padding:10px 18px;border-radius:9px;text-decoration:none}</style>
+  </head><body><div class="box">
+  <h2>🚫 Licença expirada</h2>
+  <p style="color:#64748b;margin-top:10px">Sua assinatura venceu e o painel está bloqueado.<br>Entre em contato com o suporte para renovar.</p>
+  <a class="btn" href="/painel/logout">Voltar ao login</a>
+  </div></body></html>`);
+});
+
+async function clientPanelAuthForBlockedPage(req, res, next) { next(); }
+
+// ======================================================
 //  API INTERNA
 // ======================================================
 router.get('/admin/api/conversacoes', requireAuth, async (req, res) => {
@@ -288,13 +386,22 @@ router.get('/admin/api/conversacoes', requireAuth, async (req, res) => {
   res.json(await repo.getConversationsByLead(leadId, 40));
 });
 
+router.get('/painel/api/conversacoes', clientPanelAuth, async (req, res) => {
+  const leadId = Number(req.query.lead_id);
+  if (!leadId) return res.json([]);
+  res.json(await repo.getConversationsByLead(leadId, 40));
+});
+
 // ======================================================
-//  DASHBOARD (global + por tenant)
+//  DASHBOARD (admin global + painel do cliente)
 // ======================================================
-router.get('/admin', requireAuth, async (req, res) => {
-  const { tenant, tenants } = await tenantFromReq(req, res);
-  const orders = tenant ? await repo.getOrders(tenant.id) : [];
-  const leads = tenant ? await repo.listLeads(tenant.id) : [];
+async function pageDashboard(req, res) {
+  const { tenant, tenants } = await resolveTenant(req, res);
+  const clientMode = !!req.clientMode;
+  if (!tenant) return res.send(layout('Dashboard', clientMode ? '/painel' : '/admin', '<div class="empty">Crie um cliente primeiro.</div>', tenants, null, clientMode));
+
+  const orders = await repo.getOrders(tenant.id);
+  const leads = await repo.listLeads(tenant.id);
   const subs = await repo.getSubscriptions();
   const approved = orders.filter(o => o.status === 'approved');
   const revenue = approved.reduce((s, o) => s + Number(o.total), 0);
@@ -302,52 +409,52 @@ router.get('/admin', requireAuth, async (req, res) => {
   const expiringSoon = subs.filter(s => s.status === 'ativa' && s.expires_at && new Date(s.expires_at) > new Date() && new Date(s.expires_at) < new Date(Date.now() + 7 * 86400000));
   const expired = subs.filter(s => s.status === 'ativa' && s.expires_at && new Date(s.expires_at) <= new Date());
 
-  const byDay = tenant ? await repo.getOrdersByDay(tenant.id, 14) : [];
+  const byDay = await repo.getOrdersByDay(tenant.id, 14);
   const maxDay = Math.max(1, ...byDay.map(d => Number(d.qtd)));
   const bars = byDay.map(d => {
     const h = Math.max(3, Math.round((Number(d.qtd) / maxDay) * 130));
     return `<div class="bar-col" title="${esc(d.dia)} — ${d.qtd} pedido(s)"><div class="qtd">${d.qtd}</div><div class="bar" style="height:${h}px"></div><div class="day">${esc(d.dia.slice(5))}</div></div>`;
   }).join('');
 
-  const recent = orders.slice(0, 5).map(async o => {
+  const recentRows = await Promise.all(orders.slice(0, 5).map(async o => {
     const lead = await repo.getLead(o.lead_id);
     return `<tr><td><b>#${esc(o.external_id)}</b></td><td>${esc(lead?.full_name || '—')}</td><td>${money(o.total)}</td><td>${statusBadge(o.status)}</td><td>${esc(String(o.created_at).slice(0, 16))}</td></tr>`;
-  });
-  const recentHtml = (await Promise.all(recent)).join('');
+  }));
 
-  const subRows = subs.slice(0, 6).map(s => `<tr>
-    <td><b>${esc(s.tenant_name)}</b></td>
-    <td>${esc(s.plan_name || '—')}</td>
-    <td>${money(s.price)}</td>
-    <td>${statusBadge(s.status)}</td>
-    <td>${s.expires_at ? esc(String(s.expires_at).slice(0, 10)) : '—'}</td>
-    <td><a class="btn small" href="/admin/assinaturas?tenant=${s.tenant_id}">Ver</a></td>
-  </tr>`).join('');
+  const cards = clientMode
+    ? `<div class="cards">
+        <div class="card"><div class="ico blue">👥</div><div class="num blue">${leads.length}</div><div class="label">Leads</div></div>
+        <div class="card"><div class="ico cyan" style="background:#cffafe">🧾</div><div class="num" style="color:#0e7490">${orders.length}</div><div class="label">Pedidos</div></div>
+        <div class="card"><div class="ico green">✅</div><div class="num green">${approved.length}</div><div class="label">Pagamentos</div></div>
+        <div class="card"><div class="ico violet">💰</div><div class="num violet">${money(revenue)}</div><div class="label">Faturamento</div></div>
+      </div>`
+    : `<div class="cards">
+        <div class="card"><div class="ico blue">👥</div><div class="num blue">${tenants.length}</div><div class="label">Clientes (tenants)</div></div>
+        <div class="card"><div class="ico green">✅</div><div class="num green">${activeSubs.length}</div><div class="label">Licenças ativas</div></div>
+        <div class="card"><div class="ico amber">⏳</div><div class="num amber">${expiringSoon.length}</div><div class="label">Vencem em 7 dias</div></div>
+        <div class="card"><div class="ico rose">❌</div><div class="num rose">${expired.length}</div><div class="label">Licenças vencidas</div></div>
+        <div class="card"><div class="ico violet">💰</div><div class="num violet">${money(revenue)}</div><div class="label">Faturamento (${esc(tenant?.name || '—')})</div></div>
+        <div class="card"><div class="ico cyan" style="background:#cffafe">🧾</div><div class="num" style="color:#0e7490">${orders.length}</div><div class="label">Pedidos (${esc(tenant?.name || '—')})</div></div>
+      </div>`;
 
-  res.send(layout('Dashboard', '/admin', `
-    <div class="cards">
-      <div class="card"><div class="ico blue">👥</div><div class="num blue">${tenants.length}</div><div class="label">Clientes (tenants)</div></div>
-      <div class="card"><div class="ico green">✅</div><div class="num green">${activeSubs.length}</div><div class="label">Licenças ativas</div></div>
-      <div class="card"><div class="ico amber">⏳</div><div class="num amber">${expiringSoon.length}</div><div class="label">Vencem em 7 dias</div></div>
-      <div class="card"><div class="ico rose">❌</div><div class="num rose">${expired.length}</div><div class="label">Licenças vencidas</div></div>
-      <div class="card"><div class="ico violet">💰</div><div class="num violet">${money(revenue)}</div><div class="label">Faturamento (${esc(tenant?.name || '—')})</div></div>
-      <div class="card"><div class="ico cyan" style="background:#cffafe">🧾</div><div class="num" style="color:#0e7490">${orders.length}</div><div class="label">Pedidos (${esc(tenant?.name || '—')})</div></div>
-    </div>
-    ${tenantSelector(tenant?.id, tenants)}
-    <div class="chart-row">
-      <div class="panel"><h2>📅 Pedidos 14 dias — ${esc(tenant?.name || 'sem cliente')}</h2><div class="bars">${bars || '<div class="empty">Sem pedidos no período.</div>'}</div></div>
-      <div class="panel"><h2>🕒 Últimos pedidos</h2><table><thead><tr><th>Pedido</th><th>Cliente</th><th>Total</th><th>Status</th><th>Data</th></tr></thead><tbody>${recentHtml || '<tr><td colspan="5"><div class="empty">Nenhum pedido.</div></td></tr>'}</tbody></table></div>
-      <div class="panel"><h2>📋 Licenças recentes</h2><table><thead><tr><th>Cliente</th><th>Plano</th><th>Valor</th><th>Status</th><th>Vence</th><th></th></tr></thead><tbody>${subRows || '<tr><td colspan="6"><div class="empty">Sem licenças.</div></td></tr>'}</tbody></table></div>
-    </div>`));
-});
+  res.send(layout('Dashboard', clientMode ? '/painel' : '/admin', `
+    ${cards}
+    ${clientMode ? `<div class="panel" style="background:#f0fdf4;border-color:#bbf7d0"><h2 style="color:#166534">👋 Olá, ${esc(tenant.name)}!</h2><p style="font-size:13px;color:#166534">Este é o painel do seu negócio. Gerencie seus produtos, veja seus pedidos e clientes.</p></div>` : tenantSelector(tenant.id, tenants, clientMode)}
+    <div class="panel"><h2>📅 Pedidos dos últimos 14 dias</h2><div class="bars">${bars || '<div class="empty">Sem pedidos no período.</div>'}</div></div>
+    <div class="panel"><h2>🕒 Últimos pedidos</h2><table><thead><tr><th>Pedido</th><th>Cliente</th><th>Total</th><th>Status</th><th>Data</th></tr></thead><tbody>${recentRows.join('') || '<tr><td colspan="5"><div class="empty">Nenhum pedido.</div></td></tr>'}</tbody></table></div>
+  `, tenants, tenant, clientMode));
+}
+
+router.get('/admin', requireAuth, pageDashboard);
+router.get('/painel', clientPanelAuth, pageDashboard);
 
 // ======================================================
-//  CLIENTES
+//  CLIENTES (somente admin)
 // ======================================================
 router.get('/admin/clientes', requireAuth, async (req, res) => {
   const tenants = await repo.getTenants();
   const flash = req.query.msg ? `<div id="flashMsg">${esc(req.query.msg)}</div>` : '';
-  const rows = tenants.map(async t => {
+  const rowsHtml = (await Promise.all(tenants.map(async t => {
     const subs = await repo.getSubscriptionsByTenant(t.id);
     const active = subs.find(s => s.status === 'ativa');
     return `<tr>
@@ -355,43 +462,46 @@ router.get('/admin/clientes', requireAuth, async (req, res) => {
       <td>${esc(t.contact_name || '—')}<br><small style="color:#94a3b8">${esc(t.contact_phone || '')}</small></td>
       <td>${esc(t.phone_number_id || '—')}</td>
       <td>${statusBadge(t.status)}</td>
+      <td>${t.panel_password ? '<span class="badge ok">painel ativo</span>' : '<span style="color:#94a3b8">sem login</span>'}</td>
       <td>${active ? `${money(active.price)} · vence ${esc(String(active.expires_at || '').slice(0, 10))}` : '<span style="color:#94a3b8">sem licença</span>'}</td>
       <td style="white-space:nowrap">
         <a class="btn small" href="/admin/clientes/editar?tenant=${t.id}">Editar</a>
         <a class="btn small" href="/admin/assinaturas?tenant=${t.id}">Licença</a>
       </td>
     </tr>`;
-  });
-  const rowsHtml = (await Promise.all(rows)).join('');
+  }))).join('');
+
   res.send(layout('Clientes', '/admin/clientes', `${flash}
     <div class="panel"><h2>➕ Novo cliente</h2>
       <form method="POST" action="/admin/clientes/novo" class="grid3">
         <div><label>NOME DO CLIENTE</label><input type="text" name="name" required placeholder="Ex: Loja do João"></div>
-        <div><label>CONTATO</label><input type="text" name="contact_name" placeholder="Nome do responsável"></div>
-        <div><label>WHATSAPP DO CONTATO</label><input type="text" name="contact_phone" placeholder="5548999999999"></div>
-        <div><label>PHONE NUMBER ID (WhatsApp do bot dele)</label><input type="text" name="phone_number_id" placeholder="Ex: 1234567890123456"></div>
-        <div><label>ACCESS TOKEN (do WhatsApp dele)</label><input type="text" name="access_token" placeholder="EAA..."></div>
-        <div><label>WABA ID (opcional)</label><input type="text" name="waba_id" placeholder="Ex: 1234567890123456"></div>
-        <div><label>WHATSAPP QUE RECEBE NOTIFICAÇÕES</label><input type="text" name="notify_phone" placeholder="5548999999999"></div>
-        <div><label>E-MAIL DE NOTIFICAÇÕES</label><input type="email" name="notify_email" placeholder="cliente@empresa.com"></div>
+        <div><label>CONTATO (nome)</label><input type="text" name="contact_name" placeholder="Nome do responsável"></div>
+        <div><label>WHATSAPP (login do painel dele)</label><input type="text" name="contact_phone" placeholder="5548999999999"></div>
+        <div><label>PHONE NUMBER ID (bot)</label><input type="text" name="phone_number_id" placeholder="Ex: 1234567890123456"></div>
+        <div><label>ACCESS TOKEN (bot)</label><input type="text" name="access_token" placeholder="EAA..."></div>
+        <div><label>WABA ID (opcional)</label><input type="text" name="waba_id"></div>
+        <div><label>WHATSAPP DE NOTIFICAÇÕES</label><input type="text" name="notify_phone" placeholder="5548999999999"></div>
+        <div><label>E-MAIL DE NOTIFICAÇÕES</label><input type="email" name="notify_email"></div>
+        <div><label>SENHA DO PAINEL</label><input type="text" name="panel_password" placeholder="Defina a senha do cliente"></div>
         <div style="display:flex;align-items:end"><button class="btn green" type="submit">+ Criar cliente</button></div>
       </form>
     </div>
     <div class="panel"><table>
-      <thead><tr><th>Cliente</th><th>Contato</th><th>Phone Number ID</th><th>Status</th><th>Licença</th><th>Ações</th></tr></thead>
-      <tbody>${rowsHtml || '<tr><td colspan="6"><div class="empty">Nenhum cliente ainda.</div></td></tr>'}</tbody>
+      <thead><tr><th>Cliente</th><th>Contato</th><th>Phone Number ID</th><th>Status</th><th>Painel</th><th>Licença</th><th>Ações</th></tr></thead>
+      <tbody>${rowsHtml || '<tr><td colspan="7"><div class="empty">Nenhum cliente ainda.</div></td></tr>'}</tbody>
     </table></div>`));
 });
 
 router.post('/admin/clientes/novo', requireAuth, async (req, res) => {
   const b = req.body;
   const tenant = await repo.createTenant({
-    name: b.name, contact_name: b.contact_name, contact_phone: b.contact_phone,
+    name: b.name, contact_name: b.contact_name, contact_phone: repo.normalizePhoneBr(b.contact_phone),
     phone_number_id: b.phone_number_id, access_token: b.access_token, waba_id: b.waba_id,
-    notify_phone: b.notify_phone, notify_email: b.notify_email, status: 'ativo',
+    notify_phone: repo.normalizePhoneBr(b.notify_phone), notify_email: b.notify_email, status: 'ativo',
+    panel_password: b.panel_password ? repo.hashPassword(b.panel_password) : null,
   });
   await repo.saveTenantCatalog(tenant.id, JSON.parse(fs.readFileSync(path.join(__dirname, 'catalog.json'), 'utf-8')));
-  res.redirect('/admin/clientes?msg=' + encodeURIComponent(`Cliente "${b.name}" criado! Configure a licença e o conteúdo.`));
+  res.redirect('/admin/clientes?msg=' + encodeURIComponent(`Cliente "${b.name}" criado!`));
 });
 
 router.get('/admin/clientes/editar', requireAuth, async (req, res) => {
@@ -402,12 +512,13 @@ router.get('/admin/clientes/editar', requireAuth, async (req, res) => {
       <input type="hidden" name="id" value="${tenant.id}">
       <div><label>NOME</label><input type="text" name="name" value="${esc(tenant.name)}" required></div>
       <div><label>CONTATO</label><input type="text" name="contact_name" value="${esc(tenant.contact_name || '')}"></div>
-      <div><label>WHATSAPP DO CONTATO</label><input type="text" name="contact_phone" value="${esc(tenant.contact_phone || '')}"></div>
+      <div><label>WHATSAPP (login do painel)</label><input type="text" name="contact_phone" value="${esc(tenant.contact_phone || '')}"></div>
       <div><label>PHONE NUMBER ID</label><input type="text" name="phone_number_id" value="${esc(tenant.phone_number_id || '')}"></div>
       <div><label>ACCESS TOKEN</label><input type="text" name="access_token" value="${esc(tenant.access_token || '')}"></div>
       <div><label>WABA ID</label><input type="text" name="waba_id" value="${esc(tenant.waba_id || '')}"></div>
       <div><label>WHATSAPP DE NOTIFICAÇÕES</label><input type="text" name="notify_phone" value="${esc(tenant.notify_phone || '')}"></div>
       <div><label>E-MAIL DE NOTIFICAÇÕES</label><input type="email" name="notify_email" value="${esc(tenant.notify_email || '')}"></div>
+      <div><label>SENHA DO PAINEL ${tenant.panel_password ? '(já definida — deixe vazio para manter)' : ''}</label><input type="text" name="panel_password" placeholder="${tenant.panel_password ? 'Nova senha (opcional)' : 'Defina a senha do painel'}"></div>
       <div><label>STATUS</label><select name="status">
         <option value="ativo" ${tenant.status === 'ativo' ? 'selected' : ''}>Ativo</option>
         <option value="inativo" ${tenant.status === 'inativo' ? 'selected' : ''}>Inativo</option>
@@ -419,11 +530,13 @@ router.get('/admin/clientes/editar', requireAuth, async (req, res) => {
 
 router.post('/admin/clientes/salvar', requireAuth, async (req, res) => {
   const b = req.body;
-  await repo.updateTenant(Number(b.id), {
-    name: b.name, contact_name: b.contact_name, contact_phone: b.contact_phone,
+  const fields = {
+    name: b.name, contact_name: b.contact_name, contact_phone: repo.normalizePhoneBr(b.contact_phone),
     phone_number_id: b.phone_number_id, access_token: b.access_token, waba_id: b.waba_id,
-    notify_phone: b.notify_phone, notify_email: b.notify_email, status: b.status,
-  });
+    notify_phone: repo.normalizePhoneBr(b.notify_phone), notify_email: b.notify_email, status: b.status,
+  };
+  if (b.panel_password) fields.panel_password = repo.hashPassword(b.panel_password);
+  await repo.updateTenant(Number(b.id), fields);
   res.redirect('/admin/clientes?msg=' + encodeURIComponent('Cliente atualizado!'));
 });
 
@@ -433,7 +546,7 @@ router.post('/admin/clientes/excluir', requireAuth, async (req, res) => {
 });
 
 // ======================================================
-//  ASSINATURAS
+//  ASSINATURAS (somente admin)
 // ======================================================
 router.get('/admin/assinaturas', requireAuth, async (req, res) => {
   const tenants = await repo.getTenants();
@@ -442,9 +555,7 @@ router.get('/admin/assinaturas', requireAuth, async (req, res) => {
   const flash = req.query.msg ? `<div id="flashMsg">${esc(req.query.msg)}</div>` : '';
 
   const rows = subs.map(s => `<tr>
-    <td><b>${esc(s.tenant_name)}</b></td>
-    <td>${esc(s.plan_name || '—')}</td>
-    <td>${money(s.price)}</td>
+    <td><b>${esc(s.tenant_name)}</b></td><td>${esc(s.plan_name || '—')}</td><td>${money(s.price)}</td>
     <td>${statusBadge(s.status)}</td>
     <td>${s.expires_at ? esc(String(s.expires_at).slice(0, 10)) : '—'}</td>
     <td style="white-space:nowrap">
@@ -464,7 +575,7 @@ router.get('/admin/assinaturas', requireAuth, async (req, res) => {
         <div style="min-width:200px"><label>PLANO</label><select name="plan_id" required>${planOptions}</select></div>
         <button class="btn green" type="submit">+ Criar licença</button>
       </form>
-      <p style="font-size:12px;color:#64748b;margin-top:8px">O padrão é <b>Mensal R$ 299</b>. A licença vence em N dias; o bot envia o PIX de renovação automaticamente 3 dias antes.</p>
+      <p style="font-size:12px;color:#64748b;margin-top:8px">O bot envia o PIX de renovação automaticamente 3 dias antes do vencimento.</p>
     </div>
     <div class="panel"><table>
       <thead><tr><th>Cliente</th><th>Plano</th><th>Valor</th><th>Status</th><th>Vencimento</th><th>Ações</th></tr></thead>
@@ -473,10 +584,9 @@ router.get('/admin/assinaturas', requireAuth, async (req, res) => {
 });
 
 router.post('/admin/assinaturas/nova', requireAuth, async (req, res) => {
-  const b = req.body;
-  const plan = (await repo.getPlans()).find(p => p.id === Number(b.plan_id));
+  const plan = (await repo.getPlans()).find(p => p.id === Number(req.body.plan_id));
   if (!plan) return res.redirect('/admin/assinaturas?msg=' + encodeURIComponent('Plano inválido.') + '&type=err');
-  await repo.createSubscription(Number(b.tenant_id), plan.id, plan.price, plan.period_days);
+  await repo.createSubscription(Number(req.body.tenant_id), plan.id, plan.price, plan.period_days);
   res.redirect('/admin/assinaturas?msg=' + encodeURIComponent(`Licença criada: ${plan.name} — vence em ${plan.period_days} dias.`));
 });
 
@@ -511,20 +621,19 @@ router.post('/admin/assinaturas/cancelar', requireAuth, async (req, res) => {
 });
 
 // ======================================================
-//  PRODUTOS (por tenant)
+//  CONTEÚDO DO TENANT (telas compartilhadas admin/cliente)
 // ======================================================
-router.get('/admin/produtos', requireAuth, async (req, res) => {
-  const { tenant, tenants } = await tenantFromReq(req, res);
-  if (!tenant) return res.send(layout('Produtos', '/admin/produtos', '<div class="panel"><div class="empty">Crie um cliente primeiro.</div></div>', tenants));
+function productImgSrc(image) {
+  if (/^https?:\/\//.test(image)) return image;
+  return `/images/${image}`;
+}
+
+async function pageProdutos(req, res) {
+  const { tenant, tenants } = await resolveTenant(req, res);
+  const clientMode = !!req.clientMode;
+  if (!tenant) return res.send(layout('Produtos', clientMode ? '/painel/produtos' : '/admin/produtos', '<div class="empty">Crie um cliente primeiro.</div>', tenants, null, clientMode));
   const flash = req.query.msg ? `<div id="flashMsg">${esc(req.query.msg)}</div>` : '';
   const data = await catalog.loadTenantCatalog(tenant.id);
-  const imagesDir = path.join(__dirname, '..', 'public', 'images');
-  let imgs = '';
-  try {
-    imgs = fs.readdirSync(imagesDir).filter(f => /\.(png|jpe?g|webp)$/i.test(f)).map(f =>
-      `<div style="text-align:center"><img class="thumb" src="/images/${esc(f)}"><div style="font-size:11px;color:#64748b;word-break:break-all;margin:4px 0">${esc(f)}</div><button class="btn gray small" onclick="copyText('${esc(f)}', this)">Copiar</button></div>`
-    ).join('');
-  } catch (_) {}
 
   const catsHtml = data.categories.map((cat, ci) => {
     const prods = cat.products.map((p, pi) => {
@@ -537,13 +646,14 @@ router.get('/admin/produtos', requireAuth, async (req, res) => {
         <td><input type="text" name="plans[${k}][payment_link]" value="${esc(pl.payment_link || '')}" placeholder="https://mpago.li/..." style="min-width:130px"></td>
         <td><input type="text" name="plans[${k}][redirect_link]" value="${esc(pl.redirect_link || '')}" placeholder="https://wa.me/55..." style="min-width:130px"></td>
         <td><textarea name="plans[${k}][features]" rows="3">${esc(pl.features || '')}</textarea></td>
-        <td style="text-align:center"><button class="btn red small" type="submit" formaction="/admin/produtos/excluir-plano?tenant=${tenant.id}&ci=${ci}&pi=${pi}&plan_i=${k}" formnovalidate>🗑</button></td>
+        <td style="text-align:center"><button class="btn red small" type="submit" formaction="/admin/produtos/excluir-plano?ci=${ci}&pi=${pi}&plan_i=${k}" formnovalidate>🗑</button></td>
       </tr>`).join('') || '<tr><td colspan="8" style="color:#94a3b8;font-size:12px">Sem planos — adicione abaixo.</td></tr>';
 
+      const base = clientMode ? '/painel' : '/admin';
       return `
       <div class="panel" style="margin-bottom:14px"><h2>✏️ ${esc(p.name)} ${p.plans?.length ? `<span class="badge info">${p.plans.length} plano(s)</span>` : ''} ${statusBadge(p.available ? 'ok' : 'no')}</h2>
-      <form method="POST" action="/admin/produtos/salvar" class="grid2">
-        <input type="hidden" name="tenant" value="${tenant.id}"><input type="hidden" name="ci" value="${ci}"><input type="hidden" name="pi" value="${pi}">
+      <form method="POST" action="${base}/produtos/salvar" class="grid2">
+        <input type="hidden" name="ci" value="${ci}"><input type="hidden" name="pi" value="${pi}">
         <div>
           <label>NOME</label><input type="text" name="name" value="${esc(p.name)}" required>
           <label>PREÇO (R$)</label><input type="text" name="price" value="${p.price}">
@@ -560,20 +670,19 @@ router.get('/admin/produtos', requireAuth, async (req, res) => {
           <h3 style="font-size:13px;margin:4px 0 8px">📋 PLANOS DE ASSINATURA <small style="font-weight:400;color:#94a3b8">(opcional)</small></h3>
           <table><thead><tr><th>Nome</th><th>Preço</th><th>Período</th><th>★</th><th>Link pagamento</th><th>Link redirecionamento</th><th>Recursos</th><th></th></tr></thead>
           <tbody>${plans}</tbody></table>
-          <button class="btn gray small" type="submit" formaction="/admin/produtos/novo-plano?tenant=${tenant.id}&ci=${ci}&pi=${pi}" formnovalidate style="margin-top:8px">+ Adicionar plano</button>
-          <p style="font-size:11.5px;color:#94a3b8;margin-top:6px">💳 Link de pagamento = botão "Assinar Agora". 🔗 Link de redirecionamento (ex: wa.me/55...) = link clicável "Falar com a equipe".</p>
+          <button class="btn gray small" type="submit" formaction="${base}/produtos/novo-plano?ci=${ci}&pi=${pi}" formnovalidate style="margin-top:8px">+ Adicionar plano</button>
         </div>
         <div style="grid-column:1/-1;display:flex;gap:8px;margin-top:6px">
           <button class="btn" type="submit">💾 Salvar</button>
-          <button class="btn red" type="submit" formaction="/admin/produtos/excluir?tenant=${tenant.id}" formnovalidate>🗑 Excluir produto</button>
+          <button class="btn red" type="submit" formaction="${base}/produtos/excluir" formnovalidate>🗑 Excluir produto</button>
         </div>
       </form></div>`;
     });
     return `<div class="panel"><h2>${esc(cat.emoji || '')} ${esc(cat.name)} <span class="right badge info">${cat.products.length} produto(s)</span></h2>
       ${prods.join('')}
       <details style="margin-top:8px"><summary style="cursor:pointer;font-size:13px;color:#2563eb;font-weight:600">+ Adicionar novo produto</summary>
-      <form method="POST" action="/admin/produtos/novo" class="grid2" style="margin-top:12px">
-        <input type="hidden" name="tenant" value="${tenant.id}"><input type="hidden" name="ci" value="${ci}">
+      <form method="POST" action="${clientMode ? '/painel' : '/admin'}/produtos/novo" class="grid2" style="margin-top:12px">
+        <input type="hidden" name="ci" value="${ci}">
         <div><label>ID ÚNICO</label><input type="text" name="id" required><label>NOME</label><input type="text" name="name" required><label>PREÇO (R$)</label><input type="text" name="price" required>
           <label><input type="checkbox" name="digital" style="width:auto"> Produto digital</label></div>
         <div><label>RESUMO</label><input type="text" name="short_description"><label>DESCRIÇÃO</label><textarea name="long_description"></textarea></div>
@@ -581,47 +690,41 @@ router.get('/admin/produtos', requireAuth, async (req, res) => {
       </form></details></div>`;
   }).join('');
 
-  res.send(layout('Produtos', '/admin/produtos', `${tenantSelector(tenant.id, tenants)}${flash}
-    <div class="panel"><h2>📤 Enviar foto (armazenamento local — dev)</h2>
-      <form method="POST" action="/admin/upload" enctype="multipart/form-data"><input type="file" name="foto" accept="image/*" required style="margin-bottom:8px"><button class="btn" type="submit">Enviar</button></form>
-      <div class="img-list" style="display:flex;flex-wrap:wrap;gap:14px;margin-top:14px">${imgs || '<span style="font-size:13px;color:#64748b">Nenhuma foto local. Em produção use URL do Vercel Blob.</span>'}</div>
-    </div>
-    ${catsHtml}`, tenants, tenant.id));
-});
-
-function productImgSrc(image) {
-  if (/^https?:\/\//.test(image)) return image;
-  return `/images/${image}`;
+  res.send(layout('Produtos', clientMode ? '/painel/produtos' : '/admin/produtos', `${tenantSelector(tenant.id, tenants, clientMode)}${flash}
+    ${catsHtml}`, tenants, tenant, clientMode));
 }
 
-router.post('/admin/upload', requireAuth, upload.single('foto'), (req, res) => {
-  if (!req.file) return res.redirect('/admin/produtos?msg=' + encodeURIComponent('Nenhum arquivo.'));
-  res.redirect('/admin/produtos?msg=' + encodeURIComponent(`Foto enviada: ${req.file.filename}`));
-});
+router.get('/admin/produtos', requireAuth, pageProdutos);
+router.get('/painel/produtos', clientPanelAuth, pageProdutos);
 
-router.post('/admin/produtos/novo', requireAuth, async (req, res) => {
+async function postProdutosNovo(req, res) {
   const b = req.body;
-  const tenantId = Number(b.tenant);
+  const tenantId = tenantIdFromReq(req, b.tenant || req.query.tenant);
+  const base = req.clientMode ? '/painel' : '/admin';
   const data = await catalog.loadTenantCatalog(tenantId);
   const cat = data.categories[Number(b.ci)];
-  if (!cat) return res.redirect('/admin/produtos?tenant=' + tenantId);
-  if (cat.products.some(p => p.id === b.id)) return res.redirect(`/admin/produtos?tenant=${tenantId}&msg=` + encodeURIComponent('ID já existe.'));
+  if (!cat) return res.redirect(`${base}/produtos`);
+  if (cat.products.some(p => p.id === b.id)) return res.redirect(`${base}/produtos?msg=` + encodeURIComponent('ID já existe.') + '&type=err');
   cat.products.push({
     id: b.id, name: b.name, short_description: b.short_description || '', long_description: b.long_description || '',
     price: parseFloat(String(b.price).replace(',', '.')) || 0, image: 'placeholder.png', available: true,
     digital: b.digital === 'on',
   });
   await catalog.saveTenantCatalog(tenantId, data);
-  res.redirect(`/admin/produtos?tenant=${tenantId}&msg=` + encodeURIComponent(`Produto "${b.name}" criado!`));
-});
+  res.redirect(`${base}/produtos?msg=` + encodeURIComponent(`Produto "${b.name}" criado!`));
+}
 
-router.post('/admin/produtos/salvar', requireAuth, async (req, res) => {
+router.post('/admin/produtos/novo', requireAuth, postProdutosNovo);
+router.post('/painel/produtos/novo', clientPanelAuth, postProdutosNovo);
+
+async function postProdutosSalvar(req, res) {
   const b = req.body;
-  const tenantId = Number(b.tenant);
+  const tenantId = tenantIdFromReq(req, b.tenant || req.query.tenant);
+  const base = req.clientMode ? '/painel' : '/admin';
   const data = await catalog.loadTenantCatalog(tenantId);
   const cat = data.categories[Number(b.ci)];
   const p = cat?.products?.[Number(b.pi)];
-  if (!cat || !p) return res.redirect(`/admin/produtos?tenant=${tenantId}`);
+  if (!cat || !p) return res.redirect(`${base}/produtos`);
   p.name = b.name;
   p.short_description = b.short_description || '';
   p.long_description = b.long_description || '';
@@ -652,12 +755,16 @@ router.post('/admin/produtos/salvar', requireAuth, async (req, res) => {
   }
   p.plans = plans.length ? plans : undefined;
   await catalog.saveTenantCatalog(tenantId, data);
-  res.redirect(`/admin/produtos?tenant=${tenantId}&msg=` + encodeURIComponent(`Produto "${p.name}" atualizado!`));
-});
+  res.redirect(`${base}/produtos?msg=` + encodeURIComponent(`Produto "${p.name}" atualizado!`));
+}
 
-router.post('/admin/produtos/excluir', requireAuth, async (req, res) => {
+router.post('/admin/produtos/salvar', requireAuth, postProdutosSalvar);
+router.post('/painel/produtos/salvar', clientPanelAuth, postProdutosSalvar);
+
+async function postProdutosExcluir(req, res) {
   const b = req.body;
-  const tenantId = Number(b.tenant);
+  const tenantId = tenantIdFromReq(req, b.tenant || req.query.tenant);
+  const base = req.clientMode ? '/painel' : '/admin';
   const data = await catalog.loadTenantCatalog(tenantId);
   const cat = data.categories[Number(b.ci)];
   const p = cat?.products?.[Number(b.pi)];
@@ -665,22 +772,30 @@ router.post('/admin/produtos/excluir', requireAuth, async (req, res) => {
     cat.products.splice(Number(b.pi), 1);
     await catalog.saveTenantCatalog(tenantId, data);
   }
-  res.redirect(`/admin/produtos?tenant=${tenantId}`);
-});
+  res.redirect(`${base}/produtos`);
+}
 
-router.post('/admin/produtos/novo-plano', requireAuth, async (req, res) => {
-  const tenantId = Number(req.query.tenant);
+router.post('/admin/produtos/excluir', requireAuth, postProdutosExcluir);
+router.post('/painel/produtos/excluir', clientPanelAuth, postProdutosExcluir);
+
+async function postProdutosNovoPlano(req, res) {
+  const tenantId = tenantIdFromReq(req, req.query.tenant);
+  const base = req.clientMode ? '/painel' : '/admin';
   const data = await catalog.loadTenantCatalog(tenantId);
   const p = data.categories[Number(req.query.ci)]?.products[Number(req.query.pi)];
-  if (!p) return res.redirect(`/admin/produtos?tenant=${tenantId}`);
+  if (!p) return res.redirect(`${base}/produtos`);
   if (!p.plans) p.plans = [];
   p.plans.push({ id: '', name: '', price: null, period: 'mês', popular: false, payment_link: '', redirect_link: '', features: '' });
   await catalog.saveTenantCatalog(tenantId, data);
-  res.redirect(`/admin/produtos?tenant=${tenantId}`);
-});
+  res.redirect(`${base}/produtos`);
+}
 
-router.post('/admin/produtos/excluir-plano', requireAuth, async (req, res) => {
-  const tenantId = Number(req.query.tenant);
+router.post('/admin/produtos/novo-plano', requireAuth, postProdutosNovoPlano);
+router.post('/painel/produtos/novo-plano', clientPanelAuth, postProdutosNovoPlano);
+
+async function postProdutosExcluirPlano(req, res) {
+  const tenantId = tenantIdFromReq(req, req.query.tenant);
+  const base = req.clientMode ? '/painel' : '/admin';
   const data = await catalog.loadTenantCatalog(tenantId);
   const p = data.categories[Number(req.query.ci)]?.products[Number(req.query.pi)];
   const plan_i = Number(req.query.plan_i);
@@ -689,116 +804,145 @@ router.post('/admin/produtos/excluir-plano', requireAuth, async (req, res) => {
     if (!p.plans.length) p.plans = undefined;
     await catalog.saveTenantCatalog(tenantId, data);
   }
-  res.redirect(`/admin/produtos?tenant=${tenantId}`);
-});
+  res.redirect(`${base}/produtos`);
+}
 
-// ======================================================
-//  PEDIDOS E LEADS (por tenant)
-// ======================================================
-router.get('/admin/pedidos', requireAuth, async (req, res) => {
-  const { tenant, tenants } = await tenantFromReq(req, res);
-  if (!tenant) return res.send(layout('Pedidos', '/admin/pedidos', '<div class="empty">Crie um cliente.</div>', tenants));
+router.post('/admin/produtos/excluir-plano', requireAuth, postProdutosExcluirPlano);
+router.post('/painel/produtos/excluir-plano', clientPanelAuth, postProdutosExcluirPlano);
+
+// ----- PEDIDOS -----
+async function pagePedidos(req, res) {
+  const { tenant, tenants } = await resolveTenant(req, res);
+  const clientMode = !!req.clientMode;
+  if (!tenant) return res.send(layout('Pedidos', clientMode ? '/painel/pedidos' : '/admin/pedidos', '<div class="empty">Crie um cliente.</div>', tenants, null, clientMode));
   const filter = req.query.status || 'todos';
   const orders = (await repo.getOrders(tenant.id)).filter(o => filter === 'todos' || o.status === filter);
   const statusFilter = ['todos', 'pending', 'approved', 'shipped', 'delivered', 'cancelled'].map(s =>
-    `<a class="btn ${filter === s ? '' : 'gray'} small" href="/admin/pedidos?tenant=${tenant.id}&status=${s}">${s === 'todos' ? 'Todos' : s}</a>`).join(' ');
+    `<a class="btn ${filter === s ? '' : 'gray'} small" href="${clientMode ? '/painel' : '/admin'}/pedidos?status=${s}">${s === 'todos' ? 'Todos' : s}</a>`).join(' ');
 
-  const rows = orders.map(async o => {
+  const rowsHtml = (await Promise.all(orders.map(async o => {
     const items = (await repo.getOrderItems(o.id)).map(it => `${it.quantity}x ${esc(it.product_name)}`).join('<br>');
     const pay = await repo.getPaymentByOrderId(o.id);
     const lead = await repo.getLead(o.lead_id);
-    return `<tr id="pedido-${o.id}">
+    return `<tr>
       <td><b>#${esc(o.external_id)}</b><br><small style="color:#94a3b8">${esc(String(o.created_at).slice(0, 16))}</small></td>
       <td>${esc(lead?.full_name || '—')}<br><small style="color:#94a3b8">${esc(lead?.phone || '')}</small></td>
       <td>${items}</td><td>${money(o.total)}</td><td>${statusBadge(o.status)}</td>
       <td>${methodLabel(pay?.payment_method)}<br><small style="color:#94a3b8">${esc(pay?.mp_payment_id || '')}</small></td>
-      <td>${o.status === 'pending' ? `<form class="inline-form" method="POST" action="/admin/pedidos/status?tenant=${tenant.id}"><input type="hidden" name="id" value="${o.id}"><input type="hidden" name="status" value="approved"><button class="btn green small">Pago</button></form>` : ''}</td>
+      <td>${o.status === 'pending' ? `<form class="inline-form" method="POST" action="${clientMode ? '/painel' : '/admin'}/pedidos/status"><input type="hidden" name="id" value="${o.id}"><input type="hidden" name="status" value="approved"><button class="btn green small">Pago</button></form>` : ''}</td>
     </tr>`;
-  });
-  const rowsHtml = (await Promise.all(rows)).join('');
+  }))).join('');
 
-  res.send(layout('Pedidos', '/admin/pedidos', `${tenantSelector(tenant.id, tenants)}
+  res.send(layout('Pedidos', clientMode ? '/painel/pedidos' : '/admin/pedidos', `${tenantSelector(tenant.id, tenants, clientMode)}
     <div class="filters">${statusFilter}</div>
     <div class="panel"><table><thead><tr><th>Pedido</th><th>Cliente</th><th>Itens</th><th>Total</th><th>Status</th><th>Pagamento</th><th>Ações</th></tr></thead>
-    <tbody>${rowsHtml || '<tr><td colspan="7"><div class="empty">Nenhum pedido com esse filtro.</div></td></tr>'}</tbody></table></div>`, tenants, tenant.id));
-});
+    <tbody>${rowsHtml || '<tr><td colspan="7"><div class="empty">Nenhum pedido com esse filtro.</div></td></tr>'}</tbody></table></div>`, tenants, tenant, clientMode));
+}
 
-router.post('/admin/pedidos/status', requireAuth, async (req, res) => {
-  const tenantId = Number(req.query.tenant);
+router.get('/admin/pedidos', requireAuth, pagePedidos);
+router.get('/painel/pedidos', clientPanelAuth, pagePedidos);
+
+async function postPedidosStatus(req, res) {
+  const tenantId = tenantIdFromReq(req, req.query.tenant);
+  const base = req.clientMode ? '/painel' : '/admin';
   await repo.updateOrderStatus(Number(req.body.id), String(req.body.status));
-  res.redirect(`/admin/pedidos?tenant=${tenantId}`);
-});
+  res.redirect(`${base}/pedidos`);
+}
 
-router.get('/admin/leads', requireAuth, async (req, res) => {
-  const { tenant, tenants } = await tenantFromReq(req, res);
-  if (!tenant) return res.send(layout('Leads', '/admin/leads', '<div class="empty">Crie um cliente.</div>', tenants));
+router.post('/admin/pedidos/status', requireAuth, postPedidosStatus);
+router.post('/painel/pedidos/status', clientPanelAuth, postPedidosStatus);
+
+// ----- LEADS -----
+async function pageLeads(req, res) {
+  const { tenant, tenants } = await resolveTenant(req, res);
+  const clientMode = !!req.clientMode;
+  if (!tenant) return res.send(layout('Leads', clientMode ? '/painel/leads' : '/admin/leads', '<div class="empty">Crie um cliente.</div>', tenants, null, clientMode));
   const leads = await repo.listLeads(tenant.id);
   const rows = leads.map(l => `<tr>
     <td><b>${esc(l.full_name || '—')}</b><br><small style="color:#94a3b8">${esc(l.phone)}</small></td>
     <td>${esc(l.delivery_address || '—')}</td>
     <td>${statusBadge(l.status)}</td>
-    <td><form class="inline-form" method="POST" action="/admin/leads/status?tenant=${tenant.id}"><input type="hidden" name="id" value="${l.id}">
-      <select name="status" onchange="this.form.submit()">${['novo', 'contatado', 'convertido', 'fechado'].map(s => `<option value="${s}" ${l.status === s || l.status?.startsWith('pausado') && s === 'novo' ? 'selected' : ''}>${s}</option>`).join('')}</select></form></td>
+    <td><form class="inline-form" method="POST" action="${clientMode ? '/painel' : '/admin'}/leads/status"><input type="hidden" name="id" value="${l.id}">
+      <select name="status" onchange="this.form.submit()">${['novo', 'contatado', 'convertido', 'fechado'].map(s => `<option value="${s}" ${(l.status === s || (l.status?.startsWith('pausado') && s === 'novo')) ? 'selected' : ''}>${s}</option>`).join('')}</select></form></td>
     <td>${esc(String(l.created_at).slice(0, 16))}</td>
-    <td><button class="btn small" onclick="loadConversas(${l.id}, '${esc((l.full_name || l.phone).replace(/'/g, ''))}')">💬 Conversa</button></td>
+    <td><button class="btn small" onclick="copyText('${esc(l.phone)}', this)">📋 Número</button></td>
   </tr>`).join('');
-  res.send(layout('Leads', '/admin/leads', `${tenantSelector(tenant.id, tenants)}
+  res.send(layout('Leads', clientMode ? '/painel/leads' : '/admin/leads', `${tenantSelector(tenant.id, tenants, clientMode)}
     <div class="panel"><table id="tblLeads"><thead><tr><th>Cliente</th><th>Endereço</th><th>Status</th><th>Alterar</th><th>Contato</th><th></th></tr></thead>
-    <tbody>${rows || '<tr><td colspan="6"><div class="empty">Nenhum lead.</div></td></tr>'}</tbody></table></div>`, tenants, tenant.id));
-});
+    <tbody>${rows || '<tr><td colspan="6"><div class="empty">Nenhum lead.</div></td></tr>'}</tbody></table></div>`, tenants, tenant, clientMode));
+}
 
-router.post('/admin/leads/status', requireAuth, async (req, res) => {
-  const tenantId = Number(req.query.tenant);
+router.get('/admin/leads', requireAuth, pageLeads);
+router.get('/painel/leads', clientPanelAuth, pageLeads);
+
+async function postLeadsStatus(req, res) {
+  const tenantId = tenantIdFromReq(req, req.query.tenant);
+  const base = req.clientMode ? '/painel' : '/admin';
   await repo.updateLeadStatus(Number(req.body.id), String(req.body.status));
-  res.redirect(`/admin/leads?tenant=${tenantId}`);
-});
+  res.redirect(`${base}/leads`);
+}
 
-// ======================================================
-//  PERGUNTAS (por tenant)
-// ======================================================
-router.get('/admin/perguntas', requireAuth, async (req, res) => {
-  const { tenant, tenants } = await tenantFromReq(req, res);
-  if (!tenant) return res.send(layout('Perguntas', '/admin/perguntas', '<div class="empty">Crie um cliente.</div>', tenants));
+router.post('/admin/leads/status', requireAuth, postLeadsStatus);
+router.post('/painel/leads/status', clientPanelAuth, postLeadsStatus);
+
+// ----- PERGUNTAS -----
+async function pagePerguntas(req, res) {
+  const { tenant, tenants } = await resolveTenant(req, res);
+  const clientMode = !!req.clientMode;
+  if (!tenant) return res.send(layout('Perguntas', clientMode ? '/painel/perguntas' : '/admin/perguntas', '<div class="empty">Crie um cliente.</div>', tenants, null, clientMode));
   const data = await catalog.loadTenantCatalog(tenant.id);
+  const base = clientMode ? '/painel' : '/admin';
   const qs = Object.entries(data.questionnaires || {}).map(([qid, q]) => {
     const rows = (q.questions || []).map((question, qi) => `
       <tr><td><input type="text" name="q[${esc(qid)}][${qi}][key]" value="${esc(question.key)}"></td>
       <td><input type="text" name="q[${esc(qid)}][${qi}][field]" value="${esc(question.field || '')}"></td>
       <td><input type="text" name="q[${esc(qid)}][${qi}][question]" value="${esc(question.question)}" style="min-width:240px"></td>
       <td style="text-align:center"><input type="checkbox" name="q[${esc(qid)}][${qi}][optional]" ${question.optional ? 'checked' : ''}></td>
-      <td style="text-align:center"><button class="btn red small" type="submit" formaction="/admin/perguntas/remover?tenant=${tenant.id}&qid=${esc(qid)}&qi=${qi}" formnovalidate>🗑</button></td></tr>`).join('') || '<tr><td colspan="5" style="color:#64748b">Sem perguntas.</td></tr>';
+      <td style="text-align:center"><button class="btn red small" type="submit" formaction="${base}/perguntas/remover?qid=${esc(qid)}&qi=${qi}" formnovalidate>🗑</button></td></tr>`).join('') || '<tr><td colspan="5" style="color:#64748b">Sem perguntas.</td></tr>';
     return `<div class="panel"><h2>${esc(q.label || qid)} <span class="badge info">${esc(qid)}</span></h2>
-      <form method="POST" action="/admin/perguntas/salvar"><input type="hidden" name="tenant" value="${tenant.id}">
+      <form method="POST" action="${base}/perguntas/salvar">
         <table><thead><tr><th>Chave</th><th>Campo do lead</th><th>Pergunta</th><th>Opcional</th><th></th></tr></thead><tbody>${rows}</tbody></table>
         <div style="display:flex;gap:8px;margin-top:12px"><button class="btn" type="submit">💾 Salvar</button>
-        <button class="btn gray" type="submit" formaction="/admin/perguntas/nova?tenant=${tenant.id}&qid=${esc(qid)}" formnovalidate>+ Nova pergunta</button></div>
+        <button class="btn gray" type="submit" formaction="${base}/perguntas/nova?qid=${esc(qid)}" formnovalidate>+ Nova pergunta</button></div>
       </form></div>`;
   }).join('') || '<div class="panel">Nenhum questionário.</div>';
-  res.send(layout('Perguntas', '/admin/perguntas', `${tenantSelector(tenant.id, tenants)}${qs}`, tenants, tenant.id));
-});
+  res.send(layout('Perguntas', clientMode ? '/painel/perguntas' : '/admin/perguntas', `${tenantSelector(tenant.id, tenants, clientMode)}${qs}`, tenants, tenant, clientMode));
+}
 
-router.post('/admin/perguntas/nova', requireAuth, async (req, res) => {
-  const tenantId = Number(req.query.tenant);
+router.get('/admin/perguntas', requireAuth, pagePerguntas);
+router.get('/painel/perguntas', clientPanelAuth, pagePerguntas);
+
+async function postPerguntasNova(req, res) {
+  const tenantId = tenantIdFromReq(req, req.query.tenant);
+  const base = req.clientMode ? '/painel' : '/admin';
   const data = await catalog.loadTenantCatalog(tenantId);
   const qid = String(req.query.qid || '');
-  if (!data.questionnaires?.[qid]) return res.redirect(`/admin/perguntas?tenant=${tenantId}`);
+  if (!data.questionnaires?.[qid]) return res.redirect(`${base}/perguntas`);
   data.questionnaires[qid].questions.push({ key: '', field: '', question: '', optional: false });
   await catalog.saveTenantCatalog(tenantId, data);
-  res.redirect(`/admin/perguntas?tenant=${tenantId}`);
-});
+  res.redirect(`${base}/perguntas`);
+}
 
-router.post('/admin/perguntas/remover', requireAuth, async (req, res) => {
-  const tenantId = Number(req.query.tenant);
+router.post('/admin/perguntas/nova', requireAuth, postPerguntasNova);
+router.post('/painel/perguntas/nova', clientPanelAuth, postPerguntasNova);
+
+async function postPerguntasRemover(req, res) {
+  const tenantId = tenantIdFromReq(req, req.query.tenant);
+  const base = req.clientMode ? '/painel' : '/admin';
   const data = await catalog.loadTenantCatalog(tenantId);
   const qid = String(req.query.qid || '');
   const qi = Number(req.query.qi);
   if (data.questionnaires?.[qid] && Number.isInteger(qi)) data.questionnaires[qid].questions.splice(qi, 1);
   await catalog.saveTenantCatalog(tenantId, data);
-  res.redirect(`/admin/perguntas?tenant=${tenantId}`);
-});
+  res.redirect(`${base}/perguntas`);
+}
 
-router.post('/admin/perguntas/salvar', requireAuth, async (req, res) => {
-  const tenantId = Number(req.body.tenant);
+router.post('/admin/perguntas/remover', requireAuth, postPerguntasRemover);
+router.post('/painel/perguntas/remover', clientPanelAuth, postPerguntasRemover);
+
+async function postPerguntasSalvar(req, res) {
+  const tenantId = tenantIdFromReq(req, req.body.tenant || req.query.tenant);
+  const base = req.clientMode ? '/painel' : '/admin';
   const data = await catalog.loadTenantCatalog(tenantId);
   const incoming = req.body.q || {};
   for (const [qid, qArr] of Object.entries(incoming)) {
@@ -811,46 +955,54 @@ router.post('/admin/perguntas/salvar', requireAuth, async (req, res) => {
     data.questionnaires[qid].questions = questions;
   }
   await catalog.saveTenantCatalog(tenantId, data);
-  res.redirect(`/admin/perguntas?tenant=${tenantId}`);
-});
+  res.redirect(`${base}/perguntas`);
+}
 
-// ======================================================
-//  MENSAGENS (por tenant)
-// ======================================================
-router.get('/admin/mensagens', requireAuth, async (req, res) => {
-  const { tenant, tenants } = await tenantFromReq(req, res);
-  if (!tenant) return res.send(layout('Mensagens', '/admin/mensagens', '<div class="empty">Crie um cliente.</div>', tenants));
+router.post('/admin/perguntas/salvar', requireAuth, postPerguntasSalvar);
+router.post('/painel/perguntas/salvar', clientPanelAuth, postPerguntasSalvar);
+
+// ----- MENSAGENS -----
+async function pageMensagens(req, res) {
+  const { tenant, tenants } = await resolveTenant(req, res);
+  const clientMode = !!req.clientMode;
+  if (!tenant) return res.send(layout('Mensagens', clientMode ? '/painel/mensagens' : '/admin/mensagens', '<div class="empty">Crie um cliente.</div>', tenants, null, clientMode));
   const data = await catalog.loadTenantCatalog(tenant.id);
   const fields = Object.entries(data.messages || {}).map(([key, value]) => `
     <div class="panel"><h2>${esc(key)}</h2><textarea name="msgs[${esc(key)}]" style="min-height:80px">${esc(value)}</textarea></div>`).join('');
-  res.send(layout('Mensagens', '/admin/mensagens', `${tenantSelector(tenant.id, tenants)}
-    <form method="POST" action="/admin/mensagens/salvar"><input type="hidden" name="tenant" value="${tenant.id}">
-      ${fields}<button class="btn" type="submit">💾 Salvar mensagens</button></form>`, tenants, tenant.id));
-});
+  res.send(layout('Mensagens', clientMode ? '/painel/mensagens' : '/admin/mensagens', `${tenantSelector(tenant.id, tenants, clientMode)}
+    <form method="POST" action="${clientMode ? '/painel' : '/admin'}/mensagens/salvar">
+      ${fields}<button class="btn" type="submit">💾 Salvar mensagens</button></form>`, tenants, tenant, clientMode));
+}
 
-router.post('/admin/mensagens/salvar', requireAuth, async (req, res) => {
-  const tenantId = Number(req.body.tenant);
+router.get('/admin/mensagens', requireAuth, pageMensagens);
+router.get('/painel/mensagens', clientPanelAuth, pageMensagens);
+
+async function postMensagensSalvar(req, res) {
+  const tenantId = tenantIdFromReq(req, req.body.tenant || req.query.tenant);
+  const base = req.clientMode ? '/painel' : '/admin';
   const data = await catalog.loadTenantCatalog(tenantId);
   const msgs = req.body.msgs || {};
   for (const key of Object.keys(data.messages || {})) {
     if (msgs[key] !== undefined) data.messages[key] = msgs[key];
   }
   await catalog.saveTenantCatalog(tenantId, data);
-  res.redirect(`/admin/mensagens?tenant=${tenantId}`);
-});
+  res.redirect(`${base}/mensagens`);
+}
 
-// ======================================================
-//  CONFIGURAÇÕES (por tenant)
-// ======================================================
-router.get('/admin/config', requireAuth, async (req, res) => {
-  const { tenant, tenants } = await tenantFromReq(req, res);
-  if (!tenant) return res.send(layout('Configurações', '/admin/config', '<div class="empty">Crie um cliente.</div>', tenants));
+router.post('/admin/mensagens/salvar', requireAuth, postMensagensSalvar);
+router.post('/painel/mensagens/salvar', clientPanelAuth, postMensagensSalvar);
+
+// ----- CONFIG -----
+async function pageConfig(req, res) {
+  const { tenant, tenants } = await resolveTenant(req, res);
+  const clientMode = !!req.clientMode;
+  if (!tenant) return res.send(layout('Configurações', clientMode ? '/painel/config' : '/admin/config', '<div class="empty">Crie um cliente.</div>', tenants, null, clientMode));
   const data = await catalog.loadTenantCatalog(tenant.id);
   const s = data.store || {};
   const c = data.company || {};
   const addr = c.address || {};
-  res.send(layout('Configurações', '/admin/config', `${tenantSelector(tenant.id, tenants)}
-    <form method="POST" action="/admin/config/salvar"><input type="hidden" name="tenant" value="${tenant.id}">
+  res.send(layout('Configurações', clientMode ? '/painel/config' : '/admin/config', `${tenantSelector(tenant.id, tenants, clientMode)}
+    <form method="POST" action="${clientMode ? '/painel' : '/admin'}/config/salvar">
       <div class="panel"><h2>🏪 Loja</h2><div class="grid3">
         <div><label>FRETE (R$)</label><input type="text" name="store[delivery_fee]" value="${s.delivery_fee ?? 0}"></div>
         <div><label>FRETE GRÁTIS ACIMA (R$)</label><input type="text" name="store[delivery_free_full]" value="${s.delivery_free_full ?? 0}"></div>
@@ -858,17 +1010,20 @@ router.get('/admin/config', requireAuth, async (req, res) => {
       </div></div>
       <div class="panel"><h2>🏢 Empresa</h2><div class="grid2">
         <div><label>NOME DA EMPRESA</label><input type="text" name="company[name]" value="${esc(c.name || '')}"></div>
-        <div><label>WHATSAPP DE NOTIFICAÇÕES</label><input type="text" name="company[notify_phone]" value="${esc(tenant.notify_phone || '')}" disabled></div>
         <div><label>HORÁRIO</label><input type="text" name="company[business_hours]" value="${esc(c.business_hours || '')}"></div>
         <div><label>ENDEREÇO (rua, n°)</label><input type="text" name="company[address][street]" value="${esc(addr.street || '')}"></div>
-      </div>
-      <p style="font-size:12px;color:#64748b;margin-top:8px">WhatsApp e e-mail de notificação são definidos na aba <b>Clientes</b> (editar).</p></div>
+        <div><label>CIDADE</label><input type="text" name="company[address][city]" value="${esc(addr.city || '')}"></div>
+      </div></div>
       <button class="btn" type="submit">💾 Salvar</button>
-    </form>`, tenants, tenant.id));
-});
+    </form>`, tenants, tenant, clientMode));
+}
 
-router.post('/admin/config/salvar', requireAuth, async (req, res) => {
-  const tenantId = Number(req.body.tenant);
+router.get('/admin/config', requireAuth, pageConfig);
+router.get('/painel/config', clientPanelAuth, pageConfig);
+
+async function postConfigSalvar(req, res) {
+  const tenantId = tenantIdFromReq(req, req.body.tenant || req.query.tenant);
+  const base = req.clientMode ? '/painel' : '/admin';
   const data = await catalog.loadTenantCatalog(tenantId);
   const s = req.body.store || {};
   if (s.delivery_fee !== undefined) data.store.delivery_fee = parseFloat(String(s.delivery_fee).replace(',', '.')) || 0;
@@ -885,7 +1040,33 @@ router.post('/admin/config/salvar', requireAuth, async (req, res) => {
     }
   }
   await catalog.saveTenantCatalog(tenantId, data);
-  res.redirect(`/admin/config?tenant=${tenantId}`);
+  res.redirect(`${base}/config`);
+}
+
+router.post('/admin/config/salvar', requireAuth, postConfigSalvar);
+router.post('/painel/config/salvar', clientPanelAuth, postConfigSalvar);
+
+// ----- TROCA DE SENHA (cliente) -----
+router.get('/painel/senha', clientPanelAuth, (req, res) => {
+  const tenant = req.tenantSession;
+  res.send(layout('Trocar senha', '/painel/senha', `
+    <div class="panel"><h2>🔑 Trocar senha</h2>
+      <form method="POST" action="/painel/senha" style="max-width:420px">
+        <label>SENHA ATUAL</label><input type="password" name="atual" required>
+        <label>NOVA SENHA</label><input type="password" name="nova" required minlength="6">
+        <label>CONFIRMAR NOVA SENHA</label><input type="password" name="confirma" required minlength="6">
+        <div style="margin-top:14px"><button class="btn" type="submit">💾 Alterar senha</button></div>
+      </form>
+    </div>`, [tenant], tenant, true));
+});
+
+router.post('/painel/senha', clientPanelAuth, async (req, res) => {
+  const tenant = req.tenantSession;
+  const { atual, nova, confirma } = req.body;
+  if (nova !== confirma) return res.redirect('/painel/senha?msg=' + encodeURIComponent('Confirmação não confere.') + '&type=err');
+  if (!repo.verifyPassword(atual, tenant.panel_password)) return res.redirect('/painel/senha?msg=' + encodeURIComponent('Senha atual incorreta.') + '&type=err');
+  await repo.updateTenant(tenant.id, { panel_password: repo.hashPassword(nova) });
+  res.redirect('/painel/senha?msg=' + encodeURIComponent('Senha alterada com sucesso!'));
 });
 
 module.exports = router;
