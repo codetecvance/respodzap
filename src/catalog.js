@@ -5,7 +5,7 @@ const repo = require('./repository');
 const CACHE_TTL_MS = 15000;
 const cache = new Map(); // tenantId -> { catalog, at }
 
-const TEMPLATE_PATH = path.join(__dirname, 'catalog.json');
+const TEMPLATE_PATH = path.join(__dirname, 'catalog-template.json');
 
 function defaultCatalog() {
   try {

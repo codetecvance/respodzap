@@ -438,6 +438,24 @@ async function pageDashboard(req, res) {
     return `<div class="bar-col" title="${esc(d.dia)} — ${d.qtd} pedido(s)"><div class="qtd">${d.qtd}</div><div class="bar" style="height:${h}px"></div><div class="day">${esc(d.dia.slice(5))}</div></div>`;
   }).join('');
 
+  // Guia de boas-vindas para cliente novo (catálogo vazio)
+  let onboarding = '';
+  if (clientMode) {
+    const catData = await catalog.loadTenantCatalog(tenant.id);
+    const totalProducts = (catData.categories || []).reduce((s, c) => s + (c.products || []).length, 0);
+    const hasCompanyName = !!catData.company?.name;
+    if (!totalProducts || !hasCompanyName) {
+      onboarding = `<div class="panel" style="background:#fffbeb;border-color:#fde68a">
+        <h2 style="color:#92400e">🚀 Boas-vindas, ${esc(tenant.name)}! Configure seu painel em 3 passos</h2>
+        <ol style="font-size:13px;color:#78350f;line-height:2;padding-left:20px">
+          ${!hasCompanyName ? `<li><b>Nome da empresa</b> — <a href="/painel/config">Configurações</a> (aparece nas mensagens do bot)</li>` : ''}
+          ${!totalProducts ? `<li><b>Adicione seus produtos</b> — <a href="/painel/produtos">Produtos</a> (com foto, preço e descrição)</li>` : ''}
+          <li><b>Personalize as mensagens</b> — <a href="/painel/mensagens">Mensagens</a></li>
+        </ol>
+      </div>`;
+    }
+  }
+
   const recentRows = await Promise.all(orders.slice(0, 5).map(async o => {
     const lead = await repo.getLead(o.lead_id);
     return `<tr><td><b>#${esc(o.external_id)}</b></td><td>${esc(lead?.full_name || '—')}</td><td>${money(o.total)}</td><td>${statusBadge(o.status)}</td><td>${esc(String(o.created_at).slice(0, 16))}</td></tr>`;
@@ -461,6 +479,7 @@ async function pageDashboard(req, res) {
 
   res.send(layout('Dashboard', clientMode ? '/painel' : '/admin', `
     ${cards}
+    ${onboarding}
     ${clientMode ? `<div class="panel" style="background:#f0fdf4;border-color:#bbf7d0"><h2 style="color:#166534">👋 Olá, ${esc(tenant.name)}!</h2><p style="font-size:13px;color:#166534">Este é o painel do seu negócio. Gerencie seus produtos, veja seus pedidos e clientes.</p></div>` : tenantSelector(tenant.id, tenants, clientMode)}
     <div class="panel"><h2>📅 Pedidos dos últimos 14 dias</h2><div class="bars">${bars || '<div class="empty">Sem pedidos no período.</div>'}</div></div>
     <div class="panel"><h2>🕒 Últimos pedidos</h2><table><thead><tr><th>Pedido</th><th>Cliente</th><th>Total</th><th>Status</th><th>Data</th></tr></thead><tbody>${recentRows.join('') || '<tr><td colspan="5"><div class="empty">Nenhum pedido.</div></td></tr>'}</tbody></table></div>
@@ -522,8 +541,9 @@ router.post('/admin/clientes/novo', requireAuth, async (req, res) => {
     notify_phone: repo.normalizePhoneBr(b.notify_phone), notify_email: b.notify_email, status: 'ativo',
     panel_password: b.panel_password ? repo.hashPassword(b.panel_password) : null,
   });
-  await repo.saveTenantCatalog(tenant.id, JSON.parse(fs.readFileSync(path.join(__dirname, 'catalog.json'), 'utf-8')));
-  res.redirect('/admin/clientes?msg=' + encodeURIComponent(`Cliente "${b.name}" criado!`));
+  // Catálogo LIMPO (sem dados da CodetecVance) — o cliente preenche o dele
+  await repo.saveTenantCatalog(tenant.id, JSON.parse(fs.readFileSync(path.join(__dirname, 'catalog-template.json'), 'utf-8')));
+  res.redirect('/admin/clientes?msg=' + encodeURIComponent(`Cliente "${b.name}" criado! Configure a licença e a senha do painel.`));
 });
 
 router.get('/admin/clientes/editar', requireAuth, async (req, res) => {

@@ -1,0 +1,91 @@
+{
+  "company": {
+    "name": "",
+    "display_name": "",
+    "phone": "",
+    "email": "",
+    "instagram": "",
+    "website": "",
+    "address": {
+      "street": "",
+      "neighborhood": "",
+      "city": "",
+      "state": "",
+      "zip": ""
+    },
+    "business_hours": ""
+  },
+
+  "categories": [
+    {
+      "id": "meus-produtos",
+      "name": "Meus Produtos",
+      "description": "Seus produtos e serviços",
+      "emoji": "🛍️",
+      "products": []
+    }
+  ],
+
+  "store": {
+    "currency": "BRL",
+    "currency_symbol": "R$",
+    "min_order": 10.00,
+    "delivery_free_full": 200.00,
+    "delivery_fee": 15.00,
+    "pix_discount_percent": 5,
+    "installments_max": 3,
+    "payment_methods": [
+      { "type": "pix", "label": "PIX (5% desconto)", "discount_percent": 5 },
+      { "type": "credit_card", "label": "Cartão de Crédito (até 3x sem juros)" },
+      { "type": "debit_card", "label": "Cartão de Débito" }
+    ]
+  },
+
+  "questionnaires": {
+    "checkout": {
+      "label": "Perguntas do pedido",
+      "questions": [
+        {
+          "key": "endereco",
+          "field": "delivery_address",
+          "question": "Qual o endereço de entrega? (rua, número, bairro, cidade)",
+          "optional": false
+        },
+        {
+          "key": "observacao",
+          "question": "Alguma observação sobre o pedido? (opcional)",
+          "optional": true
+        }
+      ]
+    }
+  },
+
+  "messages": {
+    "welcome": "Olá, {nome}! Bem-vindo(a) à {empresa}\n\nO que você deseja fazer?",
+    "no_categories": "Nenhuma categoria disponível.",
+    "categories_title": "Categorias disponíveis:",
+    "no_products": "Nenhum produto nesta categoria.",
+    "product_not_found": "Produto não encontrado.",
+    "product_detail": "*{nome}*\n\n{descricao}\n\n💰 {preco}",
+    "added_to_cart": "✅ \"{produto}\" adicionado ao carrinho!\nItens na sacola: {total}",
+    "cart_empty": "Seu carrinho está vazio. Que tal dar uma olhada nos nossos produtos?",
+    "cart_title": "*Seu Carrinho de Compras:*",
+    "cart_item": "{n}. {produto} — {qtd}x R$ {preco}",
+    "cart_total": "*Total: R$ {total}*",
+    "checkout_ask_name": "Qual o nome para o pedido?",
+    "checkout_confirm": "Confirme seu pedido:\n\nCliente: {nome}\nSubtotal: R$ {subtotal}\nFrete: R$ {frete}\n*Total: R$ {total}*",
+    "order_created_payment": "✅ *Pedido #{pedido} criado!*\n\nValor total: R$ {total}\n\n*Escolha a forma de pagamento:*",
+    "payment_pix": "✅ *Pedido #{pedido}*\n\n💵 Pagamento via *PIX*\n💰 Total: R$ {total} (5% de desconto aplicado)\n\n*1️⃣* Escaneie o QR Code abaixo, ou\n*2️⃣* Use o *PIX copia e cola*:\n\n```\n{qr}\n```\n\n⏳ Assim que o pagamento for aprovado, você recebe a confirmação automática aqui.",
+    "payment_card": "✅ *Pedido #{pedido}*\n\n💳 Pagamento via *{tipo}*\n💰 Total: R$ {total} (em até 3x sem juros)\n\nPara pagar, toque no link abaixo:\n\n🔗 {link}\n\n⏳ Assim que o pagamento for aprovado, você recebe a confirmação automática aqui.",
+    "payment_error": "Seu pedido foi criado, mas houve um problema ao gerar o pagamento. Um atendente vai te ajudar em instantes.",
+    "payment_confirmed": "🎉 *Pagamento confirmado!*\n\n{resumo}\n\nSeu pedido está em andamento. Obrigado por comprar conosco!",
+    "ask_support_name": "Informe seu nome completo:",
+    "ask_support_reason": "Qual o motivo do seu contato?",
+    "support_escalation": "Um dos nossos atendentes vai falar com você em breve pelo WhatsApp!",
+    "no_orders": "Você não tem pedidos ainda.",
+    "order_status": "Seu último pedido: #{pedido} — Status: {status}",
+    "cart_cleared": "Carrinho esvaziado.",
+    "plans_title": "{produto} — escolha o plano:",
+    "plan_detail": "*{produto} — {plano}*\n\n💰 {preco}\n\n{recursos}"
+  }
+}
