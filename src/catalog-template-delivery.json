@@ -16,7 +16,6 @@
     },
     "business_hours": "Todos os dias: 18h às 23h30"
   },
-
   "categories": [
     {
       "id": "cardapio",
@@ -29,7 +28,7 @@
           "name": "Combo Clássico",
           "short_description": "X-Salada + batata + refrigerante",
           "long_description": "Hambúrguer 150g com queijo, alface, tomate, batata frita média e refrigerante lata. O combo queridinho da casa!",
-          "price": 29.90,
+          "price": 29.9,
           "image": "placeholder.png",
           "unit": "combo",
           "available": true,
@@ -38,18 +37,36 @@
               "grupo": "Refrigerante",
               "unico": true,
               "opcoes": [
-                { "nome": "Coca-Cola", "preco": 0 },
-                { "nome": "Guaraná", "preco": 0 },
-                { "nome": "Fanta Laranja", "preco": 0 }
+                {
+                  "nome": "Coca-Cola",
+                  "preco": 0
+                },
+                {
+                  "nome": "Guaraná",
+                  "preco": 0
+                },
+                {
+                  "nome": "Fanta Laranja",
+                  "preco": 0
+                }
               ]
             },
             {
               "grupo": "Adicionais",
               "max": 3,
               "opcoes": [
-                { "nome": "Bacon extra", "preco": 4.00 },
-                { "nome": "Cheddar extra", "preco": 4.00 },
-                { "nome": "Batata grande", "preco": 6.00 }
+                {
+                  "nome": "Bacon extra",
+                  "preco": 4
+                },
+                {
+                  "nome": "Cheddar extra",
+                  "preco": 4
+                },
+                {
+                  "nome": "Batata grande",
+                  "preco": 6
+                }
               ]
             }
           ]
@@ -59,7 +76,7 @@
           "name": "Hot Dog Completo",
           "short_description": "Salsicha, purê, batata palha e milho",
           "long_description": "Pão macio, salsicha, purê de batata, batata palha, milho e queijo.",
-          "price": 18.90,
+          "price": 18.9,
           "image": "placeholder.png",
           "unit": "lanche",
           "available": true,
@@ -68,9 +85,18 @@
               "grupo": "Extras",
               "max": 4,
               "opcoes": [
-                { "nome": "Salsicha extra", "preco": 4.00 },
-                { "nome": "Cheddar", "preco": 3.50 },
-                { "nome": "Bacon", "preco": 4.50 }
+                {
+                  "nome": "Salsicha extra",
+                  "preco": 4
+                },
+                {
+                  "nome": "Cheddar",
+                  "preco": 3.5
+                },
+                {
+                  "nome": "Bacon",
+                  "preco": 4.5
+                }
               ]
             }
           ]
@@ -88,7 +114,7 @@
           "name": "Combo Família",
           "short_description": "4 lanches + 2 batatas + 4 refris",
           "long_description": "Quatro lanches artesanais, duas batatas grandes e quatro refrigerantes. Perfeito para a família.",
-          "price": 89.90,
+          "price": 89.9,
           "image": "placeholder.png",
           "unit": "combo",
           "available": true,
@@ -97,9 +123,18 @@
               "grupo": "Sabores dos lanches",
               "unico": true,
               "opcoes": [
-                { "nome": "Todos X-Salada", "preco": 0 },
-                { "nome": "2 X-Salada + 2 X-Burger", "preco": 0 },
-                { "nome": "Todos X-Bacon", "preco": 12.00 }
+                {
+                  "nome": "Todos X-Salada",
+                  "preco": 0
+                },
+                {
+                  "nome": "2 X-Salada + 2 X-Burger",
+                  "preco": 0
+                },
+                {
+                  "nome": "Todos X-Bacon",
+                  "preco": 12
+                }
               ]
             }
           ]
@@ -117,7 +152,7 @@
           "name": "Refrigerante 2L",
           "short_description": "Coca, Guaraná ou Fanta",
           "long_description": "Refrigerante 2 litros gelado.",
-          "price": 14.00,
+          "price": 14,
           "image": "placeholder.png",
           "unit": "garrafa",
           "available": true
@@ -127,7 +162,7 @@
           "name": "Água Mineral 500ml",
           "short_description": "Com ou sem gás",
           "long_description": "Água mineral 500ml.",
-          "price": 4.00,
+          "price": 4,
           "image": "placeholder.png",
           "unit": "unidade",
           "available": true,
@@ -136,8 +171,14 @@
               "grupo": "Tipo",
               "unico": true,
               "opcoes": [
-                { "nome": "Sem gás", "preco": 0 },
-                { "nome": "Com gás", "preco": 0 }
+                {
+                  "nome": "Sem gás",
+                  "preco": 0
+                },
+                {
+                  "nome": "Com gás",
+                  "preco": 0
+                }
               ]
             }
           ]
@@ -145,19 +186,28 @@
       ]
     }
   ],
-
   "store": {
     "currency": "BRL",
     "currency_symbol": "R$",
-    "min_order": 15.00,
-    "delivery_free_full": 80.00,
-    "delivery_fee": 6.00,
+    "min_order": 15,
+    "delivery_free_full": 80,
+    "delivery_fee": 6,
     "pix_discount_percent": 5,
     "installments_max": 1,
     "payment_methods": [
-      { "type": "pix", "label": "PIX (5% desconto)", "discount_percent": 5 },
-      { "type": "credit_card", "label": "Cartão de Crédito" },
-      { "type": "debit_card", "label": "Cartão de Débito" }
+      {
+        "type": "pix",
+        "label": "PIX (5% desconto)",
+        "discount_percent": 5
+      },
+      {
+        "type": "credit_card",
+        "label": "Cartão de Crédito"
+      },
+      {
+        "type": "debit_card",
+        "label": "Cartão de Débito"
+      }
     ],
     "menu_image": {
       "enabled": true,
@@ -168,13 +218,24 @@
       "footer_text": ""
     },
     "delivery_areas": [
-      { "bairro": "Centro", "taxa": 5.00 },
-      { "bairro": "Trindade", "taxa": 6.00 },
-      { "bairro": "Agronômica", "taxa": 7.00 },
-      { "bairro": "Itacorubi", "taxa": 9.00 }
+      {
+        "bairro": "Centro",
+        "taxa": 5
+      },
+      {
+        "bairro": "Trindade",
+        "taxa": 6
+      },
+      {
+        "bairro": "Agronômica",
+        "taxa": 7
+      },
+      {
+        "bairro": "Itacorubi",
+        "taxa": 9
+      }
     ]
   },
-
   "questionnaires": {
     "checkout": {
       "label": "Dados do pedido",
@@ -193,7 +254,6 @@
       ]
     }
   },
-
   "messages": {
     "welcome": "Olá, {nome}! Bem-vindo(a) ao delivery {empresa} 🛵\n\nEscolha uma opção abaixo:",
     "no_categories": "Nenhuma categoria disponível.",
@@ -224,6 +284,27 @@
     "addon_group": "*{produto}* — escolha o *{grupo}*:",
     "addon_done": "Adicionais registrados!",
     "out_of_area": "😔 Desculpe, seu bairro está fora da nossa área de entrega. Entre em contato para retirada no local.",
-    "store_closed": "😔 Estamos fechados agora — {horario}.\n\nVolte mais tarde!"
+    "store_closed": "😔 Estamos fechados agora — {horario}.\n\nVolte mais tarde!",
+    "support_notify_title": "ATENDIMENTO SOLICITADO",
+    "support_notify_body": "Nome: {nome}\nWhatsApp: {telefone}\nMotivo: {motivo}"
+  },
+  "buttons": {
+    "menu_shop": "Comprar",
+    "menu_support": "Atendente",
+    "menu_track": "Meus Pedidos",
+    "back": "← Voltar",
+    "buy": "🛒 Comprar",
+    "quote": "📞 Quero saber mais",
+    "add_to_cart": "Continuar comprando",
+    "cart_show": "Ver carrinho",
+    "cart_buy": "Finalizar pedido",
+    "cart_clear": "Esvaziar carrinho",
+    "add_more": "➕ Adicionar mais itens",
+    "confirm_order": "✅ Confirmar pedido",
+    "cancel": "❌ Cancelar",
+    "pay_pix": "PIX (5% off)",
+    "pay_credit": "Cartão Crédito",
+    "pay_debit": "Cartão Débito",
+    "list_button": "Ver opções"
   }
 }

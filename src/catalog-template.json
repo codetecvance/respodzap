@@ -16,7 +16,6 @@
     },
     "business_hours": ""
   },
-
   "categories": [
     {
       "id": "meus-produtos",
@@ -26,19 +25,28 @@
       "products": []
     }
   ],
-
   "store": {
     "currency": "BRL",
     "currency_symbol": "R$",
-    "min_order": 10.00,
-    "delivery_free_full": 200.00,
-    "delivery_fee": 15.00,
+    "min_order": 10,
+    "delivery_free_full": 200,
+    "delivery_fee": 15,
     "pix_discount_percent": 5,
     "installments_max": 3,
     "payment_methods": [
-      { "type": "pix", "label": "PIX (5% desconto)", "discount_percent": 5 },
-      { "type": "credit_card", "label": "Cartão de Crédito (até 3x sem juros)" },
-      { "type": "debit_card", "label": "Cartão de Débito" }
+      {
+        "type": "pix",
+        "label": "PIX (5% desconto)",
+        "discount_percent": 5
+      },
+      {
+        "type": "credit_card",
+        "label": "Cartão de Crédito (até 3x sem juros)"
+      },
+      {
+        "type": "debit_card",
+        "label": "Cartão de Débito"
+      }
     ],
     "menu_image": {
       "enabled": true,
@@ -49,7 +57,6 @@
       "footer_text": ""
     }
   },
-
   "questionnaires": {
     "checkout": {
       "label": "Perguntas do pedido",
@@ -68,7 +75,6 @@
       ]
     }
   },
-
   "messages": {
     "welcome": "Olá, {nome}! Bem-vindo(a) à {empresa}\n\nO que você deseja fazer?",
     "no_categories": "Nenhuma categoria disponível.",
@@ -96,6 +102,27 @@
     "cart_cleared": "Carrinho esvaziado.",
     "store_closed": "😔 Estamos fechados agora — {horario}.\n\nVolte mais tarde!",
     "plans_title": "{produto} — escolha o plano:",
-    "plan_detail": "*{produto} — {plano}*\n\n💰 {preco}\n\n{recursos}"
+    "plan_detail": "*{produto} — {plano}*\n\n💰 {preco}\n\n{recursos}",
+    "support_notify_title": "ATENDIMENTO SOLICITADO",
+    "support_notify_body": "Nome: {nome}\nWhatsApp: {telefone}\nMotivo: {motivo}"
+  },
+  "buttons": {
+    "menu_shop": "Comprar",
+    "menu_support": "Atendente",
+    "menu_track": "Meus Pedidos",
+    "back": "← Voltar",
+    "buy": "🛒 Comprar",
+    "quote": "📞 Quero saber mais",
+    "add_to_cart": "Continuar comprando",
+    "cart_show": "Ver carrinho",
+    "cart_buy": "Finalizar pedido",
+    "cart_clear": "Esvaziar carrinho",
+    "add_more": "➕ Adicionar mais itens",
+    "confirm_order": "✅ Confirmar pedido",
+    "cancel": "❌ Cancelar",
+    "pay_pix": "PIX (5% off)",
+    "pay_credit": "Cartão Crédito",
+    "pay_debit": "Cartão Débito",
+    "list_button": "Ver opções"
   }
 }

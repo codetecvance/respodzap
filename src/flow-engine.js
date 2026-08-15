@@ -196,8 +196,8 @@ async function _finishAddons(tenant, lead, product, selections) {
   const count = await repo.cartCount(lead.id);
   const extra = repo.formatAddons(formatarOpcoesSelecionadas(selections));
   await ws.sendButtons(lead.phone, await catalog.msg(tenant.id, 'added_to_cart', { produto: extra ? `${product.name} (${extra})` : product.name, total: count }), [
-    { id: 'MENU_SHOP', title: 'Continuar comprando' },
-    { id: 'CART_SHOW', title: 'Ver carrinho' },
+    { id: 'MENU_SHOP', title: await catalog.getButton(tenant.id, 'add_to_cart') },
+    { id: 'CART_SHOW', title: await catalog.getButton(tenant.id, 'cart_show') },
   ], tenant);
   await repo.setFlowState(lead.id, ST.MENU);
 }
@@ -248,8 +248,8 @@ async function _addToCart(tenant, lead, productId) {
   await repo.addToCart(tenant.id, lead.id, product);
   const count = await repo.cartCount(lead.id);
   await ws.sendButtons(lead.phone, await catalog.msg(tenant.id, 'added_to_cart', { produto: product.name, total: count }), [
-    { id: 'MENU_SHOP', title: 'Continuar comprando' },
-    { id: 'CART_SHOW', title: 'Ver carrinho' },
+    { id: 'MENU_SHOP', title: await catalog.getButton(tenant.id, 'add_to_cart') },
+    { id: 'CART_SHOW', title: await catalog.getButton(tenant.id, 'cart_show') },
   ], tenant);
   await repo.setFlowState(lead.id, ST.MENU);
 }
@@ -383,9 +383,9 @@ async function _cart(tenant, lead) {
   txt += '\n' + (await catalog.msg(tenant.id, 'cart_total', { total: total.toFixed(2) }));
 
   await ws.sendButtons(lead.phone, txt, [
-    { id: 'CART_BUY', title: 'Finalizar pedido' },
-    { id: 'CART_CLEAR', title: 'Esvaziar carrinho' },
-    { id: 'MENU_SHOP', title: '➕ Adicionar mais itens' },
+    { id: 'CART_BUY', title: await catalog.getButton(tenant.id, 'cart_buy') },
+    { id: 'CART_CLEAR', title: await catalog.getButton(tenant.id, 'cart_clear') },
+    { id: 'MENU_SHOP', title: await catalog.getButton(tenant.id, 'add_more') },
   ], tenant);
   await repo.setFlowState(lead.id, ST.CART);
 }
@@ -432,9 +432,9 @@ async function _checkout(tenant, lead, step, answer) {
     return ws.sendButtons(lead.phone, await catalog.msg(tenant.id, 'order_created_payment', {
       pedido: order.external_id, total: total.toFixed(2),
     }), [
-      { id: 'PAY_PIX', title: 'PIX (5% off)' },
-      { id: 'PAY_CREDIT', title: 'Cartão Crédito' },
-      { id: 'PAY_DEBIT', title: 'Cartão Débito' },
+      { id: 'PAY_PIX', title: await catalog.getButton(tenant.id, 'pay_pix') },
+      { id: 'PAY_CREDIT', title: await catalog.getButton(tenant.id, 'pay_credit') },
+      { id: 'PAY_DEBIT', title: await catalog.getButton(tenant.id, 'pay_debit') },
     ], tenant);
   }
 
@@ -475,9 +475,9 @@ async function _checkoutConfirm(tenant, lead, answers) {
 
   await repo.setFlowState(lead.id, ST.CHECKOUT_CONFIRM);
   return ws.sendButtons(lead.phone, resumo, [
-    { id: 'ORDER_FINAL', title: '✅ Confirmar pedido' },
-    { id: 'MENU_SHOP', title: '➕ Adicionar mais itens' },
-    { id: 'MENU_BACK', title: '❌ Cancelar' },
+    { id: 'ORDER_FINAL', title: await catalog.getButton(tenant.id, 'confirm_order') },
+    { id: 'MENU_SHOP', title: await catalog.getButton(tenant.id, 'add_more') },
+    { id: 'MENU_BACK', title: await catalog.getButton(tenant.id, 'cancel') },
   ], tenant);
 }
 
@@ -560,12 +560,10 @@ async function _support(tenant, lead, step, answer) {
   if (step === 'reason') {
     const name = lead.full_name || 'Cliente';
     const { notifyTenant } = require('./notify');
-    await notifyTenant(
-      tenant,
-      'ATENDIMENTO SOLICITADO',
-      `Nome: ${name}\nWhatsApp: ${lead.phone}\nMotivo: ${answer}`,
-      lead.phone
-    );
+    const titulo = (await catalog.msg(tenant.id, 'support_notify_title')) || 'ATENDIMENTO SOLICITADO';
+    let corpo = await catalog.msg(tenant.id, 'support_notify_body', { nome: name, telefone: lead.phone, motivo: answer });
+    if (!corpo) corpo = `Nome: ${name}\nWhatsApp: ${lead.phone}\nMotivo: ${answer}`;
+    await notifyTenant(tenant, titulo, corpo, lead.phone);
     await repo.setFlowState(lead.id, ST.MENU);
     await ws.sendText(lead.phone, await catalog.msg(tenant.id, 'support_escalation'), tenant);
     return _menu(tenant, lead);
@@ -607,8 +605,8 @@ async function showProductDetail(tenant, lead, productId) {
   if (product.sob_consulta) {
     await ws.sendText(lead.phone, `*${product.name}*\n\n${product.long_description || product.short_description || ''}\n\n💬 *Preço sob consulta*`, tenant);
     await ws.sendButtons(lead.phone, 'Fale conosco para receber uma proposta:', [
-      { id: `QUOTE_${product.id}`, title: '📞 Quero saber mais' },
-      { id: 'MENU_BACK', title: '← Voltar' },
+      { id: `QUOTE_${product.id}`, title: await catalog.getButton(tenant.id, 'quote') },
+      { id: 'MENU_BACK', title: await catalog.getButton(tenant.id, 'back') },
     ], tenant);
     return;
   }
@@ -619,8 +617,8 @@ async function showProductDetail(tenant, lead, productId) {
   } else {
     await ws.sendText(lead.phone, `*${product.name}*\n\n${product.long_description || product.short_description || ''}\n\n💰 ${catalog.formatPrice(product.price)}`, tenant);
     await ws.sendButtons(lead.phone, 'O que deseja fazer?', [
-      { id: `BUY_${product.id}`, title: '🛒 Comprar' },
-      { id: 'MENU_BACK', title: '← Voltar' },
+      { id: `BUY_${product.id}`, title: await catalog.getButton(tenant.id, 'buy') },
+      { id: 'MENU_BACK', title: await catalog.getButton(tenant.id, 'back') },
     ], tenant);
   }
 }

@@ -16,7 +16,6 @@
     },
     "business_hours": "Seg a Sáb: 11h às 23h"
   },
-
   "categories": [
     {
       "id": "pratos-principais",
@@ -29,7 +28,7 @@
           "name": "Prato do Dia",
           "short_description": "Saboroso e acessível todos os dias",
           "long_description": "Nosso prato executivo: arroz, feijão, proteína do dia, salada e farofa. Acompanha refrigerante lata.",
-          "price": 28.90,
+          "price": 28.9,
           "image": "placeholder.png",
           "unit": "prato",
           "available": true,
@@ -38,17 +37,32 @@
               "grupo": "Tamanho",
               "unico": true,
               "opcoes": [
-                { "nome": "Pequeno", "preco": 0 },
-                { "nome": "Grande", "preco": 8.00 }
+                {
+                  "nome": "Pequeno",
+                  "preco": 0
+                },
+                {
+                  "nome": "Grande",
+                  "preco": 8
+                }
               ]
             },
             {
               "grupo": "Adicionais",
               "max": 3,
               "opcoes": [
-                { "nome": "Ovo frito", "preco": 3.00 },
-                { "nome": "Bacon", "preco": 6.00 },
-                { "nome": "Queijo ralado", "preco": 2.50 }
+                {
+                  "nome": "Ovo frito",
+                  "preco": 3
+                },
+                {
+                  "nome": "Bacon",
+                  "preco": 6
+                },
+                {
+                  "nome": "Queijo ralado",
+                  "preco": 2.5
+                }
               ]
             }
           ]
@@ -66,7 +80,7 @@
           "name": "X-Burger Artesanal",
           "short_description": "Pão brioche, blend 160g e queijo",
           "long_description": "Pão brioche selado, blend de 160g, queijo derretido, alface, tomate e maionese da casa. Acompanha batata.",
-          "price": 24.90,
+          "price": 24.9,
           "image": "placeholder.png",
           "unit": "lanche",
           "available": true,
@@ -75,19 +89,40 @@
               "grupo": "Ponto da carne",
               "unico": true,
               "opcoes": [
-                { "nome": "Ao ponto", "preco": 0 },
-                { "nome": "Bem passado", "preco": 0 },
-                { "nome": "Mal passado", "preco": 0 }
+                {
+                  "nome": "Ao ponto",
+                  "preco": 0
+                },
+                {
+                  "nome": "Bem passado",
+                  "preco": 0
+                },
+                {
+                  "nome": "Mal passado",
+                  "preco": 0
+                }
               ]
             },
             {
               "grupo": "Adicionais",
               "max": 4,
               "opcoes": [
-                { "nome": "Bacon extra", "preco": 4.00 },
-                { "nome": "Cheddar extra", "preco": 4.00 },
-                { "nome": "Ovo", "preco": 3.00 },
-                { "nome": "Onion rings", "preco": 6.00 }
+                {
+                  "nome": "Bacon extra",
+                  "preco": 4
+                },
+                {
+                  "nome": "Cheddar extra",
+                  "preco": 4
+                },
+                {
+                  "nome": "Ovo",
+                  "preco": 3
+                },
+                {
+                  "nome": "Onion rings",
+                  "preco": 6
+                }
               ]
             }
           ]
@@ -105,7 +140,7 @@
           "name": "Refrigerante Lata 350ml",
           "short_description": "Coca, Guaraná, Fanta ou Sprite",
           "long_description": "Refrigerante lata 350ml gelado.",
-          "price": 6.00,
+          "price": 6,
           "image": "placeholder.png",
           "unit": "lata",
           "available": true
@@ -115,7 +150,7 @@
           "name": "Suco Natural 500ml",
           "short_description": "Laranja, limão ou maracujá",
           "long_description": "Suco natural feito na hora, 500ml. Sem açúcar ou com açúcar.",
-          "price": 9.00,
+          "price": 9,
           "image": "placeholder.png",
           "unit": "copo",
           "available": true,
@@ -124,9 +159,18 @@
               "grupo": "Sabor",
               "unico": true,
               "opcoes": [
-                { "nome": "Laranja", "preco": 0 },
-                { "nome": "Limão", "preco": 0 },
-                { "nome": "Maracujá", "preco": 0 }
+                {
+                  "nome": "Laranja",
+                  "preco": 0
+                },
+                {
+                  "nome": "Limão",
+                  "preco": 0
+                },
+                {
+                  "nome": "Maracujá",
+                  "preco": 0
+                }
               ]
             }
           ]
@@ -144,7 +188,7 @@
           "name": "Pudim de Leite",
           "short_description": "Fatia generosa do nosso pudim",
           "long_description": "Pudim de leite condensado com calda de caramelo.",
-          "price": 8.50,
+          "price": 8.5,
           "image": "placeholder.png",
           "unit": "fatia",
           "available": true,
@@ -153,8 +197,14 @@
               "grupo": "Extras",
               "max": 2,
               "opcoes": [
-                { "nome": "Chantilly", "preco": 2.00 },
-                { "nome": "Calda de chocolate", "preco": 2.50 }
+                {
+                  "nome": "Chantilly",
+                  "preco": 2
+                },
+                {
+                  "nome": "Calda de chocolate",
+                  "preco": 2.5
+                }
               ]
             }
           ]
@@ -162,19 +212,28 @@
       ]
     }
   ],
-
   "store": {
     "currency": "BRL",
     "currency_symbol": "R$",
-    "min_order": 10.00,
-    "delivery_free_full": 100.00,
-    "delivery_fee": 8.00,
+    "min_order": 10,
+    "delivery_free_full": 100,
+    "delivery_fee": 8,
     "pix_discount_percent": 5,
     "installments_max": 1,
     "payment_methods": [
-      { "type": "pix", "label": "PIX (5% desconto)", "discount_percent": 5 },
-      { "type": "credit_card", "label": "Cartão de Crédito" },
-      { "type": "debit_card", "label": "Cartão de Débito" }
+      {
+        "type": "pix",
+        "label": "PIX (5% desconto)",
+        "discount_percent": 5
+      },
+      {
+        "type": "credit_card",
+        "label": "Cartão de Crédito"
+      },
+      {
+        "type": "debit_card",
+        "label": "Cartão de Débito"
+      }
     ],
     "menu_image": {
       "enabled": true,
@@ -185,12 +244,20 @@
       "footer_text": ""
     },
     "delivery_areas": [
-      { "bairro": "Centro", "taxa": 5.00 },
-      { "bairro": "Trindade", "taxa": 7.00 },
-      { "bairro": "Agronômica", "taxa": 8.00 }
+      {
+        "bairro": "Centro",
+        "taxa": 5
+      },
+      {
+        "bairro": "Trindade",
+        "taxa": 7
+      },
+      {
+        "bairro": "Agronômica",
+        "taxa": 8
+      }
     ]
   },
-
   "questionnaires": {
     "checkout": {
       "label": "Dados do pedido",
@@ -209,7 +276,6 @@
       ]
     }
   },
-
   "messages": {
     "welcome": "Olá, {nome}! Bem-vindo(a) ao restaurante {empresa} 😋\n\nEscolha uma opção abaixo:",
     "no_categories": "Nenhuma categoria disponível.",
@@ -240,6 +306,27 @@
     "addon_group": "*{produto}* — escolha o *{grupo}*:",
     "addon_done": "Adicionais registrados!",
     "out_of_area": "😔 Desculpe, seu bairro está fora da nossa área de entrega. Entre em contato com a gente para retirada no local.",
-    "store_closed": "😔 Estamos fechados agora — {horario}.\n\nVolte mais tarde!"
+    "store_closed": "😔 Estamos fechados agora — {horario}.\n\nVolte mais tarde!",
+    "support_notify_title": "ATENDIMENTO SOLICITADO",
+    "support_notify_body": "Nome: {nome}\nWhatsApp: {telefone}\nMotivo: {motivo}"
+  },
+  "buttons": {
+    "menu_shop": "Comprar",
+    "menu_support": "Atendente",
+    "menu_track": "Meus Pedidos",
+    "back": "← Voltar",
+    "buy": "🛒 Comprar",
+    "quote": "📞 Quero saber mais",
+    "add_to_cart": "Continuar comprando",
+    "cart_show": "Ver carrinho",
+    "cart_buy": "Finalizar pedido",
+    "cart_clear": "Esvaziar carrinho",
+    "add_more": "➕ Adicionar mais itens",
+    "confirm_order": "✅ Confirmar pedido",
+    "cancel": "❌ Cancelar",
+    "pay_pix": "PIX (5% off)",
+    "pay_credit": "Cartão Crédito",
+    "pay_debit": "Cartão Débito",
+    "list_button": "Ver opções"
   }
 }

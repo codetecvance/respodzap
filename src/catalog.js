@@ -107,8 +107,48 @@ function segmentTheme(segmentName) {
   return SEGMENT_THEMES[segmentName] || SEGMENT_THEMES.vendas;
 }
 
+/**
+ * Nomes padrão de todos os botões do bot (editáveis no painel).
+ */
+const DEFAULT_BUTTONS = {
+  menu_shop: 'Comprar',
+  menu_support: 'Atendente',
+  menu_track: 'Meus Pedidos',
+  back: '← Voltar',
+  buy: '🛒 Comprar',
+  quote: '📞 Quero saber mais',
+  add_to_cart: 'Continuar comprando',
+  cart_show: 'Ver carrinho',
+  cart_buy: 'Finalizar pedido',
+  cart_clear: 'Esvaziar carrinho',
+  add_more: '➕ Adicionar mais itens',
+  confirm_order: '✅ Confirmar pedido',
+  cancel: '❌ Cancelar',
+  pay_pix: 'PIX (5% off)',
+  pay_credit: 'Cartão Crédito',
+  pay_debit: 'Cartão Débito',
+  list_button: 'Ver opções',
+};
+
+/**
+ * Nome do botão do tenant (com fallback para o padrão).
+ */
+async function getButton(tenantId, key) {
+  if (!tenantId) return DEFAULT_BUTTONS[key] || key;
+  const data = await loadTenantCatalog(tenantId);
+  return (data.buttons && data.buttons[key]) || DEFAULT_BUTTONS[key] || key;
+}
+
+/**
+ * Todos os botões do tenant (defaults mesclados com os personalizados).
+ */
+async function getButtons(tenantId) {
+  const data = await loadTenantCatalog(tenantId);
+  return { ...DEFAULT_BUTTONS, ...(data.buttons || {}) };
+}
+
 module.exports = {
   loadTenantCatalog, saveTenantCatalog, getCompanyInfo, getCategories,
   getProductsByCategory, findProduct, getStoreConfig, getMessages,
-  getQuestionnaire, msg, formatPrice, segmentTheme,
+  getQuestionnaire, msg, formatPrice, segmentTheme, getButton, getButtons, DEFAULT_BUTTONS,
 };

@@ -269,6 +269,7 @@ function layout(title, active, content, tenants = [], activeTenantId = null, cli
     ['/painel/leads', '👤 Leads'],
     ['/painel/perguntas', '❓ Perguntas'],
     ['/painel/mensagens', '💬 Mensagens'],
+    ['/painel/botoes', '🔘 Botões e Atendente'],
     ['/painel/config', '⚙️ Configurações'],
     ['/painel/senha', '🔑 Trocar senha'],
   ] : [
@@ -283,12 +284,13 @@ function layout(title, active, content, tenants = [], activeTenantId = null, cli
     ['/admin/leads', '👤 Leads'],
     ['/admin/perguntas', '❓ Perguntas'],
     ['/admin/mensagens', '💬 Mensagens'],
+    ['/admin/botoes', '🔘 Botões e Atendente'],
     ['/admin/config', '⚙️ Configurações'],
   ];
 
   const nav = items.map(([href, label]) => {
     let h = href;
-    if (!clientMode && activeTenantId && ['/admin/produtos', '/admin/pedidos', '/admin/leads', '/admin/perguntas', '/admin/mensagens', '/admin/config'].includes(href)) {
+    if (!clientMode && activeTenantId && ['/admin/produtos', '/admin/pedidos', '/admin/leads', '/admin/perguntas', '/admin/mensagens', '/admin/botoes', '/admin/config'].includes(href)) {
       h += `?tenant=${activeTenantId}`;
     }
     return `<a class="nav-item ${href === active ? 'active' : ''}" href="${h}">${label}</a>`;
@@ -442,7 +444,8 @@ function pageSub(active) {
     '/painel/produtos': 'Seu catálogo', '/painel/listas': 'Textos dos blocos de seleção do bot',
     '/admin/listas': 'Textos dos blocos de seleção de cada cliente',
     '/painel/pedidos': 'Seus pedidos', '/painel/leads': 'Seus clientes',
-    '/painel/perguntas': 'Seus questionários', '/painel/mensagens': 'Seus textos do bot',
+    '/painel/perguntas': 'Seus questionários', '/painel/mensagens': 'Seus textos do bot', '/painel/botoes': 'Nomes dos botões e fluxo do atendente',
+    '/admin/mensagens': 'Textos do bot de cada cliente', '/admin/botoes': 'Botões e atendente de cada cliente',
     '/painel/config': 'Suas configurações', '/painel/senha': 'Altere sua senha de acesso',
   };
   return map[active] || '';
@@ -1859,6 +1862,96 @@ async function postMensagensSalvar(req, res) {
 
 router.post('/admin/mensagens/salvar', requireAuth, postMensagensSalvar);
 router.post('/painel/mensagens/salvar', clientPanelAuth, postMensagensSalvar);
+
+// ----- BOTÕES E ATENDENTE -----
+const BOTOES_ROTULOS = {
+  menu_shop: 'Comprar (menu principal)',
+  menu_support: 'Atendente (menu principal)',
+  menu_track: 'Meus Pedidos (menu principal)',
+  back: 'Voltar',
+  buy: 'Comprar (na página do produto)',
+  quote: 'Quero saber mais (sob consulta)',
+  add_to_cart: 'Continuar comprando (após adicionar)',
+  cart_show: 'Ver carrinho (após adicionar)',
+  cart_buy: 'Finalizar pedido (no carrinho)',
+  cart_clear: 'Esvaziar carrinho',
+  add_more: 'Adicionar mais itens (carrinho/confirmação)',
+  confirm_order: 'Confirmar pedido',
+  cancel: 'Cancelar',
+  pay_pix: 'PIX',
+  pay_credit: 'Cartão de Crédito',
+  pay_debit: 'Cartão de Débito',
+  list_button: 'Botão das listas (Ver opções)',
+};
+
+async function pageBotoes(req, res) {
+  const { tenant, tenants } = await resolveTenant(req, res);
+  const clientMode = !!req.clientMode;
+  if (!tenant) return res.send(layout('Botões e Atendente', clientMode ? '/painel/botoes' : '/admin/botoes', '<div class="empty">Crie um cliente.</div>', tenants, null, clientMode));
+  const data = await catalog.loadTenantCatalog(tenant.id);
+  const btns = await catalog.getButtons(tenant.id);
+  const msgs = data.messages || {};
+  const base = clientMode ? '/painel' : '/admin';
+
+  const rows = Object.entries(BOTOES_ROTULOS).map(([k, rotulo]) => `
+    <tr><td>${esc(rotulo)}</td>
+    <td><input type="text" name="buttons[${k}]" value="${esc(btns[k] || '')}" maxlength="20"></td></tr>`).join('');
+
+  const suporte = [
+    ['notify_title', 'TÍTULO DA NOTIFICAÇÃO (você recebe)', msgs.support_notify_title || 'ATENDIMENTO SOLICITADO', false],
+    ['notify_body', 'CORPO DA NOTIFICAÇÃO (você recebe)', msgs.support_notify_body || 'Nome: {nome}\nWhatsApp: {telefone}\nMotivo: {motivo}', true],
+    ['ask_name', 'PERGUNTAR NOME (cliente recebe)', msgs.ask_support_name || 'Informe seu nome completo:', false],
+    ['ask_reason', 'PERGUNTAR MOTIVO (cliente recebe)', msgs.ask_support_reason || 'Qual o motivo do seu contato?', false],
+    ['escalation', 'RESPOSTA FINAL (cliente recebe)', msgs.support_escalation || 'Um dos nossos atendentes vai falar com você em breve pelo WhatsApp!', true],
+  ].map(([k, rotulo, valor, grande]) => `
+    <div style="grid-column:1/-1"><label>${esc(rotulo)}</label>
+    ${grande ? `<textarea name="support[${k}]" rows="3">${esc(valor)}</textarea>` : `<input type="text" name="support[${k}]" value="${esc(valor)}">`}</div>`).join('');
+
+  res.send(layout('Botões e Atendente', clientMode ? '/painel/botoes' : '/admin/botoes', `${tenantSelector(tenant.id, tenants, clientMode)}
+    <form method="POST" action="${base}/botoes/salvar"><input type="hidden" name="tenant" value="${tenant.id}">
+      <div class="panel"><h2>🔘 Nomes dos botões</h2>
+        <table><thead><tr><th>Botão</th><th>Nome exibido no WhatsApp (máx. 20 caracteres)</th></tr></thead>
+        <tbody>${rows}</tbody></table>
+        <p style="font-size:12px;color:#64748b;margin-top:8px">O WhatsApp limita os botões a 20 caracteres — textos maiores são cortados automaticamente.</p>
+      </div>
+      <div class="panel"><h2>👤 Botão Atendente</h2>
+        <p style="font-size:12px;color:#64748b;margin-bottom:6px">Na notificação, use as variáveis: <b>{nome}</b> (nome do cliente), <b>{telefone}</b> (WhatsApp dele) e <b>{motivo}</b> (o que ele digitou).</p>
+        <div class="grid2">${suporte}</div>
+      </div>
+      <button class="btn" type="submit">💾 Salvar</button>
+    </form>`, tenants, tenant, clientMode));
+}
+
+router.get('/admin/botoes', requireAuth, pageBotoes);
+router.get('/painel/botoes', clientPanelAuth, pageBotoes);
+
+async function postBotoesSalvar(req, res) {
+  const tenantId = tenantIdFromReq(req, req.body.tenant || req.query.tenant);
+  const base = req.clientMode ? '/painel' : '/admin';
+  const data = await catalog.loadTenantCatalog(tenantId);
+  const b = req.body;
+  if (b.buttons) {
+    const buttons = {};
+    for (const [k, v] of Object.entries(b.buttons)) buttons[k] = String(v || '').trim().slice(0, 20);
+    data.buttons = buttons;
+  }
+  const sp = b.support || {};
+  const maps = {
+    support_notify_title: sp.notify_title, support_notify_body: sp.notify_body,
+    ask_support_name: sp.ask_name, ask_support_reason: sp.ask_reason, support_escalation: sp.escalation,
+  };
+  for (const [chave, valor] of Object.entries(maps)) {
+    if (valor !== undefined) {
+      if (!data.messages) data.messages = {};
+      data.messages[chave] = String(valor).trim();
+    }
+  }
+  await catalog.saveTenantCatalog(tenantId, data);
+  res.redirect(`${base}/botoes?msg=` + encodeURIComponent('Botões e atendente salvos!'));
+}
+
+router.post('/admin/botoes/salvar', requireAuth, postBotoesSalvar);
+router.post('/painel/botoes/salvar', clientPanelAuth, postBotoesSalvar);
 
 // ----- CONFIG -----
 async function pageConfig(req, res) {

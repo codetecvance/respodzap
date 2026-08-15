@@ -16,7 +16,6 @@
     },
     "business_hours": "Seg a Sex: 9h às 19h · Sáb: 9h às 17h"
   },
-
   "categories": [
     {
       "id": "servicos",
@@ -29,7 +28,7 @@
           "name": "Corte Feminino",
           "short_description": "Corte, lavagem e finalização",
           "long_description": "Corte personalizado com consultoria de estilo, lavagem e finalização inclusas.",
-          "price": 65.00,
+          "price": 65,
           "image": "placeholder.png",
           "unit": "serviço",
           "available": true,
@@ -39,9 +38,18 @@
               "grupo": "Finalização",
               "unico": true,
               "opcoes": [
-                { "nome": "Escova", "preco": 0 },
-                { "nome": "Escova + chapinha", "preco": 20.00 },
-                { "nome": "Babyliss", "preco": 25.00 }
+                {
+                  "nome": "Escova",
+                  "preco": 0
+                },
+                {
+                  "nome": "Escova + chapinha",
+                  "preco": 20
+                },
+                {
+                  "nome": "Babyliss",
+                  "preco": 25
+                }
               ]
             }
           ]
@@ -51,7 +59,7 @@
           "name": "Manicure Completa",
           "short_description": "Mãos + pés com esmaltação",
           "long_description": "Manicure completa de mãos e pés com esmaltação comum.",
-          "price": 45.00,
+          "price": 45,
           "image": "placeholder.png",
           "unit": "serviço",
           "available": true,
@@ -61,8 +69,14 @@
               "grupo": "Cobertura",
               "unico": true,
               "opcoes": [
-                { "nome": "Esmaltação comum", "preco": 0 },
-                { "nome": "Blindagem", "preco": 15.00 }
+                {
+                  "nome": "Esmaltação comum",
+                  "preco": 0
+                },
+                {
+                  "nome": "Blindagem",
+                  "preco": 15
+                }
               ]
             }
           ]
@@ -72,7 +86,7 @@
           "name": "Design de Sobrancelha",
           "short_description": "Design personalizado",
           "long_description": "Design de sobrancelha personalizado com henna.",
-          "price": 30.00,
+          "price": 30,
           "image": "placeholder.png",
           "unit": "serviço",
           "available": true,
@@ -91,7 +105,7 @@
           "name": "Pacote Completo",
           "short_description": "Corte + sobrancelha + manicure",
           "long_description": "Corte feminino, design de sobrancelha e manicure completa. Economia de R$ 20!",
-          "price": 120.00,
+          "price": 120,
           "image": "placeholder.png",
           "unit": "pacote",
           "available": true,
@@ -100,7 +114,7 @@
             {
               "id": "unico",
               "name": "Sessão única",
-              "price": 120.00,
+              "price": 120,
               "period": "por sessão",
               "popular": true,
               "features": "Corte feminino\nDesign de sobrancelha\nManicure completa"
@@ -120,7 +134,7 @@
           "name": "Kit Tratamento Capilar",
           "short_description": "Shampoo + máscara + leave-in",
           "long_description": "Kit com shampoo, máscara de tratamento e leave-in para cabelos danificados.",
-          "price": 89.90,
+          "price": 89.9,
           "image": "placeholder.png",
           "unit": "kit",
           "available": true,
@@ -131,7 +145,7 @@
           "name": "Protetor Solar Facial FPS 60",
           "short_description": "Toque seco, 50g",
           "long_description": "Protetor solar facial FPS 60 com toque seco.",
-          "price": 59.90,
+          "price": 59.9,
           "image": "placeholder.png",
           "unit": "unidade",
           "available": true,
@@ -140,7 +154,6 @@
       ]
     }
   ],
-
   "store": {
     "currency": "BRL",
     "currency_symbol": "R$",
@@ -150,9 +163,19 @@
     "pix_discount_percent": 5,
     "installments_max": 1,
     "payment_methods": [
-      { "type": "pix", "label": "PIX (5% desconto)", "discount_percent": 5 },
-      { "type": "credit_card", "label": "Cartão de Crédito" },
-      { "type": "debit_card", "label": "Cartão de Débito" }
+      {
+        "type": "pix",
+        "label": "PIX (5% desconto)",
+        "discount_percent": 5
+      },
+      {
+        "type": "credit_card",
+        "label": "Cartão de Crédito"
+      },
+      {
+        "type": "debit_card",
+        "label": "Cartão de Débito"
+      }
     ],
     "menu_image": {
       "enabled": true,
@@ -163,7 +186,6 @@
       "footer_text": ""
     }
   },
-
   "questionnaires": {
     "checkout": {
       "label": "Dados do agendamento",
@@ -181,7 +203,6 @@
       ]
     }
   },
-
   "messages": {
     "welcome": "Olá, {nome}! Bem-vindo(a) ao salão {empresa} 💆‍♀️\n\nEscolha uma opção abaixo:",
     "no_categories": "Nenhuma categoria disponível.",
@@ -212,6 +233,27 @@
     "addon_group": "*{produto}* — escolha o *{grupo}*:",
     "addon_done": "Adicionais registrados!",
     "out_of_area": "😔 Desculpe, seu bairro está fora da nossa área de entrega.",
-    "store_closed": "😔 Estamos fechados agora — {horario}.\n\nVolte mais tarde!"
+    "store_closed": "😔 Estamos fechados agora — {horario}.\n\nVolte mais tarde!",
+    "support_notify_title": "ATENDIMENTO SOLICITADO",
+    "support_notify_body": "Nome: {nome}\nWhatsApp: {telefone}\nMotivo: {motivo}"
+  },
+  "buttons": {
+    "menu_shop": "Comprar",
+    "menu_support": "Atendente",
+    "menu_track": "Meus Pedidos",
+    "back": "← Voltar",
+    "buy": "🛒 Comprar",
+    "quote": "📞 Quero saber mais",
+    "add_to_cart": "Continuar comprando",
+    "cart_show": "Ver carrinho",
+    "cart_buy": "Finalizar pedido",
+    "cart_clear": "Esvaziar carrinho",
+    "add_more": "➕ Adicionar mais itens",
+    "confirm_order": "✅ Confirmar pedido",
+    "cancel": "❌ Cancelar",
+    "pay_pix": "PIX (5% off)",
+    "pay_credit": "Cartão Crédito",
+    "pay_debit": "Cartão Débito",
+    "list_button": "Ver opções"
   }
 }

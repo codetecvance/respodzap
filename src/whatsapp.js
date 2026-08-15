@@ -143,7 +143,7 @@ async function sendList(to, bodyText, rows, headerText = '', footerText = '', te
         body: { text: String(bodyText).slice(0, 1024) },
         footer: footerText ? { text: smartCut(footerText, 60) } : undefined,
         action: {
-          button: 'Ver opções',
+          button: await catalog.getButton(tenant?.id, 'list_button'),
           sections: [{
             title: 'Produtos',
             rows: rows.slice(0, 10).map(r => ({
@@ -201,9 +201,9 @@ async function sendWelcomeMenu(to, nome = '', tenant = null) {
     empresa: config.businessName || company.name || 'RespVZap',
   });
   await sendButtons(to, texto, [
-    { id: 'MENU_SHOP', title: 'Comprar' },
-    { id: 'MENU_SUPPORT', title: 'Atendente' },
-    { id: 'MENU_TRACK', title: 'Meus Pedidos' },
+    { id: 'MENU_SHOP', title: await catalog.getButton(tenant.id, 'menu_shop') },
+    { id: 'MENU_SUPPORT', title: await catalog.getButton(tenant.id, 'menu_support') },
+    { id: 'MENU_TRACK', title: await catalog.getButton(tenant.id, 'menu_track') },
   ], tenant);
 }
 
