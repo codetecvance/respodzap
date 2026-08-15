@@ -257,6 +257,7 @@ function tenantIdFromReq(req, fallback) {
 function layout(title, active, content, tenants = [], activeTenantId = null, clientMode = false) {
   const items = clientMode ? [
     ['/painel', '📊 Dashboard'],
+    ['/painel/relatorios', '📈 Relatórios'],
     ['/painel/produtos', '🛍 Produtos'],
     ['/painel/listas', '📋 Listas'],
     ['/painel/pedidos', '🧾 Pedidos'],
@@ -270,6 +271,7 @@ function layout(title, active, content, tenants = [], activeTenantId = null, cli
     ['/admin/clientes', '👥 Clientes'],
     ['/admin/segmentos', '🏷️ Segmentos'],
     ['/admin/assinaturas', '📋 Assinaturas'],
+    ['/admin/relatorios', '📈 Relatórios'],
     ['/admin/produtos', '🛍 Produtos'],
     ['/admin/listas', '📋 Listas'],
     ['/admin/pedidos', '🧾 Pedidos'],
@@ -337,6 +339,14 @@ function layout(title, active, content, tenants = [], activeTenantId = null, cli
   .prod-thumb { width: 52px; height: 52px; object-fit: cover; border-radius: 9px; background: #f1f5f9; }
   .img-list .thumb { width: 64px; height: 64px; object-fit: cover; border-radius: 9px; background: #f1f5f9; }
   .filters { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; }
+  .bars { display: flex; align-items: flex-end; gap: 6px; min-height: 170px; padding-top: 8px; overflow-x: auto; }
+  .bar-col { flex: 1; min-width: 22px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; }
+  .bar { width: 100%; max-width: 34px; background: linear-gradient(180deg,#2563eb,#3b82f6); border-radius: 6px 6px 2px 2px; }
+  .bar-col .qtd { font-size: 10px; color: #64748b; font-weight: 700; }
+  .bar-col .day { font-size: 10px; color: #94a3b8; white-space: nowrap; }
+  .mini-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; font-size: 13px; }
+  .mini-bar { height: 8px; border-radius: 4px; background: linear-gradient(90deg,#2563eb,#38bdf8); }
+  .muted { color: #94a3b8; }
   .empty { text-align: center; padding: 30px; color: #94a3b8; font-size: 13px; }
   .inline-form { display: inline; }
   @media (max-width: 900px) { body { flex-direction: column; } aside { width: 100%; height: auto; position: static; } main { padding: 18px; } .grid2, .grid3 { grid-template-columns: 1fr; } }
@@ -364,7 +374,8 @@ function layout(title, active, content, tenants = [], activeTenantId = null, cli
 function pageSub(active) {
   const map = {
     '/admin': 'Visão geral de toda a operação', '/admin/clientes': 'Crie e gerencie os clientes do SaaS',
-    '/admin/assinaturas': 'Licenças, renovações e vencimentos', '/admin/segmentos': 'Ramos de negócio e seus templates', '/painel': 'Visão geral do seu negócio',
+    '/admin/assinaturas': 'Licenças, renovações e vencimentos', '/admin/segmentos': 'Ramos de negócio e seus templates',     '/painel': 'Visão geral do seu negócio',
+    '/painel/relatorios': 'Resultados por período', '/admin/relatorios': 'Resultados do cliente por período',
     '/painel/produtos': 'Seu catálogo', '/painel/listas': 'Textos dos blocos de seleção do bot',
     '/admin/listas': 'Textos dos blocos de seleção de cada cliente',
     '/painel/pedidos': 'Seus pedidos', '/painel/leads': 'Seus clientes',
@@ -535,13 +546,46 @@ async function pageDashboard(req, res) {
     return `<tr><td><b>#${esc(o.external_id)}</b></td><td>${esc(lead?.full_name || '—')}</td><td>${money(o.total)}</td><td>${statusBadge(o.status)}</td><td>${esc(String(o.created_at).slice(0, 16))}</td></tr>`;
   }));
 
+  // ---- Dashboard por ramo ----
+  const isOperation = clientMode && tenant.segment_name && tenant.segment_name !== 'vendas';
+  let ramoCards = '', ramoBlock = '';
+  if (clientMode) {
+    const [statsToday, stats30, top30] = await Promise.all([
+      reports.orderStats(tenant.id, 0),
+      reports.orderStats(tenant.id, 30),
+      reports.topProducts(tenant.id, 30, 6),
+    ]);
+    if (isOperation) {
+      ramoCards = `<div class="cards">
+        <div class="card"><div class="ico blue">${esc(tenant.segment_emoji || '🏷️')}</div><div class="num blue" style="font-size:19px">${esc(tenant.segment_name || 'Operação')}</div><div class="label">Ramo do negócio</div></div>
+        <div class="card"><div class="ico green">💰</div><div class="num green">${money(statsToday.receita)}</div><div class="label">Faturamento hoje</div></div>
+        <div class="card"><div class="ico cyan" style="background:#cffafe">🧾</div><div class="num" style="color:#0e7490">${statsToday.pedidos}</div><div class="label">Pedidos hoje</div></div>
+        <div class="card"><div class="ico violet">🎯</div><div class="num violet">${money(stats30.ticket_medio)}</div><div class="label">Ticket médio (30d)</div></div>
+        <div class="card"><div class="ico amber">📈</div><div class="num amber">${stats30.por_metodo.reduce((s, m) => s + m.qtd, 0)}</div><div class="label">Vendas pagas (30d)</div></div>
+      </div>`;
+      const max30 = Math.max(1, ...top30.map(t => t.receita));
+      ramoBlock = `<div class="panel"><h2>🔥 Mais vendidos (30 dias) <a class="right btn small gray" href="${clientMode ? '/painel' : '/admin'}/relatorios">Ver relatórios completos →</a></h2>
+        <table><thead><tr><th>#</th><th>Item</th><th>Qtd</th><th>Receita</th><th>Participação</th></tr></thead><tbody>
+        ${top30.map((t, i) => `<tr><td>${i + 1}º</td><td>${esc(t.nome)}</td><td>${t.qtd}x</td><td>${money(t.receita)}</td>
+          <td style="min-width:140px"><div class="mini-row"><div class="mini-bar" style="width:${Math.round((t.receita / max30) * 100)}%"></div></div></td></tr>`).join('') || '<tr><td colspan="5"><div class="empty">Sem vendas pagas ainda. Divulgue seu bot! 🚀</div></td></tr>'}
+        </tbody></table></div>`;
+    } else {
+      const max30 = Math.max(1, ...top30.map(t => t.receita));
+      ramoBlock = `<div class="panel"><h2>🔥 Mais vendidos (30 dias) <a class="right btn small gray" href="/painel/relatorios">Ver relatórios completos →</a></h2>
+        <table><thead><tr><th>#</th><th>Produto / Plano</th><th>Qtd</th><th>Receita</th><th>Participação</th></tr></thead><tbody>
+        ${top30.map((t, i) => `<tr><td>${i + 1}º</td><td>${esc(t.nome)}</td><td>${t.qtd}x</td><td>${money(t.receita)}</td>
+          <td style="min-width:140px"><div class="mini-row"><div class="mini-bar" style="width:${Math.round((t.receita / max30) * 100)}%"></div></div></td></tr>`).join('') || '<tr><td colspan="5"><div class="empty">Sem vendas pagas ainda. Divulgue seu bot! 🚀</div></td></tr>'}
+        </tbody></table></div>`;
+    }
+  }
+
   const cards = clientMode
-    ? `<div class="cards">
+    ? (ramoCards || `<div class="cards">
         <div class="card"><div class="ico blue">${esc(tenant.segment_emoji || '🏷️')}</div><div class="num blue" style="font-size:19px">${esc(tenant.segment_name || '—')}</div><div class="label">Ramo do negócio</div></div>
         <div class="card"><div class="ico cyan" style="background:#cffafe">👥</div><div class="num" style="color:#0e7490">${leads.length}</div><div class="label">Leads</div></div>
         <div class="card"><div class="ico green">🧾</div><div class="num green">${orders.length}</div><div class="label">Pedidos</div></div>
         <div class="card"><div class="ico violet">💰</div><div class="num violet">${money(revenue)}</div><div class="label">Faturamento</div></div>
-      </div>`
+      </div>`)
     : `<div class="cards">
         <div class="card"><div class="ico blue">👥</div><div class="num blue">${tenants.length}</div><div class="label">Clientes (tenants)</div></div>
         <div class="card"><div class="ico green">✅</div><div class="num green">${activeSubs.length}</div><div class="label">Licenças ativas</div></div>
@@ -550,6 +594,18 @@ async function pageDashboard(req, res) {
         <div class="card"><div class="ico violet">💰</div><div class="num violet">${money(revenue)}</div><div class="label">Faturamento (${esc(tenant?.name || '—')})</div></div>
         <div class="card"><div class="ico cyan" style="background:#cffafe">🧾</div><div class="num" style="color:#0e7490">${orders.length}</div><div class="label">Pedidos (${esc(tenant?.name || '—')})</div></div>
       </div>`;
+
+  // Admin: receita por segmento
+  let segmentBlock = '';
+  if (!clientMode) {
+    const segData = await reports.revenueBySegment(30);
+    const maxSeg = Math.max(1, ...segData.map(s => s.receita));
+    segmentBlock = `<div class="panel"><h2>🧭 Receita por ramo (30 dias)</h2>
+      <table><thead><tr><th>Ramo</th><th>Clientes</th><th>Pedidos</th><th>Receita</th><th>Participação</th></tr></thead><tbody>
+      ${segData.map(s => `<tr><td>${esc(s.emoji)} ${esc(s.nome)}</td><td>${s.clientes}</td><td>${s.pedidos}</td><td>${money(s.receita)}</td>
+        <td style="min-width:140px"><div class="mini-row"><div class="mini-bar" style="width:${Math.round((s.receita / maxSeg) * 100)}%"></div></div></td></tr>`).join('')}
+      </tbody></table></div>`;
+  }
 
   const quickActions = clientMode ? '' : `<div class="panel" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
     <a class="btn" href="/admin/clientes">👥 Página de clientes</a>
@@ -560,7 +616,9 @@ async function pageDashboard(req, res) {
   res.send(layout('Dashboard', clientMode ? '/painel' : '/admin', `
     ${cards}
     ${quickActions}
+    ${segmentBlock}
     ${onboarding}
+    ${ramoBlock}
     ${clientMode ? `<div class="panel" style="background:#f0fdf4;border-color:#bbf7d0"><h2 style="color:#166534">👋 Olá, ${esc(tenant.name)}!</h2><p style="font-size:13px;color:#166534">Este é o painel do seu negócio. Gerencie seus produtos, veja seus pedidos e clientes.</p></div>` : tenantSelector(tenant.id, tenants, clientMode)}
     <div class="panel"><h2>📅 Pedidos dos últimos 14 dias</h2><div class="bars">${bars || '<div class="empty">Sem pedidos no período.</div>'}</div></div>
     <div class="panel"><h2>🕒 Últimos pedidos</h2><table><thead><tr><th>Pedido</th><th>Cliente</th><th>Total</th><th>Status</th><th>Data</th></tr></thead><tbody>${recentRows.join('') || '<tr><td colspan="5"><div class="empty">Nenhum pedido.</div></td></tr>'}</tbody></table></div>
@@ -569,6 +627,91 @@ async function pageDashboard(req, res) {
 
 router.get('/admin', requireAuth, pageDashboard);
 router.get('/painel', clientPanelAuth, pageDashboard);
+
+// ======================================================
+//  RELATÓRIOS (client + admin)
+// ======================================================
+const reports = require('./reports');
+const PERIODS = [0, 7, 30, 60, 90];
+
+async function pageRelatorios(req, res) {
+  const clientMode = !!req.clientMode;
+  const { tenant, tenants } = await resolveTenant(req, res);
+  if (!tenant) return res.send(layout('Relatórios', clientMode ? '/painel/relatorios' : '/admin/relatorios', '<div class="empty">Crie um cliente primeiro.</div>', tenants, null, clientMode));
+  const period = PERIODS.includes(Number(req.query.period)) ? Number(req.query.period) : 30;
+
+  const [stats, daily, top, leads, topLeadsList] = await Promise.all([
+    reports.orderStats(tenant.id, period),
+    reports.ordersByDay(tenant.id, period),
+    reports.topProducts(tenant.id, period),
+    reports.leadStats(tenant.id, period),
+    reports.topLeads(tenant.id, period),
+  ]);
+
+  const periodLabel = period === 0 ? 'hoje' : `nos últimos ${period} dias`;
+  const maxDaily = Math.max(1, ...daily.map(d => d.receita));
+  const bars = daily.map(d => {
+    const h = Math.max(3, Math.round((d.receita / maxDaily) * 130));
+    return `<div class="bar-col" title="${esc(d.dia)} — R$ ${d.receita.toFixed(2)} (${d.qtd} pedido(s))"><div class="qtd">R$${Math.round(d.receita)}</div><div class="bar" style="height:${h}px"></div><div class="day">${esc(d.dia.slice(5))}</div></div>`;
+  }).join('');
+
+  const maxTop = Math.max(1, ...top.map(t => t.receita));
+  const topRows = top.map((t, i) => `<tr>
+    <td>${i + 1}º</td><td>${esc(t.nome)}</td><td>${t.qtd}x</td><td>${money(t.receita)}</td>
+    <td style="min-width:140px"><div class="mini-row"><div class="mini-bar" style="width:${Math.round((t.receita / maxTop) * 100)}%"></div></div></td>
+  </tr>`).join('');
+
+  const statusMap = {
+    pending: ['wait', '⏳ Pendente'], approved: ['ok', '✅ Pago'], shipped: ['info', '🚚 Enviado'],
+    delivered: ['done', '📦 Entregue'], cancelled: ['no', '❌ Cancelado'], failed: ['no', '❌ Falhou'],
+  };
+  const statusChips = (stats.por_status || []).map(s => {
+    const [cls, label] = statusMap[s.status] || ['wait', s.status];
+    return `<span class="badge ${cls}" style="margin-right:6px">${label}: ${s.qtd}</span>`;
+  }).join('') || '<span class="muted">Nenhum pedido no período.</span>';
+
+  const metodoLabel = m => ({ pix: '💠 PIX', credit_card: '💳 Crédito', debit_card: '💳 Débito', 'n/a': '—' }[m] || m);
+  const maxMetodo = Math.max(1, ...stats.por_metodo.map(p => p.total));
+  const metodoRows = stats.por_metodo.map(p =>
+    `<div class="mini-row"><span style="width:130px">${metodoLabel(p.metodo)}</span><div class="mini-bar" style="width:${Math.round((p.total / maxMetodo) * 100)}%"></div><b>${money(p.total)}</b> <span class="muted">(${p.qtd}x)</span></div>`
+  ).join('') || '<div class="muted">Sem pagamentos aprovados no período.</div>';
+
+  const maxLead = Math.max(1, ...topLeadsList.map(l => l.gasto));
+  const leadRows = topLeadsList.map(l => `<tr>
+    <td>${esc(l.nome)}</td><td>${l.qtd_pedidos}x</td><td>${money(l.gasto)}</td>
+    <td style="min-width:140px"><div class="mini-row"><div class="mini-bar" style="width:${Math.round((l.gasto / maxLead) * 100)}%"></div></div></td>
+  </tr>`).join('');
+
+  const filter = `<div class="filters"><span style="font-size:12px;color:#64748b">Período:</span>
+    ${PERIODS.map(p => `<a class="btn ${p === period ? '' : 'gray'} small" href="?period=${p}">${p === 0 ? 'Hoje' : p + ' dias'}</a>`).join('')}
+    <span class="muted" style="font-size:12px">Mostrando ${periodLabel}</span></div>`;
+
+  const cards = `<div class="cards">
+    <div class="card"><div class="ico green">💰</div><div class="num green">${money(stats.receita)}</div><div class="label">Receita (pagos)</div></div>
+    <div class="card"><div class="ico blue">🧾</div><div class="num blue">${stats.aprovados}</div><div class="label">Pedidos pagos</div></div>
+    <div class="card"><div class="ico violet">🎯</div><div class="num violet">${money(stats.ticket_medio)}</div><div class="label">Ticket médio</div></div>
+    <div class="card"><div class="ico cyan" style="background:#cffafe">👥</div><div class="num" style="color:#0e7490">${leads.novos}</div><div class="label">Novos leads</div></div>
+    <div class="card"><div class="ico amber">📈</div><div class="num amber">${leads.conversao.toFixed(1)}%</div><div class="label">Conversão</div></div>
+  </div>`;
+
+  res.send(layout('Relatórios', clientMode ? '/painel/relatorios' : '/admin/relatorios', `
+    ${clientMode ? '' : tenantSelector(tenant.id, tenants, clientMode)}
+    ${filter}
+    ${cards}
+    <div class="panel"><h2>💵 Receita diária (pedidos pagos)</h2><div class="bars">${bars || '<div class="empty">Sem pedidos pagos no período.</div>'}</div></div>
+    <div class="grid2">
+      <div class="panel"><h2>🏆 Top produtos e planos</h2><table><thead><tr><th>#</th><th>Produto</th><th>Qtd</th><th>Receita</th><th>Participação</th></tr></thead><tbody>${topRows || '<tr><td colspan="5"><div class="empty">Sem vendas no período.</div></td></tr>'}</tbody></table></div>
+      <div>
+        <div class="panel"><h2>💳 Formas de pagamento</h2>${metodoRows}</div>
+        <div class="panel"><h2>📦 Pedidos por status</h2>${statusChips}</div>
+      </div>
+    </div>
+    <div class="panel"><h2>⭐ Melhores clientes</h2><table><thead><tr><th>Cliente</th><th>Pedidos</th><th>Gasto</th><th>Participação</th></tr></thead><tbody>${leadRows || '<tr><td colspan="4"><div class="empty">Sem clientes com pedidos pagos.</div></td></tr>'}</tbody></table></div>
+  `, tenants, tenant, clientMode));
+}
+
+router.get('/painel/relatorios', clientPanelAuth, pageRelatorios);
+router.get('/admin/relatorios', requireAuth, pageRelatorios);
 
 // ======================================================
 //  CLIENTES (somente admin)
