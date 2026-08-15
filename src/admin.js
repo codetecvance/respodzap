@@ -108,25 +108,42 @@ function galleryHtml(images, tenantId, base) {
 }
 
 // ======================================================
-//  AUTENTICAÇÃO DO ADMIN (SaaS)
+//  AUTENTICAÇÃO (cookies ASSINADOS — funcionam no serverless/Vercel,
+//  onde a memória não persiste entre requisições)
 // ======================================================
 const SESSION_TTL = 12 * 60 * 60 * 1000;
-const sessions = new Map();
+const TENANT_SESSION_TTL = 12 * 60 * 60 * 1000;
+const SESSION_SECRET = config.appSecret || config.adminPassword || 'respodzap-session-secret';
+
+function signSession(payload) {
+  const data = Buffer.from(JSON.stringify(payload)).toString('base64url');
+  const sig = crypto.createHmac('sha256', SESSION_SECRET).update(data).digest('base64url');
+  return `${data}.${sig}`;
+}
+
+function verifySession(token) {
+  if (!token) return null;
+  const parts = String(token).split('.');
+  if (parts.length !== 2) return null;
+  const [data, sig] = parts;
+  const expected = crypto.createHmac('sha256', SESSION_SECRET).update(data).digest('base64url');
+  if (sig !== expected) return null;
+  try {
+    const payload = JSON.parse(Buffer.from(data, 'base64url').toString());
+    if (payload.exp && payload.exp < Date.now()) return null;
+    return payload;
+  } catch {
+    return null;
+  }
+}
 
 function createSession() {
-  const token = crypto.randomBytes(24).toString('hex');
-  sessions.set(token, Date.now() + SESSION_TTL);
-  return token;
+  return signSession({ role: 'admin', exp: Date.now() + SESSION_TTL });
 }
 
 function isAuthed(req) {
-  const token = req.cookies?.rpz_admin;
-  if (!token || !sessions.has(token)) return false;
-  if (sessions.get(token) < Date.now()) {
-    sessions.delete(token);
-    return false;
-  }
-  return true;
+  const p = verifySession(req.cookies?.rpz_admin);
+  return p?.role === 'admin';
 }
 
 function requireAuth(req, res, next) {
@@ -137,24 +154,14 @@ function requireAuth(req, res, next) {
 // ======================================================
 //  AUTENTICAÇÃO DO CLIENTE (tenant)
 // ======================================================
-const TENANT_SESSION_TTL = 12 * 60 * 60 * 1000;
-const tenantSessions = new Map(); // token -> { tenantId, expiresAt }
-
 function createTenantSession(tenantId) {
-  const token = crypto.randomBytes(24).toString('hex');
-  tenantSessions.set(token, { tenantId, expiresAt: Date.now() + TENANT_SESSION_TTL });
-  return token;
+  return signSession({ role: 'tenant', tid: tenantId, exp: Date.now() + TENANT_SESSION_TTL });
 }
 
 function getTenantSession(req) {
-  const token = req.cookies?.rpz_tenant_auth;
-  if (!token || !tenantSessions.has(token)) return null;
-  const s = tenantSessions.get(token);
-  if (s.expiresAt < Date.now()) {
-    tenantSessions.delete(token);
-    return null;
-  }
-  return s;
+  const p = verifySession(req.cookies?.rpz_tenant_auth);
+  if (p?.role !== 'tenant') return null;
+  return { tenantId: p.tid, expiresAt: p.exp };
 }
 
 /**
@@ -401,8 +408,6 @@ router.post('/admin/login', (req, res) => {
 });
 
 router.get('/admin/logout', (req, res) => {
-  const token = req.cookies?.rpz_admin;
-  if (token) sessions.delete(token);
   res.setHeader('Set-Cookie', 'rpz_admin=; Path=/; Max-Age=0');
   res.redirect('/admin/login');
 });
@@ -450,8 +455,6 @@ router.post('/painel/login', async (req, res) => {
 });
 
 router.get('/painel/logout', (req, res) => {
-  const token = req.cookies?.rpz_tenant_auth;
-  if (token) tenantSessions.delete(token);
   res.setHeader('Set-Cookie', 'rpz_tenant_auth=; Path=/; Max-Age=0');
   res.redirect('/painel/login');
 });
