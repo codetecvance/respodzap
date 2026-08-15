@@ -410,19 +410,55 @@ async function getConversationsByLead(leadId, limit = 40) {
 // ============================================================
 //  CARRINHO
 // ============================================================
-async function getCart(leadId) {
-  const r = await query('SELECT * FROM cart_items WHERE lead_id = $1 ORDER BY added_at', [leadId]);
-  return r.rows.map(i => ({ ...i, unit_price: num(i.unit_price), total_price: num(i.total_price) }));
+/**
+ * Soma os preços dos adicionais de um item.
+ */
+function addonsTotal(addons) {
+  return (addons || []).reduce((s, g) => s + (g.opcoes || []).reduce((s2, o) => s2 + (Number(o.preco) || 0), 0), 0);
 }
 
-async function addToCart(leadId, product) {
-  const r = await query('SELECT id, quantity FROM cart_items WHERE lead_id = $1 AND product_id = $2', [leadId, product.id]);
-  if (r.rows[0]) {
-    await query('UPDATE cart_items SET quantity = quantity + 1 WHERE id = $1', [r.rows[0].id]);
+/**
+ * Texto amigável dos adicionais: "Bacon, Cheddar".
+ */
+function formatAddons(addons) {
+  const parts = [];
+  for (const g of addons || []) {
+    const nomes = (g.opcoes || []).map(o => o.nome).filter(Boolean);
+    if (nomes.length) parts.push(nomes.join(', '));
+  }
+  return parts.join('; ');
+}
+
+function addonsKey(addons) {
+  return JSON.stringify((addons || []).map(g => ({ grupo: g.grupo, opcoes: (g.opcoes || []).map(o => o.nome) })));
+}
+
+async function getCart(leadId) {
+  const r = await query('SELECT * FROM cart_items WHERE lead_id = $1 ORDER BY added_at', [leadId]);
+  return r.rows.map(i => ({ ...i, unit_price: num(i.unit_price), total_price: num(i.total_price), addons: parseAddons(i.addons) }));
+}
+
+function parseAddons(raw) {
+  if (!raw) return null;
+  if (typeof raw === 'object') return Array.isArray(raw) && raw.length ? raw : null;
+  try { return JSON.parse(raw); } catch { return null; }
+}
+
+/**
+ * Adiciona produto (com adicionais opcionais) ao carrinho.
+ * Item com mesmos adicionais incrementa a quantidade.
+ */
+async function addToCart(tenantId, leadId, product, addons = null) {
+  const key = addonsKey(addons);
+  const unitPrice = num(product.price) + addonsTotal(addons);
+  const r = await query('SELECT id, quantity, addons FROM cart_items WHERE lead_id = $1 AND product_id = $2', [leadId, product.id]);
+  const match = r.rows.find(i => addonsKey(parseAddons(i.addons)) === key);
+  if (match) {
+    await query('UPDATE cart_items SET quantity = quantity + 1, total_price = total_price + $2 WHERE id = $1', [match.id, unitPrice]);
   } else {
     await query(
-      'INSERT INTO cart_items (lead_id, product_id, product_name, unit_price, quantity, total_price, image) VALUES ($1,$2,$3,$4,1,$5,$6)',
-      [leadId, product.id, product.name, product.price, product.price, product.image || null]
+      'INSERT INTO cart_items (tenant_id, lead_id, product_id, product_name, unit_price, quantity, total_price, image, addons) VALUES ($1,$2,$3,$4,$5,1,$6,$7,$8)',
+      [tenantId, leadId, product.id, product.name, unitPrice, unitPrice, product.image || null, addons ? JSON.stringify(addons) : null]
     );
   }
 }
@@ -466,10 +502,10 @@ async function createOrder(tenantId, leadId, cartItems, subtotal, discount, deli
 
   for (const item of cartItems) {
     await query(
-      `INSERT INTO order_items (tenant_id, order_id, product_id, product_name, unit_price, quantity, total_price, product_image)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+      `INSERT INTO order_items (tenant_id, order_id, product_id, product_name, unit_price, quantity, total_price, product_image, addons)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
       [tenantId, orderId, item.product_id, item.product_name, item.unit_price, item.quantity,
-       num(item.unit_price) * item.quantity, item.image || null]
+       num(item.unit_price) * item.quantity, item.image || null, item.addons ? JSON.stringify(item.addons) : null]
     );
   }
   return getOrder(orderId);
@@ -489,7 +525,7 @@ async function getOrderByExternal(tenantId, externalId) {
 
 async function getOrderItems(orderId) {
   const r = await query('SELECT * FROM order_items WHERE order_id = $1', [orderId]);
-  return r.rows.map(i => ({ ...i, unit_price: num(i.unit_price), total_price: num(i.total_price) }));
+  return r.rows.map(i => ({ ...i, unit_price: num(i.unit_price), total_price: num(i.total_price), addons: parseAddons(i.addons) }));
 }
 
 async function updateOrderStatus(orderId, status) {
@@ -595,6 +631,7 @@ module.exports = {
   addMessage, getConversationsByLead,
   // carrinho
   getCart, addToCart, removeFromCart, clearCart, updateCartItemQuantity, cartTotal, cartCount,
+  formatAddons, addonsTotal,
   // pedidos
   createOrder, getOrder, getOrderByExternal, getOrderItems, updateOrderStatus, getLeadOrders, getOrders,
   // pagamentos

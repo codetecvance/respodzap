@@ -1087,6 +1087,7 @@ async function pageProdutos(req, res) {
   const images = await listTenantImages(tenant.id);
   const base = clientMode ? '/painel' : '/admin';
   const gallery = galleryHtml(images, tenant.id, base);
+  const showAddonsEditor = !!tenant.segment_name && tenant.segment_name !== 'vendas';
 
   const catsHtml = data.categories.map((cat, ci) => {
     const prods = cat.products.map((p, pi) => {
@@ -1125,6 +1126,11 @@ async function pageProdutos(req, res) {
         </div>
         <div><label>RESUMO (1 linha)</label><input type="text" name="short_description" value="${esc(p.short_description || '')}">
           <label>DESCRIÇÃO COMPLETA</label><textarea name="long_description" style="min-height:110px">${esc(p.long_description || '')}</textarea></div>
+        ${showAddonsEditor ? `<div style="grid-column:1/-1">
+          <h3 style="font-size:13px;margin:4px 0 8px">🧀 ADICIONAIS (grupos de opções) <small style="font-weight:400;color:#94a3b8">— o bot pergunta antes de adicionar ao pedido</small></h3>
+          <textarea name="adicionais" rows="6" style="font-family:Consolas,monospace;font-size:12px" placeholder='[{"grupo":"Tamanho","unico":true,"opcoes":[{"nome":"Pequeno","preco":0},{"nome":"Grande","preco":8}]},{"grupo":"Adicionais","max":3,"opcoes":[{"nome":"Bacon","preco":4},{"nome":"Cheddar","preco":3.5}]}]'>${esc(JSON.stringify(p.adicionais || [], null, 2))}</textarea>
+          <p style="font-size:12px;color:#64748b;margin-top:6px"><b>unico</b> = só 1 opção · <b>max</b> = limite de opções (sem os dois, escolhe à vontade) · <b>preco</b> = adicional por opção (0 = sem custo)</p>
+        </div>` : ''}
         <div style="grid-column:1/-1">
           <h3 style="font-size:13px;margin:4px 0 8px">📋 PLANOS DE ASSINATURA <small style="font-weight:400;color:#94a3b8">(opcional)</small></h3>
           <table><thead><tr><th>Nome</th><th>Preço</th><th>Período</th><th>★</th><th>Link pagamento</th><th>Link redirecionamento</th><th>Recursos</th><th></th></tr></thead>
@@ -1221,6 +1227,25 @@ async function postProdutosSalvar(req, res) {
     }
   }
   p.plans = plans.length ? plans : undefined;
+
+  // Adicionais (JSON) — só se o ramo permite
+  if (showAddonsEditor) {
+    if (b.adicionais && String(b.adicionais).trim()) {
+      try {
+        const addons = JSON.parse(b.adicionais);
+        if (Array.isArray(addons) && addons.every(g => g.grupo && Array.isArray(g.opcoes) && g.opcoes.length)) {
+          p.adicionais = addons;
+        } else {
+          return res.redirect(`${base}/produtos?msg=` + encodeURIComponent('Adicionais: JSON inválido (cada grupo precisa de "grupo" e "opcoes").') + '&type=err');
+        }
+      } catch (e) {
+        return res.redirect(`${base}/produtos?msg=` + encodeURIComponent('Adicionais: JSON inválido — ' + e.message) + '&type=err');
+      }
+    } else {
+      p.adicionais = undefined;
+    }
+  }
+
   await catalog.saveTenantCatalog(tenantId, data);
   res.redirect(`${base}/produtos?msg=` + encodeURIComponent(`Produto "${p.name}" atualizado!`));
 }
@@ -1427,7 +1452,10 @@ async function pagePedidos(req, res) {
     `<a class="btn ${filter === s ? '' : 'gray'} small" href="${clientMode ? '/painel' : '/admin'}/pedidos?status=${s}">${s === 'todos' ? 'Todos' : s}</a>`).join(' ');
 
   const rowsHtml = (await Promise.all(orders.map(async o => {
-    const items = (await repo.getOrderItems(o.id)).map(it => `${it.quantity}x ${esc(it.product_name)}`).join('<br>');
+    const items = (await repo.getOrderItems(o.id)).map(it => {
+      const extra = repo.formatAddons(it.addons);
+      return `${it.quantity}x ${esc(it.product_name)}${extra ? ` <small style="color:#64748b">(${esc(extra)})</small>` : ''}`;
+    }).join('<br>');
     const pay = await repo.getPaymentByOrderId(o.id);
     const lead = await repo.getLead(o.lead_id);
     return `<tr>

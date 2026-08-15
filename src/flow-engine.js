@@ -20,6 +20,7 @@ const ST = {
   SOB_CONSULTA_NAME: 'SOB_CONSULTA_NAME',
   SUPPORT_NAME: 'SUPPORT_NAME',
   SUPPORT_REASON: 'SUPPORT_REASON',
+  ADDONS: 'ADDONS',
 };
 
 // ================================================================
@@ -90,6 +91,85 @@ async function precoExibicao(tenantId, product) {
   return catalog.formatPrice(product.price);
 }
 
+// ================================================================
+//  ADICIONAIS (grupos de opções com preço — restaurante/delivery)
+// ================================================================
+
+function temAdicionais(product) {
+  return Array.isArray(product.adicionais) && product.adicionais.length > 0;
+}
+
+function opcaoPreco(opcao) {
+  const preco = Number(opcao.preco || 0);
+  return preco > 0 ? ` (+R$ ${preco.toFixed(2)})` : '';
+}
+
+function formatarOpcoesSelecionadas(selections) {
+  return (selections || []).map(g => ({
+    grupo: g.grupo,
+    opcoes: (g.opcoes || []).map(o => ({ nome: o.nome, preco: Number(o.preco || 0) })),
+  }));
+}
+
+async function _askAddonGroup(tenant, lead, product, grupoIdx) {
+  const grupo = product.adicionais[grupoIdx];
+  const lines = grupo.opcoes.map((o, i) => `${i + 1}. ${o.nome}${opcaoPreco(o)}`).join('\n');
+  const limite = grupo.unico ? 'Escolha *1* opção' : (grupo.max ? `Escolha até *${grupo.max}* opções` : 'Escolha quantas quiser');
+  const txt = `*${product.name}* — escolha o *${grupo.grupo}*:\n\n${lines}\n\n${limite}\n\nResponda com o(s) número(s), ex: *1,3*`;
+  await ws.sendText(lead.phone, txt, tenant);
+}
+
+async function _startAddons(tenant, lead, product) {
+  const survey = (await repo.getSurvey(lead.id)) || {};
+  survey.addons = { productId: product.id, grupoIdx: 0, selections: [] };
+  await repo.setSurvey(lead.id, survey);
+  await repo.setFlowState(lead.id, ST.ADDONS);
+  await _askAddonGroup(tenant, lead, product, 0);
+}
+
+async function _finishAddons(tenant, lead, product, selections) {
+  await repo.setSurvey(lead.id, null);
+  await repo.addToCart(tenant.id, lead.id, product, formatarOpcoesSelecionadas(selections));
+  const count = await repo.cartCount(lead.id);
+  const extra = repo.formatAddons(formatarOpcoesSelecionadas(selections));
+  await ws.sendButtons(lead.phone, await catalog.msg(tenant.id, 'added_to_cart', { produto: extra ? `${product.name} (${extra})` : product.name, total: count }), [
+    { id: 'MENU_SHOP', title: 'Continuar comprando' },
+    { id: 'CART_SHOW', title: 'Ver carrinho' },
+  ], tenant);
+  await repo.setFlowState(lead.id, ST.MENU);
+}
+
+async function _handleAddonsAnswer(tenant, lead, text) {
+  const survey = await repo.getSurvey(lead.id);
+  const state = survey?.addons;
+  if (!state) return _menu(tenant, lead);
+  const product = await catalog.findProduct(tenant.id, state.productId);
+  if (!product) return _menu(tenant, lead);
+  const grupo = product.adicionais[state.grupoIdx];
+  if (!grupo) return _finishAddons(tenant, lead, product, state.selections);
+
+  const nums = String(text || '').trim().split(/[\s,;/]+/).map(Number).filter(n => Number.isInteger(n) && n >= 1 && n <= grupo.opcoes.length);
+  const unicos = [...new Set(nums)];
+  const limite = grupo.unico ? 1 : (grupo.max || grupo.opcoes.length);
+  const valido = unicos.length > 0 && unicos.length <= limite && unicos.length === nums.length;
+  if (!valido) {
+    await ws.sendText(lead.phone, `Hmm, resposta inválida para *${grupo.grupo}*.\n\n${grupo.unico ? 'Escolha apenas 1 opção' : `Escolha até ${grupo.max || grupo.opcoes.length} opções`}, ex: *1,3*`, tenant);
+    return _askAddonGroup(tenant, lead, product, state.grupoIdx);
+  }
+
+  state.selections.push({
+    grupo: grupo.grupo,
+    opcoes: unicos.map(n => ({ nome: grupo.opcoes[n - 1].nome, preco: Number(grupo.opcoes[n - 1].preco || 0) })),
+  });
+  state.grupoIdx++;
+  await repo.setSurvey(lead.id, survey);
+
+  const proximo = product.adicionais[state.grupoIdx];
+  if (proximo) return _askAddonGroup(tenant, lead, product, state.grupoIdx);
+  await ws.sendText(lead.phone, await catalog.msg(tenant.id, 'addon_done'), tenant);
+  return _finishAddons(tenant, lead, product, state.selections);
+}
+
 function productImageUrl(product) {
   const image = product.image || '';
   if (/^https?:\/\//.test(image)) return image;
@@ -102,7 +182,7 @@ async function _addToCart(tenant, lead, productId) {
     await ws.sendText(lead.phone, await catalog.msg(tenant.id, 'product_not_found'), tenant);
     return _menu(tenant, lead);
   }
-  await repo.addToCart(lead.id, product);
+  await repo.addToCart(tenant.id, lead.id, product);
   const count = await repo.cartCount(lead.id);
   await ws.sendButtons(lead.phone, await catalog.msg(tenant.id, 'added_to_cart', { produto: product.name, total: count }), [
     { id: 'MENU_SHOP', title: 'Continuar comprando' },
@@ -131,7 +211,8 @@ async function _cart(tenant, lead) {
   let total = 0;
   items.forEach((it, i) => {
     total += Number(it.unit_price) * it.quantity;
-    txt += `${i + 1}. ${it.product_name} — ${it.quantity}x R$ ${Number(it.unit_price).toFixed(2)}\n`;
+    const extra = repo.formatAddons(it.addons);
+    txt += `${i + 1}. ${it.product_name}${extra ? ` (${extra})` : ''} — ${it.quantity}x R$ ${Number(it.unit_price).toFixed(2)}\n`;
   });
   txt += '\n' + (await catalog.msg(tenant.id, 'cart_total', { total: total.toFixed(2) }));
 
@@ -172,7 +253,7 @@ async function _checkout(tenant, lead, step, answer) {
     const answers = survey?.answers || {};
     await repo.setSurvey(lead.id, null);
     const surveyLines = Object.entries(answers).map(([k, v]) => `• ${k}: ${v}`).join('\n');
-    const itensTxt = items.map(it => `${it.quantity}x ${it.product_name}`).join(', ');
+    const itensTxt = items.map(it => `${it.quantity}x ${it.product_name}${repo.formatAddons(it.addons) ? ` (${repo.formatAddons(it.addons)})` : ''}`).join(', ');
     const { notifyTenant } = require('./notify');
     await notifyTenant(
       tenant,
@@ -447,7 +528,7 @@ async function processIncoming(tenant, phone, text, payload, messageId, numberId
     }
     if (payload === 'MENU_BACK')      return _menu(tenant, lead);
     if (payload.startsWith('CAT_'))   { const catId = payload.slice(4); return _products(tenant, lead, catId); }
-    if (payload.startsWith('BUY_'))   { const pid = payload.slice(4); const prod = await catalog.findProduct(tenant.id, pid); if (prod?.plans?.length) return sendPlanList(tenant, lead, prod); return _addToCart(tenant, lead, pid); }
+    if (payload.startsWith('BUY_'))   { const pid = payload.slice(4); const prod = await catalog.findProduct(tenant.id, pid); if (prod?.plans?.length) return sendPlanList(tenant, lead, prod); if (prod && temAdicionais(prod)) return _startAddons(tenant, lead, prod); return _addToCart(tenant, lead, pid); }
     if (payload.startsWith('PLANS_')) { const pid = payload.slice(6); const prod = await catalog.findProduct(tenant.id, pid); if (prod?.plans?.length) return sendPlanList(tenant, lead, prod); return _addToCart(tenant, lead, pid); }
     if (payload.startsWith('PLAN_'))  { const parts = payload.split('_'); const pid = parts.slice(1, -1).join('_'); const planId = parts[parts.length - 1]; return showPlanDetail(tenant, lead, pid, planId); }
     if (payload.startsWith('PROD_'))  { const pid = payload.slice(5); await showProductDetail(tenant, lead, pid); return; }
@@ -464,6 +545,7 @@ async function processIncoming(tenant, phone, text, payload, messageId, numberId
   }
 
   const state = lead.flow_state;
+  if (state === ST.ADDONS)            return _handleAddonsAnswer(tenant, lead, text);
   if (state === ST.CHECKOUT_NAME)     return _checkout(tenant, lead, 'name', text);
   if (state === ST.SURVEY)            return _handleSurveyAnswer(tenant, lead, text);
   if (state === ST.SOB_CONSULTA_NAME) return _handleSobConsulta(tenant, lead, text);
