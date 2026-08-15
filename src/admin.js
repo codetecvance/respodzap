@@ -1092,6 +1092,29 @@ function productImgSrc(image) {
   return `/images/${image}`;
 }
 
+/**
+ * Renderiza um grupo de adicionais como editor visual (caixas nome + valor).
+ */
+function addonsGrupoHtml(gi, g) {
+  const opcoes = (g.opcoes || []).map((o, oi) => `
+    <div class="addons-opcao" style="display:flex;gap:8px;margin-bottom:6px;align-items:center">
+      <input type="text" name="adicionais[${gi}][opcoes][${oi}][nome]" value="${esc(o.nome || '')}" placeholder="Nome (ex: Bacon)" style="flex:1">
+      <div style="display:flex;align-items:center;gap:4px;width:130px;flex-shrink:0"><span style="font-size:12px;color:#64748b">R$</span><input type="text" name="adicionais[${gi}][opcoes][${oi}][preco]" value="${esc(o.preco ?? '')}" placeholder="0,00"></div>
+      <button type="button" class="btn red small" onclick="removeAddonsOpcao(this)">✕</button>
+    </div>`).join('');
+  return `
+    <div class="addons-grupo" style="border:1px dashed #cbd5e1;border-radius:10px;padding:12px;margin-bottom:10px;background:#f8fafc">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input type="text" name="adicionais[${gi}][grupo]" value="${esc(g.grupo || '')}" placeholder="Nome do grupo (ex: Extras)" style="min-width:170px">
+        <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:#475569;white-space:nowrap"><input type="checkbox" name="adicionais[${gi}][unico]" value="on" ${g.unico ? 'checked' : ''} style="width:auto"> Só 1 opção</label>
+        <div style="display:flex;align-items:center;gap:4px"><span style="font-size:12px;color:#64748b">Máx.</span><input type="number" name="adicionais[${gi}][max]" value="${esc(g.max ?? '')}" placeholder="—" style="width:64px" title="Limite de opções (vazio = escolhe à vontade)"></div>
+        <button type="button" class="btn red small" onclick="removeAddonsGrupo(this)">🗑 Grupo</button>
+      </div>
+      <div class="addons-opcoes" style="margin-top:8px">${opcoes}</div>
+      <button type="button" class="btn gray small" onclick="addAddonsOpcao(this)">+ Opção</button>
+    </div>`;
+}
+
 async function pageProdutos(req, res) {
   const { tenant, tenants } = await resolveTenant(req, res);
   const clientMode = !!req.clientMode;
@@ -1120,7 +1143,7 @@ async function pageProdutos(req, res) {
       const base = clientMode ? '/painel' : '/admin';
       return `
       <div class="panel" style="margin-bottom:14px"><h2>✏️ ${esc(p.name)} ${p.plans?.length ? `<span class="badge info">${p.plans.length} plano(s)</span>` : ''} ${statusBadge(p.available ? 'ok' : 'no')}</h2>
-      <form method="POST" action="${base}/produtos/salvar" class="grid2">
+      <form method="POST" action="${base}/produtos/salvar" class="grid2" onsubmit="reindexAddons()">
         <input type="hidden" name="tenant" value="${tenant.id}"><input type="hidden" name="ci" value="${ci}"><input type="hidden" name="pi" value="${pi}">
         <div>
           <label>NOME</label><input type="text" name="name" value="${esc(p.name)}" required>
@@ -1141,9 +1164,12 @@ async function pageProdutos(req, res) {
         <div><label>RESUMO (1 linha)</label><input type="text" name="short_description" value="${esc(p.short_description || '')}">
           <label>DESCRIÇÃO COMPLETA</label><textarea name="long_description" style="min-height:110px">${esc(p.long_description || '')}</textarea></div>
         ${showAddonsEditor ? `<div style="grid-column:1/-1">
-          <h3 style="font-size:13px;margin:4px 0 8px">🧀 ADICIONAIS (grupos de opções) <small style="font-weight:400;color:#94a3b8">— o bot pergunta antes de adicionar ao pedido</small></h3>
-          <textarea name="adicionais" rows="6" style="font-family:Consolas,monospace;font-size:12px" placeholder='[{"grupo":"Tamanho","unico":true,"opcoes":[{"nome":"Pequeno","preco":0},{"nome":"Grande","preco":8}]},{"grupo":"Adicionais","max":3,"opcoes":[{"nome":"Bacon","preco":4},{"nome":"Cheddar","preco":3.5}]}]'>${esc(JSON.stringify(p.adicionais || [], null, 2))}</textarea>
-          <p style="font-size:12px;color:#64748b;margin-top:6px"><b>unico</b> = só 1 opção · <b>max</b> = limite de opções (sem os dois, escolhe à vontade) · <b>preco</b> = adicional por opção (0 = sem custo)</p>
+          <h3 style="font-size:13px;margin:4px 0 8px">🧀 ADICIONAIS <small style="font-weight:400;color:#94a3b8">— o bot pergunta antes de adicionar ao pedido, e o valor é somado ao item</small></h3>
+          <div id="addonsList-${ci}-${pi}">
+            ${(p.adicionais || []).map((g, gi) => addonsGrupoHtml(gi, g)).join('') || '<div class="muted" style="font-size:12px;margin:4px 0">Nenhum grupo ainda. Clique em "+ Adicionar grupo" para criar (ex: Extras, Tamanho, Ponto da carne).</div>'}
+          </div>
+          <button type="button" class="btn gray small" style="margin-top:6px" onclick="addAddonsGrupo(${ci}, ${pi})">+ Adicionar grupo</button>
+          <p style="font-size:12px;color:#64748b;margin-top:6px"><b>Só 1 opção</b> = cliente escolhe apenas uma · <b>Máx.</b> = limite de opções por grupo (vazio = à vontade) · o valor digitado em cada opção é somado ao preço do item (0 = sem custo)</p>
         </div>` : ''}
         <div style="grid-column:1/-1">
           <h3 style="font-size:13px;margin:4px 0 8px">📋 PLANOS DE ASSINATURA <small style="font-weight:400;color:#94a3b8">(opcional)</small></h3>
@@ -1178,7 +1204,40 @@ async function pageProdutos(req, res) {
       <p style="font-size:12px;color:#64748b">Depois de enviar, a foto aparece na galeria abaixo — <b>clique nela</b> (nos produtos) para usar, ou copie a URL.</p>
     </div>
     ${gallery}
-    ${catsHtml}`, tenants, tenant, clientMode));
+    ${catsHtml}
+    <script>
+      function addonsOpcaoHtml(){
+        return '<div class="addons-opcao" style="display:flex;gap:8px;margin-bottom:6px;align-items:center"><input type="text" name="adicionais[0][opcoes][0][nome]" placeholder="Nome (ex: Bacon)" style="flex:1"><div style="display:flex;align-items:center;gap:4px;width:130px;flex-shrink:0"><span style="font-size:12px;color:#64748b">R$</span><input type="text" name="adicionais[0][opcoes][0][preco]" placeholder="0,00"></div><button type="button" class="btn red small" onclick="removeAddonsOpcao(this)">✕</button></div>';
+      }
+      function addAddonsOpcao(btn){ btn.closest('.addons-grupo').querySelector('.addons-opcoes').insertAdjacentHTML('beforeend', addonsOpcaoHtml()); }
+      function removeAddonsOpcao(btn){ btn.closest('.addons-opcao').remove(); }
+      function removeAddonsGrupo(btn){ btn.closest('.addons-grupo').remove(); }
+      function addAddonsGrupo(ci, pi){
+        const el = document.getElementById('addonsList-' + ci + '-' + pi);
+        if (!el) return;
+        el.insertAdjacentHTML('beforeend',
+          '<div class="addons-grupo" style="border:1px dashed #cbd5e1;border-radius:10px;padding:12px;margin-bottom:10px;background:#f8fafc">' +
+          '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">' +
+          '<input type="text" name="adicionais[0][grupo]" placeholder="Nome do grupo (ex: Extras)" style="min-width:170px">' +
+          '<label style="display:flex;align-items:center;gap:5px;font-size:12px;color:#475569;white-space:nowrap"><input type="checkbox" name="adicionais[0][unico]" value="on" style="width:auto"> Só 1 opção</label>' +
+          '<div style="display:flex;align-items:center;gap:4px"><span style="font-size:12px;color:#64748b">Máx.</span><input type="number" name="adicionais[0][max]" placeholder="—" style="width:64px"></div>' +
+          '<button type="button" class="btn red small" onclick="removeAddonsGrupo(this)">🗑 Grupo</button>' +
+          '</div><div class="addons-opcoes" style="margin-top:8px"></div>' +
+          '<button type="button" class="btn gray small" onclick="addAddonsOpcao(this)">+ Opção</button></div>');
+      }
+      function reindexAddons(){
+        document.querySelectorAll('.addons-grupo').forEach(function(g, gi){
+          g.querySelectorAll('input[name^="adicionais["]').forEach(function(el){
+            el.name = el.name.replace(/^adicionais\\[\\d+\\]/, 'adicionais[' + gi + ']');
+          });
+          g.querySelectorAll('.addons-opcao').forEach(function(o, oi){
+            o.querySelectorAll('input[name^="adicionais["]').forEach(function(el){
+              el.name = el.name.replace(/adicionais\\[\\d+\\]\\[opcoes\\]\\[\\d+\\]/, 'adicionais[' + gi + '][opcoes][' + oi + ']');
+            });
+          });
+        });
+      }
+    </script>`, tenants, tenant, clientMode));
 }
 
 router.get('/admin/produtos', requireAuth, pageProdutos);
@@ -1208,6 +1267,8 @@ async function postProdutosSalvar(req, res) {
   const b = req.body;
   const tenantId = tenantIdFromReq(req, b.tenant || req.query.tenant);
   const base = req.clientMode ? '/painel' : '/admin';
+  const tenant = await repo.getTenant(tenantId);
+  const showAddonsEditor = !!tenant?.segment_name && tenant.segment_name !== 'vendas';
   const data = await catalog.loadTenantCatalog(tenantId);
   const cat = data.categories[Number(b.ci)];
   const p = cat?.products?.[Number(b.pi)];
@@ -1242,22 +1303,26 @@ async function postProdutosSalvar(req, res) {
   }
   p.plans = plans.length ? plans : undefined;
 
-  // Adicionais (JSON) — só se o ramo permite
+  // Adicionais (editor visual — arrays do form)
   if (showAddonsEditor) {
-    if (b.adicionais && String(b.adicionais).trim()) {
-      try {
-        const addons = JSON.parse(b.adicionais);
-        if (Array.isArray(addons) && addons.every(g => g.grupo && Array.isArray(g.opcoes) && g.opcoes.length)) {
-          p.adicionais = addons;
-        } else {
-          return res.redirect(`${base}/produtos?msg=` + encodeURIComponent('Adicionais: JSON inválido (cada grupo precisa de "grupo" e "opcoes").') + '&type=err');
-        }
-      } catch (e) {
-        return res.redirect(`${base}/produtos?msg=` + encodeURIComponent('Adicionais: JSON inválido — ' + e.message) + '&type=err');
-      }
-    } else {
-      p.adicionais = undefined;
+    const addons = [];
+    const grupos = b.adicionais ? (Array.isArray(b.adicionais) ? b.adicionais : [b.adicionais]) : [];
+    for (const g of grupos) {
+      const nomeGrupo = String(g.grupo || '').trim();
+      if (!nomeGrupo) continue;
+      const opcoesRaw = Array.isArray(g.opcoes) ? g.opcoes : (g.opcoes ? [g.opcoes] : []);
+      const opcoes = opcoesRaw
+        .map(o => ({ nome: String(o.nome || '').trim(), preco: parseFloat(String(o.preco || '0').replace(',', '.')) || 0 }))
+        .filter(o => o.nome);
+      if (!opcoes.length) continue;
+      addons.push({
+        grupo: nomeGrupo,
+        unico: (Array.isArray(g.unico) ? g.unico[g.unico.length - 1] : g.unico) === 'on',
+        max: g.max !== '' && g.max !== undefined && g.max !== null ? Number(g.max) : undefined,
+        opcoes,
+      });
     }
+    p.adicionais = addons.length ? addons : undefined;
   }
 
   await catalog.saveTenantCatalog(tenantId, data);
