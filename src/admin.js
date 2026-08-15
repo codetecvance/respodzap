@@ -1383,17 +1383,20 @@ async function pageConfig(req, res) {
           <label>LOGO DO CLIENTE (aparece no topo da imagem)</label>
           <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
             <input type="text" id="logoUrlField" name="company[logo_url]" value="${esc(logoUrl)}" placeholder="URL da logo ou envie abaixo">
-            <form method="POST" action="${base}/config/logo" enctype="multipart/form-data" style="display:flex;gap:8px;align-items:center;margin:0">
-              <input type="hidden" name="tenant" value="${tenant.id}">
-              <input type="file" name="logo" accept="image/*" style="max-width:200px">
-              <button class="btn small" type="submit">Enviar logo</button>
-            </form>
           </div>
           ${logoThumb}
         </div>
       </div>
       <button class="btn" type="submit">💾 Salvar</button>
     </form>
+    <div class="panel"><h2>🖼️ Enviar logo do cliente</h2>
+      <form method="POST" action="${base}/config/logo" enctype="multipart/form-data" style="display:flex;gap:8px;align-items:end;flex-wrap:wrap">
+        <input type="hidden" name="tenant" value="${tenant.id}">
+        <input type="file" name="logo" accept="image/*">
+        <button class="btn" type="submit">Enviar logo</button>
+      </form>
+      <p style="font-size:12px;color:#64748b;margin-top:8px">Depois de enviar, a URL aparece no campo acima. Clique em <b>Salvar</b> para aplicar.</p>
+    </div>
     <div class="panel"><h2>👁 Preview da imagem do menu</h2>
       <img id="menuPreview" src="/api/menu-image?tenant=${tenant.id}&cat=${encodeURIComponent(previewCat)}&refresh=1&v=1" style="max-width:360px;width:100%;border:1px solid #e2e8f0;border-radius:10px" alt="Preview">
       <p style="font-size:12px;color:#64748b;margin-top:8px">Atualiza conforme você muda as cores/acima. Salve para aplicar no bot (em até 15s).</p>
