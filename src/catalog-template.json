@@ -94,6 +94,7 @@
     "no_orders": "Você não tem pedidos ainda.",
     "order_status": "Seu último pedido: #{pedido} — Status: {status}",
     "cart_cleared": "Carrinho esvaziado.",
+    "store_closed": "😔 Estamos fechados agora — {horario}.\n\nVolte mais tarde!",
     "plans_title": "{produto} — escolha o plano:",
     "plan_detail": "*{produto} — {plano}*\n\n💰 {preco}\n\n{recursos}"
   }

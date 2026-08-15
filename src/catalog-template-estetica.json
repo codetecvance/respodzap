@@ -211,6 +211,7 @@
     "plan_detail": "*{produto} — {plano}*\n\n💰 {preco}\n\n{recursos}",
     "addon_group": "*{produto}* — escolha o *{grupo}*:",
     "addon_done": "Adicionais registrados!",
-    "out_of_area": "😔 Desculpe, seu bairro está fora da nossa área de entrega."
+    "out_of_area": "😔 Desculpe, seu bairro está fora da nossa área de entrega.",
+    "store_closed": "😔 Estamos fechados agora — {horario}.\n\nVolte mais tarde!"
   }
 }

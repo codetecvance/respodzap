@@ -93,6 +93,57 @@ async function precoExibicao(tenantId, product) {
 }
 
 // ================================================================
+//  HORÁRIO DE FUNCIONAMENTO (ramos de operação — bloqueio de pedidos)
+// ================================================================
+const DIAS_PT = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
+
+function minutos(h) {
+  const [a, b] = String(h || '').split(':').map(Number);
+  if (Number.isNaN(a)) return undefined;
+  return a * 60 + (Number.isNaN(b) ? 0 : b);
+}
+
+/**
+ * Verifica se a loja está aberta agora.
+ * store.hours: { "0": {open, close}, ... } — chave = dia (0=domingo..6=sábado); ausente = fechado.
+ * Sem store.hours → sempre aberto.
+ */
+function estaAberto(store) {
+  const hours = store?.hours;
+  if (!hours || typeof hours !== 'object') return { aberto: true };
+  const cfg = hours[String(new Date().getDay())];
+  if (!cfg) return { aberto: false };
+  const min = new Date().getHours() * 60 + new Date().getMinutes();
+  const open = minutos(cfg.open);
+  const close = minutos(cfg.close);
+  if (open === undefined || close === undefined) return { aberto: false };
+  const aberto = open <= close ? (min >= open && min <= close) : (min >= open || min <= close);
+  return { aberto, open: cfg.open, close: cfg.close };
+}
+
+/**
+ * Bloqueia pedidos fora do horário (exceto ramo vendas). Retorna true se pode prosseguir.
+ */
+async function _checaHorario(tenant, lead) {
+  let seg = tenant.segment_name;
+  if (!seg) {
+    const s = await repo.getTenantSegment(tenant.id);
+    seg = s?.name;
+  }
+  if (!seg || seg === 'vendas') return true;
+  const store = await catalog.getStoreConfig(tenant.id);
+  const s = estaAberto(store);
+  if (s.aberto) return true;
+  const diaNome = DIAS_PT[new Date().getDay()];
+  const horario = s.open ? `hoje das *${s.open}* às *${s.close}*` : `hoje (*${diaNome}* fechado)`;
+  let texto = await catalog.msg(tenant.id, 'store_closed', { horario, dia: diaNome });
+  if (!texto) texto = `😔 Estamos fechados agora — ${horario}.\n\nVolte mais tarde!`;
+  await ws.sendText(lead.phone, texto, tenant);
+  await repo.setFlowState(lead.id, ST.MENU);
+  return false;
+}
+
+// ================================================================
 //  ADICIONAIS (grupos de opções com preço — restaurante/delivery)
 // ================================================================
 
@@ -648,14 +699,14 @@ async function processIncoming(tenant, phone, text, payload, messageId, numberId
     }
     if (payload === 'MENU_BACK')      return _menu(tenant, lead);
     if (payload.startsWith('CAT_'))   { const catId = payload.slice(4); return _products(tenant, lead, catId); }
-    if (payload.startsWith('BUY_'))   { const pid = payload.slice(4); const prod = await catalog.findProduct(tenant.id, pid); if (prod?.plans?.length) return sendPlanList(tenant, lead, prod); if (prod && temAdicionais(prod)) return _startAddons(tenant, lead, prod); return _addToCart(tenant, lead, pid); }
+    if (payload.startsWith('BUY_'))   { if (!(await _checaHorario(tenant, lead))) return; const pid = payload.slice(4); const prod = await catalog.findProduct(tenant.id, pid); if (prod?.plans?.length) return sendPlanList(tenant, lead, prod); if (prod && temAdicionais(prod)) return _startAddons(tenant, lead, prod); return _addToCart(tenant, lead, pid); }
     if (payload.startsWith('PLANS_')) { const pid = payload.slice(6); const prod = await catalog.findProduct(tenant.id, pid); if (prod?.plans?.length) return sendPlanList(tenant, lead, prod); return _addToCart(tenant, lead, pid); }
     if (payload.startsWith('PLAN_'))  { const parts = payload.split('_'); const pid = parts.slice(1, -1).join('_'); const planId = parts[parts.length - 1]; return showPlanDetail(tenant, lead, pid, planId); }
     if (payload.startsWith('PROD_'))  { const pid = payload.slice(5); await showProductDetail(tenant, lead, pid); return; }
     if (payload.startsWith('DETAIL_')){ const pid = payload.slice(7); await showProductDetail(tenant, lead, pid); return; }
     if (payload === 'CART_SHOW')      return _cart(tenant, lead);
     if (payload.startsWith('BAIRRO_')) return _handleBairro(tenant, lead, '', payload);
-    if (payload === 'CART_BUY')       { await repo.setFlowState(lead.id, ST.CHECKOUT_NAME); return ws.sendText(phone, await catalog.msg(tenant.id, 'checkout_ask_name'), tenant); }
+    if (payload === 'CART_BUY')       { if (!(await _checaHorario(tenant, lead))) return; await repo.setFlowState(lead.id, ST.CHECKOUT_NAME); return ws.sendText(phone, await catalog.msg(tenant.id, 'checkout_ask_name'), tenant); }
     if (payload === 'CART_CLEAR')     { await repo.clearCart(lead.id); await ws.sendText(phone, await catalog.msg(tenant.id, 'cart_cleared'), tenant); return _menu(tenant, lead); }
     if (payload === 'ORDER_FINAL')    return _checkout(tenant, lead, 'confirm', '');
     if (payload === 'PAY_PIX')        return _processPayment(tenant, lead, 'pix');

@@ -553,6 +553,22 @@ async function getOrders(tenantId) {
   return r.rows.map(o => ({ ...o, subtotal: num(o.subtotal), delivery_fee: num(o.delivery_fee), total: num(o.total) }));
 }
 
+/**
+ * Pedidos aprovados ainda não impressos (fila da impressora), do mais antigo.
+ */
+async function getOrdersToPrint(tenantId, limit = 5) {
+  const r = await query(
+    `SELECT * FROM orders WHERE tenant_id = $1 AND status = 'approved' AND printed_at IS NULL
+     ORDER BY created_at ASC LIMIT $2`,
+    [tenantId, limit]
+  );
+  return r.rows.map(o => ({ ...o, subtotal: num(o.subtotal), delivery_fee: num(o.delivery_fee), total: num(o.total) }));
+}
+
+async function markOrderPrinted(orderId) {
+  await query(`UPDATE orders SET printed_at = NOW(), updated_at = NOW() WHERE id = $1`, [orderId]);
+}
+
 // ============================================================
 //  PAGAMENTOS
 // ============================================================
@@ -642,6 +658,7 @@ module.exports = {
   formatAddons, addonsTotal,
   // pedidos
   createOrder, getOrder, getOrderByExternal, getOrderItems, updateOrderStatus, getLeadOrders, getOrders,
+  getOrdersToPrint, markOrderPrinted,
   // pagamentos
   createPayment, getPaymentByMpId, getPaymentByOrderId, updatePaymentStatusByMpId,
   // estatísticas

@@ -6,6 +6,7 @@ const multer = require('multer');
 const catalog = require('./catalog');
 const repo = require('./repository');
 const config = require('./config');
+const ticket = require('./ticket');
 
 const router = express.Router();
 
@@ -304,6 +305,48 @@ function layout(title, active, content, tenants = [], activeTenantId = null, cli
   const activeBg = clientMode ? theme.active : '#2563eb';
   const logoGrad = clientMode ? `linear-gradient(135deg,${theme.sidebar[1]},${theme.active})` : 'linear-gradient(135deg,#38bdf8,#2563eb)';
 
+  // Impressão automática de pedidos pagos (ramos de operação)
+  const printScript = (clientMode && activeTenantId?.segment_name && activeTenantId.segment_name !== 'vendas') ? `
+  <script>
+    let imprimindo = false;
+    function printTicket(html){
+      return new Promise(function(resolve){
+        const f = document.createElement('iframe');
+        f.style.cssText = 'position:fixed;left:-10000px;top:0;width:80mm;height:220mm;border:0;visibility:hidden';
+        document.body.appendChild(f);
+        f.onload = function(){
+          try { f.contentWindow.focus(); f.contentWindow.print(); } catch(e){}
+          setTimeout(function(){ f.remove(); resolve(); }, 600);
+        };
+        f.srcdoc = html;
+      });
+    }
+    async function checarImpressao(){
+      if (imprimindo) return;
+      try {
+        const r = await fetch('/painel/api/impressao');
+        const lista = await r.json();
+        for (const t of lista || []) {
+          imprimindo = true;
+          try {
+            await printTicket(t.html);
+            await fetch('/painel/api/impressao/marcar', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ id: t.id }) });
+          } catch(e){}
+          imprimindo = false;
+        }
+      } catch(e){}
+    }
+    setInterval(checarImpressao, 4000);
+    checarImpressao();
+    window.testarImpressora = async function(){
+      try {
+        const r = await fetch('/painel/api/impressao/teste');
+        const html = await r.text();
+        await printTicket(html);
+      } catch(e){ alert('Erro ao gerar teste de impressão'); }
+    };
+  </script>` : '';
+
   return `<!DOCTYPE html>
 <html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(title)} — RespVZap</title>
@@ -379,6 +422,7 @@ function layout(title, active, content, tenants = [], activeTenantId = null, cli
   function copyText(t, btn){ navigator.clipboard.writeText(t).then(()=>{ if(btn){ btn.textContent='✓ Copiado'; setTimeout(()=>btn.textContent='Copiar',1500); } }); }
   function filterTable(inputId, tableId){ const q=(document.getElementById(inputId).value||'').toLowerCase(); document.querySelectorAll('#'+tableId+' tbody tr').forEach(r=>{ r.style.display=r.textContent.toLowerCase().includes(q)?'':'none'; }); }
 </script>
+${printScript}
 </body></html>`;
 }
 
@@ -514,6 +558,82 @@ router.get('/painel/api/conversacoes', clientPanelAuth, async (req, res) => {
   const leadId = Number(req.query.lead_id);
   if (!leadId) return res.json([]);
   res.json(await repo.getConversationsByLead(leadId, 40));
+});
+
+// ======================================================
+//  IMPRESSORA DE PEDIDOS (painel do cliente — ramos de operação)
+// ======================================================
+function ehRamoOperacao(tenant) {
+  return !!tenant?.segment_name && tenant.segment_name !== 'vendas';
+}
+
+/**
+ * Fila de impressão: pedidos pagos ainda não impressos (com ticket HTML).
+ * O painel consulta a cada 4s e imprime automaticamente.
+ */
+router.get('/painel/api/impressao', clientPanelAuth, async (req, res) => {
+  const tenant = req.tenantSession;
+  if (!ehRamoOperacao(tenant)) return res.json([]);
+  try {
+    const toPrint = await repo.getOrdersToPrint(tenant.id, 5);
+    const tickets = [];
+    for (const o of toPrint) {
+      const t = await ticket.buildTicket(tenant.id, o.id);
+      if (t) tickets.push({ id: o.id, external_id: o.external_id, html: t.html });
+    }
+    res.json(tickets);
+  } catch (e) {
+    console.error('[IMPRESSAO] fila:', e.message);
+    res.json([]);
+  }
+});
+
+router.post('/painel/api/impressao/marcar', clientPanelAuth, async (req, res) => {
+  try {
+    const id = Number(req.body?.id);
+    if (id) await repo.markOrderPrinted(id);
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('[IMPRESSAO] marcar:', e.message);
+    res.json({ ok: false });
+  }
+});
+
+/**
+ * Ticket de teste para calibrar a impressora.
+ */
+router.get('/painel/api/impressao/teste', clientPanelAuth, async (req, res) => {
+  const tenant = req.tenantSession;
+  res.send(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Teste de impressão</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Courier New', monospace; width: 80mm; font-size: 12px; color: #000; padding: 4mm; }
+  .center { text-align: center; }
+  .empresa { font-size: 16px; font-weight: bold; text-transform: uppercase; margin-bottom: 2px; }
+  .div { border-top: 1px dashed #000; margin: 6px 0; }
+  .pedido-num { font-size: 30px; font-weight: bold; text-align: center; margin: 6px 0; }
+  .item { margin: 5px 0; }
+  .nome { font-weight: bold; }
+  .linha { display: flex; justify-content: space-between; font-size: 12px; }
+  .total { font-size: 18px; font-weight: bold; text-align: center; margin: 6px 0; }
+  .pago { text-align: center; font-weight: bold; font-size: 13px; margin: 4px 0; }
+  .rodape { text-align: center; margin-top: 8px; font-size: 11px; }
+</style></head><body>
+  <div class="center"><div class="empresa">${ticket.esc(tenant.name)}</div></div>
+  <div class="div"></div>
+  <div class="pedido-num">TESTE</div>
+  <div class="center">Impressão de teste — ${new Date().toLocaleString('pt-BR')}</div>
+  <div class="div"></div>
+  <div class="item"><div class="nome">Produto de exemplo <small>(Bacon, Cheddar)</small></div><div class="linha"><span>1x</span><span>R$ 24,50</span></div></div>
+  <div class="item"><div class="nome">Refrigerante</div><div class="linha"><span>2x</span><span>R$ 12,00</span></div></div>
+  <div class="div"></div>
+  <div class="linha"><span>Subtotal</span><span>R$ 36,50</span></div>
+  <div class="linha"><span>Entrega</span><span>R$ 7,00</span></div>
+  <div class="total">TOTAL R$ 43,50</div>
+  <div class="pago">✅ PIX — PAGO</div>
+  <div class="div"></div>
+  <div class="rodape">Se esta impressão saiu com as bordas cortadas, ajuste as margens da impressora (nenhuma) e o papel 80mm.</div>
+</body></html>`);
 });
 
 // ======================================================
@@ -1557,7 +1677,7 @@ async function pagePedidos(req, res) {
   }))).join('');
 
   res.send(layout('Pedidos', clientMode ? '/painel/pedidos' : '/admin/pedidos', `${tenantSelector(tenant.id, tenants, clientMode)}
-    <div class="filters">${statusFilter}</div>
+    <div class="filters">${statusFilter}${clientMode && ehRamoOperacao(tenant) ? `<button class="btn amber small" onclick="testarImpressora()">🖨️ Imprimir teste</button>` : ''}</div>
     <div class="panel"><table><thead><tr><th>Pedido</th><th>Cliente</th><th>Itens</th><th>Total</th><th>Status</th><th>Pagamento</th><th>Ações</th></tr></thead>
     <tbody>${rowsHtml || '<tr><td colspan="7"><div class="empty">Nenhum pedido com esse filtro.</div></td></tr>'}</tbody></table></div>`, tenants, tenant, clientMode));
 }
@@ -1730,6 +1850,24 @@ async function pageConfig(req, res) {
   const areas = Array.isArray(s.delivery_areas) ? s.delivery_areas : [];
   const firstCat = (data.categories || []).find(cat => (cat.products || []).some(p => p.available)) || data.categories?.[0];
 
+  // Horário de funcionamento (por dia da semana)
+  const DIAS_HORARIO = [
+    { chave: '0', nome: 'Domingo' }, { chave: '1', nome: 'Segunda-feira' }, { chave: '2', nome: 'Terça-feira' },
+    { chave: '3', nome: 'Quarta-feira' }, { chave: '4', nome: 'Quinta-feira' }, { chave: '5', nome: 'Sexta-feira' },
+    { chave: '6', nome: 'Sábado' },
+  ];
+  const hoursData = s.hours || {};
+  const hoursRows = DIAS_HORARIO.map((d, i) => {
+    const h = hoursData[d.chave];
+    const fechado = !h;
+    return `<tr>
+      <td><b>${d.nome}</b></td>
+      <td style="text-align:center"><input type="checkbox" name="store[hours][${d.chave}][fechado]" value="on" ${fechado ? 'checked' : ''} onchange="toggleHorario(${i})"></td>
+      <td><input type="time" name="store[hours][${d.chave}][open]" value="${esc(h?.open || '11:00')}" data-h="1" ${fechado ? 'disabled' : ''}></td>
+      <td><input type="time" name="store[hours][${d.chave}][close]" value="${esc(h?.close || '23:00')}" data-h="1" ${fechado ? 'disabled' : ''}></td>
+    </tr>`;
+  }).join('');
+
   const previewCat = firstCat?.id || '';
   const logoUrl = c.logo_url || '';
   const logoThumb = logoUrl ? `<div style="margin-top:8px"><img src="${esc(logoUrl)}" style="max-height:56px;border-radius:8px"><button class="btn red small" style="margin-left:8px" onclick="document.getElementById('logoUrlField').value=''">Remover</button></div>` : '';
@@ -1749,10 +1887,15 @@ async function pageConfig(req, res) {
       </div>
       <div class="panel"><h2>🏢 Empresa</h2><div class="grid2">
         <div><label>NOME DA EMPRESA</label><input type="text" name="company[name]" value="${esc(c.name || '')}"></div>
-        <div><label>HORÁRIO</label><input type="text" name="company[business_hours]" value="${esc(c.business_hours || '')}"></div>
+        <div><label>HORÁRIO (texto exibido no ticket)</label><input type="text" name="company[business_hours]" value="${esc(c.business_hours || '')}"></div>
         <div><label>ENDEREÇO (rua, n°)</label><input type="text" name="company[address][street]" value="${esc(addr.street || '')}"></div>
         <div><label>CIDADE</label><input type="text" name="company[address][city]" value="${esc(addr.city || '')}"></div>
       </div></div>
+      ${showAreasEditor ? `<div class="panel"><h2>🕒 Horário de funcionamento <small style="font-weight:400;color:#94a3b8">— o bot bloqueia pedidos fora do horário</small></h2>
+        <table><thead><tr><th>Dia</th><th>Fechado</th><th>Abre</th><th>Fecha</th></tr></thead>
+        <tbody>${hoursRows}</tbody></table>
+        <p style="font-size:12px;color:#64748b;margin-top:8px">Dia marcado como <b>Fechado</b> bloqueia pedidos o dia inteiro. Cliente fora do horário recebe aviso e não consegue comprar/finalizar.</p>
+      </div>` : ''}
       <div class="panel"><h2>🖼️ Imagem do menu (lista de produtos)</h2>
         <div class="grid3">
           <div><label>COR DO CABEÇALHO</label><input type="color" id="miHeaderBg" name="store[menu_image][header_bg]" value="${esc(mi.header_bg || '#1e3a8a')}" oninput="previewMenu()"></div>
@@ -1787,6 +1930,13 @@ async function pageConfig(req, res) {
       <p style="font-size:12px;color:#64748b;margin-top:8px">Atualiza conforme você muda as cores/acima. Salve para aplicar no bot (em até 15s).</p>
     </div>
     <script>
+      function toggleHorario(i){
+        const rows = document.querySelectorAll('table tbody tr');
+        const row = rows[i];
+        if (!row) return;
+        const fechado = row.querySelector('input[type=checkbox]').checked;
+        row.querySelectorAll('input[type=time]').forEach(inp => { inp.disabled = fechado; });
+      }
       function previewMenu(){
         const v = Date.now();
         const sp = document.getElementById('miShowPrice').checked ? '1' : '0';
@@ -1830,6 +1980,20 @@ async function postConfigSalvar(req, res) {
     } else {
       data.store.delivery_areas = undefined;
     }
+  }
+
+  // Horário de funcionamento (por dia da semana — ramo de operação)
+  if (s.hours) {
+    const hours = {};
+    for (const [chave, v] of Object.entries(s.hours)) {
+      if (checkboxVal(v?.fechado)) continue; // dia fechado
+      const open = String(v?.open || '');
+      const close = String(v?.close || '');
+      if (/^\d{2}:\d{2}$/.test(open) && /^\d{2}:\d{2}$/.test(close)) {
+        hours[chave] = { open, close };
+      }
+    }
+    data.store.hours = Object.keys(hours).length ? hours : undefined;
   }
 
   // Imagem do menu
