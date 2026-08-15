@@ -75,6 +75,47 @@ async function listTenantImages(tenantId) {
   }
 }
 
+/**
+ * Exclui uma imagem do tenant (valida que pertence ao tenant).
+ */
+async function deleteTenantImage(tenantId, url) {
+  const token = process.env.BLOB_READ_WRITE_TOKEN;
+  if (token) {
+    const { del } = require('@vercel/blob');
+    const pathname = new URL(url).pathname;
+    if (!pathname.startsWith(`/tenant-${tenantId}/`)) throw new Error('Imagem não pertence a este cliente');
+    await del(pathname, { token });
+    return;
+  }
+  const name = path.basename(String(url));
+  const dir = path.join(__dirname, '..', 'public', 'images', `tenant-${tenantId}`);
+  const file = path.join(dir, name);
+  if (!file.startsWith(dir + path.sep)) throw new Error('Caminho inválido');
+  if (fs.existsSync(file)) fs.unlinkSync(file);
+}
+
+/**
+ * Galeria de imagens (usada nas páginas Produtos e Listas).
+ */
+function galleryHtml(images, tenantId, base) {
+  return `<div class="panel"><h2>📸 Suas imagens <span class="right badge info">${images.length}</span></h2>
+    <div style="display:flex;flex-wrap:wrap;gap:14px">
+      ${images.map(img => `<div style="text-align:center">
+        <img class="thumb" src="${esc(img.url)}" style="width:64px;height:64px;object-fit:cover;border-radius:9px;background:#f1f5f9">
+        <div style="font-size:10px;color:#64748b;word-break:break-all;max-width:120px;margin:3px 0">${esc(img.name)}</div>
+        <div style="display:flex;gap:4px;justify-content:center">
+          <button class="btn gray small" onclick="copyText('${esc(img.url)}', this)">Copiar URL</button>
+          <form method="POST" action="${base}/imagens/excluir" onsubmit="return confirm('Excluir esta imagem?')">
+            <input type="hidden" name="tenant" value="${tenantId}">
+            <input type="hidden" name="url" value="${esc(img.url)}">
+            <button class="btn red small" title="Excluir">🗑</button>
+          </form>
+        </div>
+      </div>`).join('') || '<span style="font-size:13px;color:#64748b">Nenhuma imagem ainda.</span>'}
+    </div>
+  </div>`;
+}
+
 // ======================================================
 //  AUTENTICAÇÃO DO ADMIN (SaaS)
 // ======================================================
@@ -715,16 +756,8 @@ async function pageProdutos(req, res) {
   const flash = req.query.msg ? `<div id="flashMsg">${esc(req.query.msg)}</div>` : '';
   const data = await catalog.loadTenantCatalog(tenant.id);
   const images = await listTenantImages(tenant.id);
-
-  const gallery = `<div class="panel"><h2>📸 Suas imagens <span class="right badge info">${images.length}</span></h2>
-    <div style="display:flex;flex-wrap:wrap;gap:14px">
-      ${images.map(img => `<div style="text-align:center">
-        <img class="thumb" src="${esc(img.url)}" style="width:64px;height:64px;object-fit:cover;border-radius:9px;background:#f1f5f9">
-        <div style="font-size:10px;color:#64748b;word-break:break-all;max-width:120px;margin:3px 0">${esc(img.name)}</div>
-        <button class="btn gray small" onclick="copyText('${esc(img.url)}', this)">Copiar URL</button>
-      </div>`).join('') || '<span style="font-size:13px;color:#64748b">Nenhuma imagem ainda — envie acima.</span>'}
-    </div>
-  </div>`;
+  const base = clientMode ? '/painel' : '/admin';
+  const gallery = galleryHtml(images, tenant.id, base);
 
   const catsHtml = data.categories.map((cat, ci) => {
     const prods = cat.products.map((p, pi) => {
@@ -790,7 +823,7 @@ async function pageProdutos(req, res) {
 
   res.send(layout('Produtos', clientMode ? '/painel/produtos' : '/admin/produtos', `${tenantSelector(tenant.id, tenants, clientMode)}${flash}
     <div class="panel"><h2>📤 Enviar foto de produto <span class="right"><button class="btn small" onclick="document.getElementById('fileInput').click()">Escolher arquivo</button></span></h2>
-      <form method="POST" action="${clientMode ? '/painel' : '/admin'}/upload" enctype="multipart/form-data">
+      <form method="POST" action="${base}/upload" enctype="multipart/form-data">
         <input type="file" id="fileInput" name="foto" accept="image/*" required style="display:none" onchange="this.form.submit()">
       </form>
       <p style="font-size:12px;color:#64748b">Depois de enviar, a foto aparece na galeria abaixo — <b>clique nela</b> (nos produtos) para usar, ou copie a URL.</p>
@@ -962,6 +995,8 @@ async function pageListas(req, res) {
   const flash = req.query.msg ? `<div id="flashMsg">${esc(req.query.msg)}</div>` : '';
   const data = await catalog.loadTenantCatalog(tenant.id);
   const base = clientMode ? '/painel' : '/admin';
+  const images = await listTenantImages(tenant.id);
+  const gallery = galleryHtml(images, tenant.id, base);
 
   const catsHtml = data.categories.map((cat, ci) => `
     <div class="panel"><h2>${esc(cat.emoji || '')} ${esc(cat.name)}</h2>
@@ -985,6 +1020,7 @@ async function pageListas(req, res) {
 
   res.send(layout('Listas', clientMode ? '/painel/listas' : '/admin/listas', `${tenantSelector(tenant.id, tenants, clientMode)}${flash}
     <div class="flash">✏️ Preencha o texto exato de cada bloco (sem preço automático). <b>Deixe vazio</b> para voltar ao padrão (preço — resumo).</div>
+    ${gallery}
     <form method="POST" action="${base}/listas/salvar"><input type="hidden" name="tenant" value="${tenant.id}">
       ${catsHtml}
       <button class="btn" type="submit">💾 Salvar todas as listas</button>
@@ -1028,6 +1064,24 @@ router.get('/admin/listas', requireAuth, pageListas);
 router.get('/painel/listas', clientPanelAuth, pageListas);
 router.post('/admin/listas/salvar', requireAuth, postListasSalvar);
 router.post('/painel/listas/salvar', clientPanelAuth, postListasSalvar);
+
+// ----- EXCLUSÃO DE IMAGENS -----
+async function postImagensExcluir(req, res) {
+  const tenantId = tenantIdFromReq(req, req.body.tenant || req.query.tenant);
+  const base = req.clientMode ? '/painel' : '/admin';
+  const url = String(req.body.url || '');
+  if (!url) return res.redirect(`${base}/produtos?msg=` + encodeURIComponent('URL inválida.') + '&type=err');
+  try {
+    await deleteTenantImage(tenantId, url);
+    res.redirect(`${base}/produtos?msg=` + encodeURIComponent('Imagem excluída.'));
+  } catch (e) {
+    console.error('[IMAGES] excluir:', e.message);
+    res.redirect(`${base}/produtos?msg=` + encodeURIComponent('Erro ao excluir: ' + e.message) + '&type=err');
+  }
+}
+
+router.post('/admin/imagens/excluir', requireAuth, postImagensExcluir);
+router.post('/painel/imagens/excluir', clientPanelAuth, postImagensExcluir);
 
 // ----- PEDIDOS -----
 async function pagePedidos(req, res) {
