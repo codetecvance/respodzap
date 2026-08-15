@@ -298,25 +298,31 @@ function freteDoPedido(items, store, checkoutBairro) {
   return calcularFrete(items, store, null);
 }
 
+/**
+ * Lista formatada dos itens do carrinho (com adicionais e quantidades).
+ */
+function resumoItens(items) {
+  const linhas = items.map((it, i) => `${i + 1}. ${it.product_name}${repo.formatAddons(it.addons) ? ` (${repo.formatAddons(it.addons)})` : ''} — ${it.quantity}x R$ ${Number(it.unit_price).toFixed(2)}`);
+  return `*Seu pedido:*\n${linhas.join('\n')}`;
+}
+
 async function _cart(tenant, lead) {
   const items = await repo.getCart(lead.id);
   if (!items.length) {
     await ws.sendText(lead.phone, await catalog.msg(tenant.id, 'cart_empty'), tenant);
     return _categories(tenant, lead);
   }
-  let txt = (await catalog.msg(tenant.id, 'cart_title')) + '\n\n';
+  let txt = resumoItens(items) + '\n\n';
   let total = 0;
-  items.forEach((it, i) => {
+  items.forEach(it => {
     total += Number(it.unit_price) * it.quantity;
-    const extra = repo.formatAddons(it.addons);
-    txt += `${i + 1}. ${it.product_name}${extra ? ` (${extra})` : ''} — ${it.quantity}x R$ ${Number(it.unit_price).toFixed(2)}\n`;
   });
   txt += '\n' + (await catalog.msg(tenant.id, 'cart_total', { total: total.toFixed(2) }));
 
   await ws.sendButtons(lead.phone, txt, [
     { id: 'CART_BUY', title: 'Finalizar pedido' },
     { id: 'CART_CLEAR', title: 'Esvaziar carrinho' },
-    { id: 'MENU_BACK', title: 'Continuar comprando' },
+    { id: 'MENU_SHOP', title: '➕ Adicionar mais itens' },
   ], tenant);
   await repo.setFlowState(lead.id, ST.CART);
 }
@@ -393,7 +399,8 @@ async function _checkoutConfirm(tenant, lead, answers) {
   const bairro = survey?.checkoutBairro?.bairro || null;
   const total = sub + frete;
 
-  let resumo = await catalog.msg(tenant.id, 'checkout_confirm', {
+  let resumo = resumoItens(items) + '\n\n';
+  resumo += await catalog.msg(tenant.id, 'checkout_confirm', {
     nome: lead.full_name,
     subtotal: sub.toFixed(2),
     frete: frete.toFixed(2),
@@ -405,8 +412,9 @@ async function _checkoutConfirm(tenant, lead, answers) {
 
   await repo.setFlowState(lead.id, ST.CHECKOUT_CONFIRM);
   return ws.sendButtons(lead.phone, resumo, [
-    { id: 'ORDER_FINAL', title: 'Confirmar pedido' },
-    { id: 'MENU_BACK', title: 'Cancelar' },
+    { id: 'ORDER_FINAL', title: '✅ Confirmar pedido' },
+    { id: 'MENU_SHOP', title: '➕ Adicionar mais itens' },
+    { id: 'MENU_BACK', title: '❌ Cancelar' },
   ], tenant);
 }
 

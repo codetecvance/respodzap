@@ -71,6 +71,10 @@ async function criarCheckoutCartao(tenant, order, lead, tipo) {
     quantity: it.quantity || 1,
     currency_id: 'BRL',
   }));
+  // Frete entra como item para o MP cobrar o total exato (itens + entrega)
+  if (Number(order.delivery_fee) > 0) {
+    items.push({ title: 'Frete (entrega)', unit_price: Number(order.delivery_fee), quantity: 1, currency_id: 'BRL' });
+  }
 
   const excluded = tipo === 'credit'
     ? [{ id: 'debit_card' }, { id: 'ticket' }, { id: 'pix' }]
