@@ -1430,12 +1430,13 @@ async function postConfigSalvar(req, res) {
 
   // Imagem do menu
   const mi = s.menu_image || {};
+  const checkboxVal = (v) => (Array.isArray(v) ? v[v.length - 1] : v) === 'on';
   if (!data.store.menu_image) data.store.menu_image = {};
   if (mi.header_bg !== undefined) data.store.menu_image.header_bg = mi.header_bg || '#1e3a8a';
   if (mi.price_color !== undefined) data.store.menu_image.price_color = mi.price_color || '#1d4ed8';
-  if (mi.show_price !== undefined) data.store.menu_image.show_price = mi.show_price === 'on';
-  if (mi.show_numbers !== undefined) data.store.menu_image.show_numbers = mi.show_numbers === 'on';
-  if (mi.enabled !== undefined) data.store.menu_image.enabled = mi.enabled === 'on';
+  if (mi.show_price !== undefined) data.store.menu_image.show_price = checkboxVal(mi.show_price);
+  if (mi.show_numbers !== undefined) data.store.menu_image.show_numbers = checkboxVal(mi.show_numbers);
+  if (mi.enabled !== undefined) data.store.menu_image.enabled = checkboxVal(mi.enabled);
   if (mi.footer_text !== undefined) data.store.menu_image.footer_text = mi.footer_text || '';
 
   const c = req.body.company || {};
