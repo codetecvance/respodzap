@@ -301,6 +301,10 @@ async function cancelSubscription(id) {
   await query(`UPDATE subscriptions SET status = 'cancelada', updated_at = NOW() WHERE id = $1`, [id]);
 }
 
+async function deleteSubscription(id) {
+  await query('DELETE FROM subscriptions WHERE id = $1', [id]);
+}
+
 async function getExpiringSubscriptions(days) {
   const r = await query(
     `SELECT s.*, t.name AS tenant_name, t.notify_phone, t.notify_email
@@ -620,7 +624,7 @@ module.exports = {
   // planos e assinaturas
   getPlans, createPlan, updatePlan, deletePlan, countSubscriptionsByPlan,
   getSubscriptions, getSubscriptionsByTenant, getActiveSubscription, createSubscription,
-  renewSubscription, renewSubscriptionMark, cancelSubscription, getExpiringSubscriptions,
+  renewSubscription, renewSubscriptionMark, cancelSubscription, deleteSubscription, getExpiringSubscriptions,
   // catálogos
   getTenantCatalog, saveTenantCatalog,
   // imagens

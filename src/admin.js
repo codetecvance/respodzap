@@ -954,6 +954,7 @@ router.get('/admin/assinaturas', requireAuth, async (req, res) => {
         <form class="inline-form" method="POST" action="/admin/assinaturas/renovar"><input type="hidden" name="id" value="${s.id}"><input type="hidden" name="days" value="${days}"><button class="btn green small">Renovar</button></form>
         <form class="inline-form" method="POST" action="/admin/assinaturas/pix"><input type="hidden" name="id" value="${s.id}"><button class="btn amber small">Gerar PIX</button></form>
         ${s.status === 'ativa' ? `<form class="inline-form" method="POST" action="/admin/assinaturas/cancelar"><input type="hidden" name="id" value="${s.id}"><button class="btn red small">Cancelar</button></form>` : ''}
+        <form class="inline-form" method="POST" action="/admin/assinaturas/excluir" onsubmit="return confirm('Excluir a licença de ${esc(s.tenant_name)}? Essa ação não pode ser desfeita.');"><input type="hidden" name="id" value="${s.id}"><button class="btn red small" title="Excluir licença permanentemente">🗑 Excluir</button></form>
       </td>
     </tr>`;
   }).join('');
@@ -1075,6 +1076,11 @@ router.post('/admin/assinaturas/pix', requireAuth, async (req, res) => {
 router.post('/admin/assinaturas/cancelar', requireAuth, async (req, res) => {
   await repo.cancelSubscription(Number(req.body.id));
   res.redirect('/admin/assinaturas?msg=' + encodeURIComponent('Licença cancelada.'));
+});
+
+router.post('/admin/assinaturas/excluir', requireAuth, async (req, res) => {
+  await repo.deleteSubscription(Number(req.body.id));
+  res.redirect('/admin/assinaturas?msg=' + encodeURIComponent('Licença excluída.'));
 });
 
 // ======================================================
