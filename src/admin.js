@@ -188,6 +188,7 @@ function layout(title, active, content, tenants = [], activeTenantId = null, cli
   const items = clientMode ? [
     ['/painel', '📊 Dashboard'],
     ['/painel/produtos', '🛍 Produtos'],
+    ['/painel/listas', '📋 Listas'],
     ['/painel/pedidos', '🧾 Pedidos'],
     ['/painel/leads', '👤 Leads'],
     ['/painel/perguntas', '❓ Perguntas'],
@@ -199,6 +200,7 @@ function layout(title, active, content, tenants = [], activeTenantId = null, cli
     ['/admin/clientes', '👥 Clientes'],
     ['/admin/assinaturas', '📋 Assinaturas'],
     ['/admin/produtos', '🛍 Produtos'],
+    ['/admin/listas', '📋 Listas'],
     ['/admin/pedidos', '🧾 Pedidos'],
     ['/admin/leads', '👤 Leads'],
     ['/admin/perguntas', '❓ Perguntas'],
@@ -292,7 +294,9 @@ function pageSub(active) {
   const map = {
     '/admin': 'Visão geral de toda a operação', '/admin/clientes': 'Crie e gerencie os clientes do SaaS',
     '/admin/assinaturas': 'Licenças, renovações e vencimentos', '/painel': 'Visão geral do seu negócio',
-    '/painel/produtos': 'Seu catálogo', '/painel/pedidos': 'Seus pedidos', '/painel/leads': 'Seus clientes',
+    '/painel/produtos': 'Seu catálogo', '/painel/listas': 'Textos dos blocos de seleção do bot',
+    '/admin/listas': 'Textos dos blocos de seleção de cada cliente',
+    '/painel/pedidos': 'Seus pedidos', '/painel/leads': 'Seus clientes',
     '/painel/perguntas': 'Seus questionários', '/painel/mensagens': 'Seus textos do bot',
     '/painel/config': 'Suas configurações', '/painel/senha': 'Altere sua senha de acesso',
   };
@@ -887,6 +891,94 @@ router.post('/painel/upload', clientPanelAuth, upload.single('foto'), async (req
     res.redirect('/painel/produtos?msg=' + encodeURIComponent('Erro no upload: ' + e.message) + '&type=err');
   }
 });
+
+// ======================================================
+//  LISTAS (textos dos blocos de seleção — admin e cliente)
+// ======================================================
+function previewProduto(p) {
+  if (p.list_description) return p.list_description;
+  const preco = p.sob_consulta ? 'Sob consulta' : catalog.formatPrice(p.price);
+  return `${preco} — ${p.short_description || ''}`;
+}
+
+function previewPlano(pl) {
+  if (pl.list_description) return pl.list_description;
+  return `${pl.price ? catalog.formatPrice(pl.price) : 'Sob medida'}/${pl.period} — ${(pl.features || '').split('\n')[0]}`;
+}
+
+async function pageListas(req, res) {
+  const { tenant, tenants } = await resolveTenant(req, res);
+  const clientMode = !!req.clientMode;
+  if (!tenant) return res.send(layout('Listas', clientMode ? '/painel/listas' : '/admin/listas', '<div class="empty">Crie um cliente primeiro.</div>', tenants, null, clientMode));
+  const flash = req.query.msg ? `<div id="flashMsg">${esc(req.query.msg)}</div>` : '';
+  const data = await catalog.loadTenantCatalog(tenant.id);
+  const base = clientMode ? '/painel' : '/admin';
+
+  const catsHtml = data.categories.map((cat, ci) => `
+    <div class="panel"><h2>${esc(cat.emoji || '')} ${esc(cat.name)}</h2>
+      ${cat.products.map((p, pi) => {
+        const plansHtml = (p.plans || []).map((pl, ki) => `
+          <div style="margin:10px 0 10px 28px;padding:10px 14px;background:#f8fafc;border-radius:9px">
+            <label style="margin-top:0">💠 Plano ${esc(pl.name)}${pl.popular ? ' ★' : ''} — descrição da lista</label>
+            <textarea name="pld[${ci}][${pi}][${ki}]" placeholder="Vazio = ${esc(previewPlano(pl))}">${esc(pl.list_description || '')}</textarea>
+            <div style="font-size:11.5px;color:#64748b;margin-top:4px">Fallback: ${esc(previewPlano(pl))}</div>
+          </div>`).join('');
+        return `
+        <div style="border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin-bottom:12px">
+          <h3 style="font-size:14px;margin-bottom:8px">${pi + 1}. ${esc(p.name)}</h3>
+          <label>DESCRIÇÃO DA LISTA (bloco de seleção no WhatsApp)</label>
+          <textarea name="ld[${ci}][${pi}]" placeholder="Vazio = ${esc(previewProduto(p))}">${esc(p.list_description || '')}</textarea>
+          <div style="font-size:11.5px;color:#64748b;margin-top:4px">Se vazio, usa: <b>${esc(previewProduto(p))}</b></div>
+          ${plansHtml}
+        </div>`;
+      }).join('') || '<div class="empty">Nenhum produto nesta categoria.</div>'}
+    </div>`).join('') || '<div class="empty">Nenhuma categoria ainda — adicione produtos primeiro.</div>';
+
+  res.send(layout('Listas', clientMode ? '/painel/listas' : '/admin/listas', `${tenantSelector(tenant.id, tenants, clientMode)}${flash}
+    <div class="flash">✏️ Preencha o texto exato de cada bloco (sem preço automático). <b>Deixe vazio</b> para voltar ao padrão (preço — resumo).</div>
+    <form method="POST" action="${base}/listas/salvar"><input type="hidden" name="tenant" value="${tenant.id}">
+      ${catsHtml}
+      <button class="btn" type="submit">💾 Salvar todas as listas</button>
+    </form>`, tenants, tenant, clientMode));
+}
+
+async function postListasSalvar(req, res) {
+  const tenantId = tenantIdFromReq(req, req.body.tenant || req.query.tenant);
+  const base = req.clientMode ? '/painel' : '/admin';
+  const data = await catalog.loadTenantCatalog(tenantId);
+
+  const ld = req.body.ld || {};
+  for (const [ci, prods] of Object.entries(ld)) {
+    for (const [pi, val] of Object.entries(prods)) {
+      const p = data.categories[Number(ci)]?.products[Number(pi)];
+      if (!p) continue;
+      const v = String(val).trim();
+      if (v) p.list_description = v; else delete p.list_description;
+    }
+  }
+
+  const pld = req.body.pld || {};
+  for (const [ci, prods] of Object.entries(pld)) {
+    for (const [pi, plans] of Object.entries(prods)) {
+      const p = data.categories[Number(ci)]?.products[Number(pi)];
+      if (!p) continue;
+      for (const [ki, val] of Object.entries(plans)) {
+        const pl = p.plans?.[Number(ki)];
+        if (!pl) continue;
+        const v = String(val).trim();
+        if (v) pl.list_description = v; else delete pl.list_description;
+      }
+    }
+  }
+
+  await catalog.saveTenantCatalog(tenantId, data);
+  res.redirect(`${base}/listas?msg=` + encodeURIComponent('Listas salvas!'));
+}
+
+router.get('/admin/listas', requireAuth, pageListas);
+router.get('/painel/listas', clientPanelAuth, pageListas);
+router.post('/admin/listas/salvar', requireAuth, postListasSalvar);
+router.post('/painel/listas/salvar', clientPanelAuth, postListasSalvar);
 
 // ----- PEDIDOS -----
 async function pagePedidos(req, res) {

@@ -66,7 +66,9 @@ async function _products(tenant, lead, categoryId) {
   const rows = await Promise.all(products.map(async (p, i) => ({
     id: `PROD_${p.id}`,
     title: `${i + 1}. ${p.name}`,
-    description: `${await precoExibicao(tenant.id, p)} — ${p.short_description || ''}`,
+    description: p.list_description
+      ? p.list_description
+      : `${await precoExibicao(tenant.id, p)} — ${p.short_description || ''}`,
   })));
   await ws.sendList(
     lead.phone,
@@ -357,7 +359,9 @@ async function sendPlanList(tenant, lead, product) {
   const rows = product.plans.map((pl, i) => ({
     id: `PLAN_${product.id}_${pl.id}`,
     title: `${i + 1}. ${pl.name}${pl.popular ? ' ★' : ''}`,
-    description: `${pl.price ? catalog.formatPrice(pl.price) : 'Sob medida'}/${pl.period} — ${(pl.features || '').split('\n')[0]}`,
+    description: pl.list_description
+      ? pl.list_description
+      : `${pl.price ? catalog.formatPrice(pl.price) : 'Sob medida'}/${pl.period} — ${(pl.features || '').split('\n')[0]}`,
   }));
   await ws.sendList(
     lead.phone,
