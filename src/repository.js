@@ -38,6 +38,30 @@ function num(v) {
 }
 
 // ============================================================
+//  IMAGENS DO TENANT (registro no banco — fonte da verdade)
+// ============================================================
+async function addTenantImage(tenantId, url) {
+  const name = String(url).split('/').pop().split('?')[0];
+  await query(
+    `INSERT INTO tenant_images (tenant_id, url, name) VALUES ($1, $2, $3)
+     ON CONFLICT DO NOTHING`,
+    [tenantId, url, name]
+  );
+}
+
+async function listTenantImagesDb(tenantId) {
+  const r = await query(
+    'SELECT url, name FROM tenant_images WHERE tenant_id = $1 ORDER BY id DESC',
+    [tenantId]
+  );
+  return r.rows;
+}
+
+async function deleteTenantImageDb(tenantId, url) {
+  await query('DELETE FROM tenant_images WHERE tenant_id = $1 AND url = $2', [tenantId, url]);
+}
+
+// ============================================================
 //  TENANTS (clientes)
 // ============================================================
 async function createTenant(data) {
@@ -469,6 +493,8 @@ module.exports = {
   renewSubscription, renewSubscriptionMark, cancelSubscription, getExpiringSubscriptions,
   // catálogos
   getTenantCatalog, saveTenantCatalog,
+  // imagens
+  addTenantImage, listTenantImagesDb, deleteTenantImageDb,
   // leads
   getLead, getLeadByPhone, getOrCreateLead, updateLead, setFlowState, updateLeadStatus, listLeads,
   // questionários

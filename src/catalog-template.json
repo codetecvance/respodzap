@@ -41,6 +41,7 @@
       { "type": "debit_card", "label": "Cartão de Débito" }
     ],
     "menu_image": {
+      "enabled": true,
       "header_bg": "#1e3a8a",
       "price_color": "#1d4ed8",
       "show_price": true,

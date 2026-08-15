@@ -138,6 +138,15 @@ async function initDb() {
       added_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
+    CREATE TABLE IF NOT EXISTS tenant_images (
+      id         SERIAL PRIMARY KEY,
+      tenant_id  INTEGER NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+      url        TEXT NOT NULL,
+      name       TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_tenant_images_tenant ON tenant_images (tenant_id);
     CREATE INDEX IF NOT EXISTS idx_leads_tenant_phone ON leads (tenant_id, phone);
     CREATE INDEX IF NOT EXISTS idx_conversations_lead ON conversations (lead_id);
     CREATE INDEX IF NOT EXISTS idx_orders_tenant ON orders (tenant_id);

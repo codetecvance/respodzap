@@ -56,9 +56,10 @@ async function _products(tenant, lead, categoryId) {
   await repo.setSurvey(lead.id, { cat: categoryId });
 
   // Imagem-menu: lista vertical com miniaturas (gerada por /api/menu-image)
-  const sig = Buffer.from(products.map(p => `${p.id}|${p.price}|${p.image}|${p.name}`).join('#')).toString('base64').replace(/[^a-zA-Z0-9]/g, '').slice(0, 24);
-  const menuUrl = `${config.webhookUrl || ''}/api/menu-image?tenant=${tenant.id}&cat=${encodeURIComponent(categoryId)}&sig=${sig}`;
-  if (config.webhookUrl) {
+  const menuEnabled = data.store?.menu_image?.enabled !== false;
+  if (menuEnabled && config.webhookUrl) {
+    const sig = Buffer.from(products.map(p => `${p.id}|${p.price}|${p.image}|${p.name}`).join('#')).toString('base64').replace(/[^a-zA-Z0-9]/g, '').slice(0, 24);
+    const menuUrl = `${config.webhookUrl}/api/menu-image?tenant=${tenant.id}&cat=${encodeURIComponent(categoryId)}&sig=${sig}`;
     await ws.sendImage(lead.phone, menuUrl, `${cat?.emoji || ''} ${cat?.name || 'Produtos'}`, tenant);
   }
 

@@ -50,57 +50,39 @@ async function saveUploadedImage(tenantId, file) {
 }
 
 /**
- * Lista as imagens do tenant (Blob list em produção; pasta local em dev).
+ * Lista as imagens do tenant (registro no banco — fonte da verdade).
  */
 async function listTenantImages(tenantId) {
-  const token = process.env.BLOB_READ_WRITE_TOKEN;
-  if (token) {
-    try {
-      const { list } = require('@vercel/blob');
-      const { blobs } = await list({ token, prefix: `tenant-${tenantId}/`, limit: 200 });
-      return blobs.map(b => ({ url: b.url, name: b.pathname.split('/').pop() }));
-    } catch (e) {
-      console.error('[IMAGES]', e.message);
-      return [];
-    }
-  }
-  const dir = path.join(__dirname, '..', 'public', 'images', `tenant-${tenantId}`);
-  try {
-    if (!fs.existsSync(dir)) return [];
-    return fs.readdirSync(dir)
-      .filter(f => /\.(png|jpe?g|webp)$/i.test(f))
-      .map(f => ({ url: `/images/tenant-${tenantId}/${f}`, name: f }));
-  } catch {
-    return [];
-  }
+  return repo.listTenantImagesDb(tenantId);
 }
 
 /**
- * Exclui uma imagem do tenant (valida que pertence ao tenant).
+ * Exclui a imagem do Blob (best-effort) ou do disco local.
+ * O registro no banco é a fonte da verdade da galeria.
  */
-async function deleteTenantImage(tenantId, url) {
+async function deleteBlobImage(tenantId, url) {
   const token = process.env.BLOB_READ_WRITE_TOKEN;
   if (token) {
-    const { del } = require('@vercel/blob');
-    const pathname = new URL(url).pathname;
-    if (!pathname.startsWith(`/tenant-${tenantId}/`)) throw new Error('Imagem não pertence a este cliente');
-    const result = await del(pathname, { token });
-    return {
-      ok: true,
-      debug: JSON.stringify({
-        pathname,
-        apiUrl: process.env.VERCEL_BLOB_API_URL || '(default)',
-        tokenPrefix: String(token).slice(0, 20),
-        result,
-      }),
-    };
+    try {
+      const { del } = require('@vercel/blob');
+      const pathname = new URL(url).pathname;
+      if (pathname.startsWith(`/tenant-${tenantId}/`)) {
+        await del(pathname, { token });
+      }
+    } catch (e) {
+      console.warn('[IMAGES] blob del (best-effort):', e.message);
+    }
+    return;
   }
-  const name = path.basename(String(url));
-  const dir = path.join(__dirname, '..', 'public', 'images', `tenant-${tenantId}`);
-  const file = path.join(dir, name);
-  if (!file.startsWith(dir + path.sep)) throw new Error('Caminho inválido');
-  if (fs.existsSync(file)) fs.unlinkSync(file);
-  return { ok: true, debug: 'local' };
+  // Modo local: remove o arquivo da pasta do tenant
+  try {
+    const name = path.basename(String(url));
+    const dir = path.join(__dirname, '..', 'public', 'images', `tenant-${tenantId}`);
+    const file = path.join(dir, name);
+    if (file.startsWith(dir + path.sep) && fs.existsSync(file)) fs.unlinkSync(file);
+  } catch (e) {
+    console.warn('[IMAGES] local del (best-effort):', e.message);
+  }
 }
 
 /**
@@ -971,6 +953,7 @@ router.post('/admin/upload', requireAuth, upload.single('foto'), async (req, res
   if (!Number.isFinite(tenantId)) tenantId = 0;
   try {
     const url = await saveUploadedImage(tenantId, req.file);
+    await repo.addTenantImage(tenantId, url);
     res.redirect(`${req.clientMode ? '/painel' : '/admin'}/produtos?msg=` + encodeURIComponent(`Imagem enviada! Copie a URL: ${url}`));
   } catch (e) {
     console.error('[UPLOAD]', e.message);
@@ -983,6 +966,7 @@ router.post('/painel/upload', clientPanelAuth, upload.single('foto'), async (req
   const tenantId = req.tenantSession.id;
   try {
     const url = await saveUploadedImage(tenantId, req.file);
+    await repo.addTenantImage(tenantId, url);
     res.redirect('/painel/produtos?msg=' + encodeURIComponent(`Imagem enviada! Copie a URL: ${url}`));
   } catch (e) {
     console.error('[UPLOAD]', e.message);
@@ -1088,8 +1072,10 @@ async function postImagensExcluir(req, res) {
   const url = String(req.body.url || '');
   if (!url) return res.redirect(`${base}/produtos?msg=` + encodeURIComponent('URL inválida.') + '&type=err');
   try {
-    const r = await deleteTenantImage(tenantId, url);
-    res.redirect(`${base}/produtos?msg=` + encodeURIComponent('Imagem excluída. [debug] ' + (r?.debug || '')));
+    // Remove do registro (galeria some na hora) e tenta limpar o Blob
+    await repo.deleteTenantImageDb(tenantId, url);
+    deleteBlobImage(tenantId, url).catch(() => {});
+    res.redirect(`${base}/produtos?msg=` + encodeURIComponent('Imagem excluída.'));
   } catch (e) {
     console.error('[IMAGES] excluir:', e.message);
     res.redirect(`${base}/produtos?msg=` + encodeURIComponent('Erro ao excluir: ' + e.message) + '&type=err');
@@ -1318,6 +1304,7 @@ async function pageConfig(req, res) {
           <div><label>TEXTO DO RODAPÉ (opcional)</label><input type="text" id="miFooter" name="store[menu_image][footer_text]" value="${esc(mi.footer_text || '')}" placeholder="Ex: Toque no produto abaixo" oninput="previewMenu()"></div>
         </div>
         <div style="margin-top:10px">
+          <label style="display:inline-flex;align-items:center;gap:6px;margin-right:18px"><input type="hidden" name="store[menu_image][enabled]" value="off"><input type="checkbox" id="miEnabled" name="store[menu_image][enabled]" value="on" ${mi.enabled !== false ? 'checked' : ''} onchange="previewMenu()"> Mostrar imagem do menu</label>
           <label style="display:inline-flex;align-items:center;gap:6px;margin-right:18px"><input type="hidden" name="store[menu_image][show_price]" value="off"><input type="checkbox" id="miShowPrice" name="store[menu_image][show_price]" value="on" ${mi.show_price !== false ? 'checked' : ''} onchange="previewMenu()"> Mostrar preços</label>
           <label style="display:inline-flex;align-items:center;gap:6px"><input type="hidden" name="store[menu_image][show_numbers]" value="off"><input type="checkbox" id="miShowNums" name="store[menu_image][show_numbers]" value="on" ${mi.show_numbers !== false ? 'checked' : ''} onchange="previewMenu()"> Mostrar números (1., 2., 3.)</label>
         </div>
@@ -1374,6 +1361,7 @@ async function postConfigSalvar(req, res) {
   if (mi.price_color !== undefined) data.store.menu_image.price_color = mi.price_color || '#1d4ed8';
   if (mi.show_price !== undefined) data.store.menu_image.show_price = mi.show_price === 'on';
   if (mi.show_numbers !== undefined) data.store.menu_image.show_numbers = mi.show_numbers === 'on';
+  if (mi.enabled !== undefined) data.store.menu_image.enabled = mi.enabled === 'on';
   if (mi.footer_text !== undefined) data.store.menu_image.footer_text = mi.footer_text || '';
 
   const c = req.body.company || {};
@@ -1401,6 +1389,7 @@ async function postConfigLogo(req, res) {
   if (!req.file) return res.redirect(`${base}/config?msg=` + encodeURIComponent('Nenhum arquivo recebido.') + '&type=err');
   try {
     const url = await saveUploadedImage(tenantId, req.file);
+    await repo.addTenantImage(tenantId, url);
     const data = await catalog.loadTenantCatalog(tenantId);
     data.company.logo_url = url;
     await catalog.saveTenantCatalog(tenantId, data);
