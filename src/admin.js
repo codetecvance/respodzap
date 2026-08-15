@@ -742,6 +742,7 @@ router.get('/admin/clientes', requireAuth, async (req, res) => {
       <td style="white-space:nowrap">
         <a class="btn small" href="/admin/clientes/editar?tenant=${t.id}">Editar</a>
         <a class="btn small" href="/admin/assinaturas?tenant=${t.id}">Licença</a>
+        <form class="inline-form" method="POST" action="/admin/clientes/excluir" onsubmit="return confirm('Excluir o cliente ${esc(t.name)}? Todos os dados (pedidos, leads, catálogo, licenças) serão apagados permanentemente.');"><input type="hidden" name="id" value="${t.id}"><button class="btn red small" title="Excluir cliente permanentemente">🗑 Excluir</button></form>
       </td>
     </tr>`;
   }))).join('');

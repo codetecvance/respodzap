@@ -206,6 +206,8 @@ async function updateTenant(id, fields) {
 }
 
 async function deleteTenant(id) {
+  // payments não têm CASCADE via orders — exclui primeiro
+  await query(`DELETE FROM payments WHERE order_id IN (SELECT id FROM orders WHERE tenant_id = $1)`, [id]);
   await query('DELETE FROM tenants WHERE id = $1', [id]);
 }
 
