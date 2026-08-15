@@ -84,14 +84,23 @@ async function deleteTenantImage(tenantId, url) {
     const { del } = require('@vercel/blob');
     const pathname = new URL(url).pathname;
     if (!pathname.startsWith(`/tenant-${tenantId}/`)) throw new Error('Imagem não pertence a este cliente');
-    await del(pathname, { token });
-    return;
+    const result = await del(pathname, { token });
+    return {
+      ok: true,
+      debug: JSON.stringify({
+        pathname,
+        apiUrl: process.env.VERCEL_BLOB_API_URL || '(default)',
+        tokenPrefix: String(token).slice(0, 20),
+        result,
+      }),
+    };
   }
   const name = path.basename(String(url));
   const dir = path.join(__dirname, '..', 'public', 'images', `tenant-${tenantId}`);
   const file = path.join(dir, name);
   if (!file.startsWith(dir + path.sep)) throw new Error('Caminho inválido');
   if (fs.existsSync(file)) fs.unlinkSync(file);
+  return { ok: true, debug: 'local' };
 }
 
 /**
@@ -1079,8 +1088,8 @@ async function postImagensExcluir(req, res) {
   const url = String(req.body.url || '');
   if (!url) return res.redirect(`${base}/produtos?msg=` + encodeURIComponent('URL inválida.') + '&type=err');
   try {
-    await deleteTenantImage(tenantId, url);
-    res.redirect(`${base}/produtos?msg=` + encodeURIComponent('Imagem excluída.'));
+    const r = await deleteTenantImage(tenantId, url);
+    res.redirect(`${base}/produtos?msg=` + encodeURIComponent('Imagem excluída. [debug] ' + (r?.debug || '')));
   } catch (e) {
     console.error('[IMAGES] excluir:', e.message);
     res.redirect(`${base}/produtos?msg=` + encodeURIComponent('Erro ao excluir: ' + e.message) + '&type=err');
