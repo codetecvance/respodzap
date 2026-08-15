@@ -556,8 +556,15 @@ async function pageDashboard(req, res) {
         <div class="card"><div class="ico cyan" style="background:#cffafe">🧾</div><div class="num" style="color:#0e7490">${orders.length}</div><div class="label">Pedidos (${esc(tenant?.name || '—')})</div></div>
       </div>`;
 
+  const quickActions = clientMode ? '' : `<div class="panel" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+    <a class="btn" href="/admin/clientes">👥 Página de clientes</a>
+    <a class="btn green" href="/painel/login" target="_blank">🔗 Login do painel do cliente</a>
+    <button class="btn amber" onclick="copyText('${config.webhookUrl || 'https://respodzap.vercel.app'}/painel/login', this)">📋 Copiar link do login</button>
+  </div>`;
+
   res.send(layout('Dashboard', clientMode ? '/painel' : '/admin', `
     ${cards}
+    ${quickActions}
     ${onboarding}
     ${clientMode ? `<div class="panel" style="background:#f0fdf4;border-color:#bbf7d0"><h2 style="color:#166534">👋 Olá, ${esc(tenant.name)}!</h2><p style="font-size:13px;color:#166534">Este é o painel do seu negócio. Gerencie seus produtos, veja seus pedidos e clientes.</p></div>` : tenantSelector(tenant.id, tenants, clientMode)}
     <div class="panel"><h2>📅 Pedidos dos últimos 14 dias</h2><div class="bars">${bars || '<div class="empty">Sem pedidos no período.</div>'}</div></div>
@@ -1274,8 +1281,16 @@ async function pageConfig(req, res) {
   const s = data.store || {};
   const c = data.company || {};
   const addr = c.address || {};
+  const mi = s.menu_image || {};
+  const base = clientMode ? '/painel' : '/admin';
+  const firstCat = (data.categories || []).find(cat => (cat.products || []).some(p => p.available)) || data.categories?.[0];
+
+  const previewCat = firstCat?.id || '';
+  const logoUrl = c.logo_url || '';
+  const logoThumb = logoUrl ? `<div style="margin-top:8px"><img src="${esc(logoUrl)}" style="max-height:56px;border-radius:8px"><button class="btn red small" style="margin-left:8px" onclick="document.getElementById('logoUrlField').value=''">Remover</button></div>` : '';
+
   res.send(layout('Configurações', clientMode ? '/painel/config' : '/admin/config', `${tenantSelector(tenant.id, tenants, clientMode)}
-    <form method="POST" action="${clientMode ? '/painel' : '/admin'}/config/salvar"><input type="hidden" name="tenant" value="${tenant.id}">
+    <form method="POST" action="${base}/config/salvar"><input type="hidden" name="tenant" value="${tenant.id}">
       <div class="panel"><h2>🏪 Loja</h2><div class="grid3">
         <div><label>FRETE (R$)</label><input type="text" name="store[delivery_fee]" value="${s.delivery_fee ?? 0}"></div>
         <div><label>FRETE GRÁTIS ACIMA (R$)</label><input type="text" name="store[delivery_free_full]" value="${s.delivery_free_full ?? 0}"></div>
@@ -1287,8 +1302,48 @@ async function pageConfig(req, res) {
         <div><label>ENDEREÇO (rua, n°)</label><input type="text" name="company[address][street]" value="${esc(addr.street || '')}"></div>
         <div><label>CIDADE</label><input type="text" name="company[address][city]" value="${esc(addr.city || '')}"></div>
       </div></div>
+      <div class="panel"><h2>🖼️ Imagem do menu (lista de produtos)</h2>
+        <div class="grid3">
+          <div><label>COR DO CABEÇALHO</label><input type="color" id="miHeaderBg" name="store[menu_image][header_bg]" value="${esc(mi.header_bg || '#1e3a8a')}" oninput="previewMenu()"></div>
+          <div><label>COR DOS PREÇOS</label><input type="color" id="miPriceColor" name="store[menu_image][price_color]" value="${esc(mi.price_color || '#1d4ed8')}" oninput="previewMenu()"></div>
+          <div><label>TEXTO DO RODAPÉ (opcional)</label><input type="text" id="miFooter" name="store[menu_image][footer_text]" value="${esc(mi.footer_text || '')}" placeholder="Ex: Toque no produto abaixo" oninput="previewMenu()"></div>
+        </div>
+        <div style="margin-top:10px">
+          <label style="display:inline-flex;align-items:center;gap:6px;margin-right:18px"><input type="hidden" name="store[menu_image][show_price]" value="off"><input type="checkbox" id="miShowPrice" name="store[menu_image][show_price]" value="on" ${mi.show_price !== false ? 'checked' : ''} onchange="previewMenu()"> Mostrar preços</label>
+          <label style="display:inline-flex;align-items:center;gap:6px"><input type="hidden" name="store[menu_image][show_numbers]" value="off"><input type="checkbox" id="miShowNums" name="store[menu_image][show_numbers]" value="on" ${mi.show_numbers !== false ? 'checked' : ''} onchange="previewMenu()"> Mostrar números (1., 2., 3.)</label>
+        </div>
+        <div style="margin-top:14px;border-top:1px dashed #e2e8f0;padding-top:12px">
+          <label>LOGO DO CLIENTE (aparece no topo da imagem)</label>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <input type="text" id="logoUrlField" name="company[logo_url]" value="${esc(logoUrl)}" placeholder="URL da logo ou envie abaixo">
+            <form method="POST" action="${base}/config/logo" enctype="multipart/form-data" style="display:flex;gap:8px;align-items:center;margin:0">
+              <input type="hidden" name="tenant" value="${tenant.id}">
+              <input type="file" name="logo" accept="image/*" style="max-width:200px">
+              <button class="btn small" type="submit">Enviar logo</button>
+            </form>
+          </div>
+          ${logoThumb}
+        </div>
+      </div>
       <button class="btn" type="submit">💾 Salvar</button>
-    </form>`, tenants, tenant, clientMode));
+    </form>
+    <div class="panel"><h2>👁 Preview da imagem do menu</h2>
+      <img id="menuPreview" src="/api/menu-image?tenant=${tenant.id}&cat=${encodeURIComponent(previewCat)}&refresh=1&v=1" style="max-width:360px;width:100%;border:1px solid #e2e8f0;border-radius:10px" alt="Preview">
+      <p style="font-size:12px;color:#64748b;margin-top:8px">Atualiza conforme você muda as cores/acima. Salve para aplicar no bot (em até 15s).</p>
+    </div>
+    <script>
+      function previewMenu(){
+        const v = Date.now();
+        const sp = document.getElementById('miShowPrice').checked ? '1' : '0';
+        const sn = document.getElementById('miShowNums').checked ? '1' : '0';
+        const url = '/api/menu-image?tenant=${tenant.id}&cat=${encodeURIComponent(previewCat)}&refresh=1&v=' + v +
+          '&header_bg=' + encodeURIComponent(document.getElementById('miHeaderBg').value) +
+          '&price_color=' + encodeURIComponent(document.getElementById('miPriceColor').value) +
+          '&show_price=' + sp + '&show_numbers=' + sn +
+          '&footer_text=' + encodeURIComponent(document.getElementById('miFooter').value);
+        document.getElementById('menuPreview').src = url;
+      }
+    </script>`, tenants, tenant, clientMode));
 }
 
 router.get('/admin/config', requireAuth, pageConfig);
@@ -1302,9 +1357,20 @@ async function postConfigSalvar(req, res) {
   if (s.delivery_fee !== undefined) data.store.delivery_fee = parseFloat(String(s.delivery_fee).replace(',', '.')) || 0;
   if (s.delivery_free_full !== undefined) data.store.delivery_free_full = parseFloat(String(s.delivery_free_full).replace(',', '.')) || 0;
   if (s.pix_discount_percent !== undefined) data.store.pix_discount_percent = parseFloat(String(s.pix_discount_percent).replace(',', '.')) || 0;
+
+  // Imagem do menu
+  const mi = s.menu_image || {};
+  if (!data.store.menu_image) data.store.menu_image = {};
+  if (mi.header_bg !== undefined) data.store.menu_image.header_bg = mi.header_bg || '#1e3a8a';
+  if (mi.price_color !== undefined) data.store.menu_image.price_color = mi.price_color || '#1d4ed8';
+  if (mi.show_price !== undefined) data.store.menu_image.show_price = mi.show_price === 'on';
+  if (mi.show_numbers !== undefined) data.store.menu_image.show_numbers = mi.show_numbers === 'on';
+  if (mi.footer_text !== undefined) data.store.menu_image.footer_text = mi.footer_text || '';
+
   const c = req.body.company || {};
   if (c.name !== undefined) data.company.name = c.name;
   if (c.business_hours !== undefined) data.company.business_hours = c.business_hours;
+  if (c.logo_url !== undefined) data.company.logo_url = c.logo_url || '';
   const addr = c.address || {};
   for (const k of ['street', 'neighborhood', 'city', 'state', 'zip']) {
     if (addr[k] !== undefined) {
@@ -1318,6 +1384,26 @@ async function postConfigSalvar(req, res) {
 
 router.post('/admin/config/salvar', requireAuth, postConfigSalvar);
 router.post('/painel/config/salvar', clientPanelAuth, postConfigSalvar);
+
+// ----- UPLOAD DE LOGO (config) -----
+async function postConfigLogo(req, res) {
+  const tenantId = tenantIdFromReq(req, req.body.tenant || req.query.tenant);
+  const base = req.clientMode ? '/painel' : '/admin';
+  if (!req.file) return res.redirect(`${base}/config?msg=` + encodeURIComponent('Nenhum arquivo recebido.') + '&type=err');
+  try {
+    const url = await saveUploadedImage(tenantId, req.file);
+    const data = await catalog.loadTenantCatalog(tenantId);
+    data.company.logo_url = url;
+    await catalog.saveTenantCatalog(tenantId, data);
+    res.redirect(`${base}/config?msg=` + encodeURIComponent('Logo salvo!'));
+  } catch (e) {
+    console.error('[UPLOAD LOGO]', e.message);
+    res.redirect(`${base}/config?msg=` + encodeURIComponent('Erro ao enviar logo: ' + e.message) + '&type=err');
+  }
+}
+
+router.post('/admin/config/logo', requireAuth, upload.single('logo'), postConfigLogo);
+router.post('/painel/config/logo', clientPanelAuth, upload.single('logo'), postConfigLogo);
 
 // ----- TROCA DE SENHA (cliente) -----
 router.get('/painel/senha', clientPanelAuth, (req, res) => {

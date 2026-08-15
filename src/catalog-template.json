@@ -6,6 +6,7 @@
     "email": "",
     "instagram": "",
     "website": "",
+    "logo_url": "",
     "address": {
       "street": "",
       "neighborhood": "",
@@ -38,7 +39,14 @@
       { "type": "pix", "label": "PIX (5% desconto)", "discount_percent": 5 },
       { "type": "credit_card", "label": "Cartão de Crédito (até 3x sem juros)" },
       { "type": "debit_card", "label": "Cartão de Débito" }
-    ]
+    ],
+    "menu_image": {
+      "header_bg": "#1e3a8a",
+      "price_color": "#1d4ed8",
+      "show_price": true,
+      "show_numbers": true,
+      "footer_text": ""
+    }
   },
 
   "questionnaires": {

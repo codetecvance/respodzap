@@ -54,13 +54,26 @@ app.get('/api/menu-image', async (req, res) => {
     if (!tenantId) return res.status(400).send('tenant inválido');
     const tenant = await repo.getTenant(tenantId);
     if (!tenant) return res.status(404).send('tenant não encontrado');
-    const data = await catalog.loadTenantCatalog(tenantId);
+    const data = await catalog.loadTenantCatalog(tenantId, req.query.refresh === '1');
     const cat = (data.categories || []).find(c => c.id === catId);
     const products = cat?.products?.filter(p => p.available) || [];
     if (!products.length) return res.status(404).send('categoria vazia');
-    const buf = await generateMenuImage(tenantId, cat, products);
+
+    // Configuração do tenant + overrides (para o preview ao vivo)
+    const m = data.store?.menu_image || {};
+    const cfg = {
+      headerBg: req.query.header_bg || m.header_bg || '#1e3a8a',
+      priceColor: req.query.price_color || m.price_color || '#1d4ed8',
+      showPrice: req.query.show_price !== undefined ? req.query.show_price === '1' : m.show_price !== false,
+      showNumbers: req.query.show_numbers !== undefined ? req.query.show_numbers === '1' : m.show_numbers !== false,
+      footerText: req.query.footer_text || m.footer_text || '',
+      companyName: data.company?.name || cat?.name || 'Produtos',
+      logoUrl: data.company?.logo_url || '',
+    };
+
+    const buf = await generateMenuImage(tenantId, cat, products, cfg);
     res.set('Content-Type', 'image/png');
-    res.set('Cache-Control', 'public, max-age=300');
+    res.set('Cache-Control', 'no-store');
     res.send(buf);
   } catch (e) {
     console.error('[MENU-IMAGE]', e.message);
