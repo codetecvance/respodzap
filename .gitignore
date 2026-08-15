@@ -7,4 +7,4 @@ public/images/menu/
 
 .vercel
 .env*
-tenant-
+public/images/tenant-*/
