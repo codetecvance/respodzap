@@ -14,6 +14,7 @@ const ST = {
   PRODUCT_DETAIL: 'PRODUCT_DETAIL',
   CART: 'CART',
   CHECKOUT_NAME: 'CHECKOUT_NAME',
+  CHECKOUT_BAIRRO: 'CHECKOUT_BAIRRO',
   CHECKOUT_CONFIRM: 'CHECKOUT_CONFIRM',
   CHECKOUT_PAYMENT: 'CHECKOUT_PAYMENT',
   SURVEY: 'SURVEY',
@@ -193,12 +194,108 @@ async function _addToCart(tenant, lead, productId) {
 
 /**
  * Calcula frete: produtos digitais (SaaS) não têm frete.
+ * Com bairro selecionado, usa a taxa da área de entrega.
  */
-function calcularFrete(items, store) {
+function calcularFrete(items, store, bairro = null) {
   const allDigital = items.length > 0 && items.every(it => it.digital);
   if (allDigital) return 0;
   const sub = items.reduce((s, it) => s + Number(it.unit_price) * it.quantity, 0);
-  return sub >= (store.delivery_free_full || 9999999) ? 0 : store.delivery_fee || 0;
+  if (sub >= (store.delivery_free_full || 9999999)) return 0;
+  if (bairro) {
+    const area = (store.delivery_areas || []).find(a => a.bairro === bairro);
+    if (area) return Number(area.taxa) || 0;
+  }
+  return store.delivery_fee || 0;
+}
+
+/**
+ * Deve perguntar o bairro? Sim, quando há áreas de entrega
+ * e o carrinho não é 100% digital.
+ */
+function precisaBairro(store, items) {
+  const allDigital = items.length > 0 && items.every(it => it.digital);
+  return !allDigital && Array.isArray(store.delivery_areas) && store.delivery_areas.length > 0;
+}
+
+function normTxt(v) {
+  return String(v || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+}
+
+/**
+ * Pergunta o bairro de entrega (lista + opção de retirada no local).
+ */
+async function _askBairro(tenant, lead, answers) {
+  const store = await catalog.getStoreConfig(tenant.id);
+  const rows = (store.delivery_areas || []).map((a, i) => ({
+    id: `BAIRRO_${encodeURIComponent(a.bairro)}`,
+    title: `${i + 1}. ${a.bairro}`,
+    description: a.taxa > 0 ? `Taxa de entrega: R$ ${Number(a.taxa).toFixed(2)}` : 'Entrega grátis',
+  }));
+  rows.push({ id: 'BAIRRO_RETIRADA', title: 'Retirar no local', description: 'Sem taxa de entrega' });
+
+  const survey = await repo.getSurvey(lead.id);
+  const pending = { id: 'checkout', answers: answers || {}, idx: survey?.id === 'checkout' ? survey.idx : 0, pendingBairro: true };
+  await repo.setSurvey(lead.id, pending);
+  await repo.setFlowState(lead.id, ST.CHECKOUT_BAIRRO);
+
+  await ws.sendList(
+    lead.phone,
+    '🛵 Qual o *bairro de entrega*?',
+    rows,
+    'Bairro de entrega',
+    'Toque no bairro ou digite o nome',
+    tenant
+  );
+}
+
+/**
+ * Trata a escolha do bairro (payload da lista ou texto digitado).
+ */
+async function _handleBairro(tenant, lead, text, payload) {
+  const survey = await repo.getSurvey(lead.id);
+  if (survey?.id !== 'checkout' || !survey.pendingBairro) return _menu(tenant, lead);
+  const store = await catalog.getStoreConfig(tenant.id);
+  const areas = store.delivery_areas || [];
+
+  let bairro = null;
+  if (payload?.startsWith('BAIRRO_')) {
+    const raw = decodeURIComponent(payload.slice(7));
+    if (raw !== 'RETIRADA') bairro = raw;
+  } else {
+    const t = normTxt(text);
+    if (!t) {
+      return ws.sendText(lead.phone, 'Digite o nome do seu bairro ou toque em *Retirar no local*:', tenant);
+    }
+    if (['retirar', 'retirada', 'buscar', 'balcao', 'balcão'].includes(t) || t.includes('retirar no local')) {
+      bairro = null;
+    } else {
+      const match = areas.find(a => normTxt(a.bairro) === t);
+      if (!match) {
+        // Fora da área: bloqueia com aviso + sugestão de contato
+        const wa = (tenant.contact_phone || '').replace(/[^\d]/g, '');
+        const link = wa ? `https://wa.me/${wa}?text=${encodeURIComponent('Olá! Quero fazer um pedido mas meu bairro está fora da área de entrega.')}` : null;
+        await ws.sendText(lead.phone, await catalog.msg(tenant.id, 'out_of_area'), tenant);
+        if (link) await ws.sendText(lead.phone, `🔗 Fale conosco para retirada no local:\n\n${link}`, tenant);
+        await repo.setFlowState(lead.id, ST.MENU);
+        return _menu(tenant, lead);
+      }
+      bairro = match.bairro;
+    }
+  }
+
+  survey.checkoutBairro = { bairro, taxa: bairro ? calcularFrete([], store, bairro) : 0 };
+  delete survey.pendingBairro;
+  await repo.setSurvey(lead.id, survey);
+  return _checkoutConfirm(tenant, lead, survey.answers || {});
+}
+
+/**
+ * Frete final do pedido: usa a taxa do bairro escolhido (ou 0 na retirada)
+ * quando o bairro foi perguntado; senão, a regra padrão.
+ */
+function freteDoPedido(items, store, checkoutBairro) {
+  if (checkoutBairro) return Number(checkoutBairro.taxa) || 0;
+  return calcularFrete(items, store, null);
 }
 
 async function _cart(tenant, lead) {
@@ -233,7 +330,7 @@ async function _checkout(tenant, lead, step, answer) {
       await repo.setFlowState(lead.id, ST.SURVEY);
       return ws.sendText(lead.phone, q.questions[0].question, tenant);
     }
-    return _checkoutConfirm(tenant, lead, {});
+    return _afterCheckoutSurvey(tenant, lead, {});
   }
 
   if (step === 'confirm') {
@@ -241,7 +338,9 @@ async function _checkout(tenant, lead, step, answer) {
     if (!items.length) return _menu(tenant, lead);
     const subtotal = items.reduce((s, it) => s + Number(it.unit_price) * it.quantity, 0);
     const store = await catalog.getStoreConfig(tenant.id);
-    const frete = calcularFrete(items, store);
+    const survey = await repo.getSurvey(lead.id);
+    const frete = freteDoPedido(items, store, survey?.checkoutBairro);
+    const bairro = survey?.checkoutBairro?.bairro || null;
     const total = subtotal + frete;
 
     const order = await repo.createOrder(tenant.id, lead.id, items, subtotal, 0, frete, total);
@@ -249,7 +348,6 @@ async function _checkout(tenant, lead, step, answer) {
     await repo.setFlowState(lead.id, ST.CHECKOUT_PAYMENT);
 
     // Notifica o contato do tenant
-    const survey = await repo.getSurvey(lead.id);
     const answers = survey?.answers || {};
     await repo.setSurvey(lead.id, null);
     const surveyLines = Object.entries(answers).map(([k, v]) => `• ${k}: ${v}`).join('\n');
@@ -258,7 +356,7 @@ async function _checkout(tenant, lead, step, answer) {
     await notifyTenant(
       tenant,
       'NOVO PEDIDO',
-      `Pedido: #${order.external_id}\nCliente: ${lead.full_name || '—'}\nItens: ${itensTxt}\nTotal: R$ ${total.toFixed(2)}\nStatus: aguardando pagamento${surveyLines ? '\nRespostas:\n' + surveyLines : ''}`,
+      `Pedido: #${order.external_id}\nCliente: ${lead.full_name || '—'}\nItens: ${itensTxt}\n${bairro ? `Bairro: ${bairro}\n` : ''}Entrega: R$ ${frete.toFixed(2)}\nTotal: R$ ${total.toFixed(2)}\nStatus: aguardando pagamento${surveyLines ? '\nRespostas:\n' + surveyLines : ''}`,
       lead.phone
     );
 
@@ -274,12 +372,25 @@ async function _checkout(tenant, lead, step, answer) {
   return _menu(tenant, lead);
 }
 
+/**
+ * Depois do nome/questionário: pergunta o bairro (se a loja tem áreas)
+ * ou vai direto para a confirmação.
+ */
+async function _afterCheckoutSurvey(tenant, lead, answers) {
+  const items = await repo.getCart(lead.id);
+  const store = await catalog.getStoreConfig(tenant.id);
+  if (precisaBairro(store, items)) return _askBairro(tenant, lead, answers);
+  return _checkoutConfirm(tenant, lead, answers);
+}
+
 async function _checkoutConfirm(tenant, lead, answers) {
   const items = await repo.getCart(lead.id);
   if (!items.length) return _menu(tenant, lead);
   const sub = items.reduce((s, it) => s + Number(it.unit_price) * it.quantity, 0);
   const store = await catalog.getStoreConfig(tenant.id);
-  const frete = calcularFrete(items, store);
+  const survey = await repo.getSurvey(lead.id);
+  const frete = freteDoPedido(items, store, survey?.checkoutBairro);
+  const bairro = survey?.checkoutBairro?.bairro || null;
   const total = sub + frete;
 
   let resumo = await catalog.msg(tenant.id, 'checkout_confirm', {
@@ -288,6 +399,7 @@ async function _checkoutConfirm(tenant, lead, answers) {
     frete: frete.toFixed(2),
     total: total.toFixed(2),
   });
+  if (bairro) resumo += `\n\n🛵 Bairro: *${bairro}* (entrega R$ ${frete.toFixed(2)})`;
   const extras = Object.entries(answers).filter(([, v]) => v);
   if (extras.length) resumo += '\n\n' + extras.map(([k, v]) => `• ${k}: ${v}`).join('\n');
 
@@ -330,7 +442,7 @@ async function finishSurvey(tenant, lead, data) {
     if (Object.keys(leadFields).length) await repo.updateLead(lead.id, leadFields);
   }
   if (data.id === 'checkout') {
-    return _checkoutConfirm(tenant, lead, data.answers);
+    return _afterCheckoutSurvey(tenant, lead, data.answers);
   }
   await repo.setSurvey(lead.id, null);
   return _menu(tenant, lead);
@@ -534,6 +646,7 @@ async function processIncoming(tenant, phone, text, payload, messageId, numberId
     if (payload.startsWith('PROD_'))  { const pid = payload.slice(5); await showProductDetail(tenant, lead, pid); return; }
     if (payload.startsWith('DETAIL_')){ const pid = payload.slice(7); await showProductDetail(tenant, lead, pid); return; }
     if (payload === 'CART_SHOW')      return _cart(tenant, lead);
+    if (payload.startsWith('BAIRRO_')) return _handleBairro(tenant, lead, '', payload);
     if (payload === 'CART_BUY')       { await repo.setFlowState(lead.id, ST.CHECKOUT_NAME); return ws.sendText(phone, await catalog.msg(tenant.id, 'checkout_ask_name'), tenant); }
     if (payload === 'CART_CLEAR')     { await repo.clearCart(lead.id); await ws.sendText(phone, await catalog.msg(tenant.id, 'cart_cleared'), tenant); return _menu(tenant, lead); }
     if (payload === 'ORDER_FINAL')    return _checkout(tenant, lead, 'confirm', '');
@@ -546,6 +659,7 @@ async function processIncoming(tenant, phone, text, payload, messageId, numberId
 
   const state = lead.flow_state;
   if (state === ST.ADDONS)            return _handleAddonsAnswer(tenant, lead, text);
+  if (state === ST.CHECKOUT_BAIRRO)   return _handleBairro(tenant, lead, text, null);
   if (state === ST.CHECKOUT_NAME)     return _checkout(tenant, lead, 'name', text);
   if (state === ST.SURVEY)            return _handleSurveyAnswer(tenant, lead, text);
   if (state === ST.SOB_CONSULTA_NAME) return _handleSobConsulta(tenant, lead, text);

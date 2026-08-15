@@ -1637,6 +1637,8 @@ async function pageConfig(req, res) {
   const addr = c.address || {};
   const mi = s.menu_image || {};
   const base = clientMode ? '/painel' : '/admin';
+  const showAreasEditor = !!tenant.segment_name && tenant.segment_name !== 'vendas';
+  const areas = Array.isArray(s.delivery_areas) ? s.delivery_areas : [];
   const firstCat = (data.categories || []).find(cat => (cat.products || []).some(p => p.available)) || data.categories?.[0];
 
   const previewCat = firstCat?.id || '';
@@ -1649,7 +1651,13 @@ async function pageConfig(req, res) {
         <div><label>FRETE (R$)</label><input type="text" name="store[delivery_fee]" value="${s.delivery_fee ?? 0}"></div>
         <div><label>FRETE GRÁTIS ACIMA (R$)</label><input type="text" name="store[delivery_free_full]" value="${s.delivery_free_full ?? 0}"></div>
         <div><label>DESCONTO PIX (%)</label><input type="text" name="store[pix_discount_percent]" value="${s.pix_discount_percent ?? 0}"></div>
-      </div></div>
+      </div>
+      ${showAreasEditor ? `<div style="margin-top:10px;border-top:1px dashed #e2e8f0;padding-top:12px">
+        <h3 style="font-size:13px;margin-bottom:6px">🛵 ÁREAS DE ENTREGA <small style="font-weight:400;color:#94a3b8">— o bot pergunta o bairro no checkout</small></h3>
+        <textarea name="store[delivery_areas]" rows="5" style="font-family:Consolas,monospace;font-size:12px" placeholder='[{"bairro":"Centro","taxa":5},{"bairro":"Trindade","taxa":7}]'>${esc(JSON.stringify(areas || [], null, 2))}</textarea>
+        <p style="font-size:12px;color:#64748b;margin-top:6px">Bairros fora da lista são <b>bloqueados</b> no checkout com sugestão de contato. Se a lista estiver vazia, vale o frete fixo acima.</p>
+      </div>` : ''}
+      </div>
       <div class="panel"><h2>🏢 Empresa</h2><div class="grid2">
         <div><label>NOME DA EMPRESA</label><input type="text" name="company[name]" value="${esc(c.name || '')}"></div>
         <div><label>HORÁRIO</label><input type="text" name="company[business_hours]" value="${esc(c.business_hours || '')}"></div>
@@ -1715,6 +1723,25 @@ async function postConfigSalvar(req, res) {
   if (s.delivery_fee !== undefined) data.store.delivery_fee = parseFloat(String(s.delivery_fee).replace(',', '.')) || 0;
   if (s.delivery_free_full !== undefined) data.store.delivery_free_full = parseFloat(String(s.delivery_free_full).replace(',', '.')) || 0;
   if (s.pix_discount_percent !== undefined) data.store.pix_discount_percent = parseFloat(String(s.pix_discount_percent).replace(',', '.')) || 0;
+
+  // Áreas de entrega (JSON) — ramo de operação
+  if (s.delivery_areas !== undefined) {
+    const raw = String(s.delivery_areas).trim();
+    if (raw) {
+      try {
+        const areas = JSON.parse(raw);
+        if (Array.isArray(areas) && areas.every(a => a.bairro && a.taxa !== undefined)) {
+          data.store.delivery_areas = areas;
+        } else {
+          return res.redirect(`${base}/config?msg=` + encodeURIComponent('Áreas de entrega: JSON inválido (cada área precisa de "bairro" e "taxa").') + '&type=err');
+        }
+      } catch (e) {
+        return res.redirect(`${base}/config?msg=` + encodeURIComponent('Áreas de entrega: JSON inválido — ' + e.message) + '&type=err');
+      }
+    } else {
+      data.store.delivery_areas = undefined;
+    }
+  }
 
   // Imagem do menu
   const mi = s.menu_image || {};
