@@ -149,6 +149,18 @@ async function deletePlan(id) {
   await query('DELETE FROM subscription_plans WHERE id = $1', [id]);
 }
 
+async function updatePlan(id, name, price, periodDays) {
+  await query(
+    'UPDATE subscription_plans SET name = $2, price = $3, period_days = $4 WHERE id = $1',
+    [id, name, price, periodDays]
+  );
+}
+
+async function countSubscriptionsByPlan(planId) {
+  const r = await query('SELECT COUNT(*) AS c FROM subscriptions WHERE plan_id = $1', [planId]);
+  return Number(r.rows[0].c);
+}
+
 // ============================================================
 //  ASSINATURAS (licenças)
 // ============================================================
@@ -183,8 +195,8 @@ async function getActiveSubscription(tenantId) {
 
 async function createSubscription(tenantId, planId, price, periodDays) {
   const r = await query(
-    `INSERT INTO subscriptions (tenant_id, plan_id, price, status, expires_at)
-     VALUES ($1,$2,$3,'ativa', NOW() + ($4 || ' days')::interval) RETURNING *`,
+    `INSERT INTO subscriptions (tenant_id, plan_id, price, period_days, status, expires_at)
+     VALUES ($1,$2,$3,$4,'ativa', NOW() + make_interval(days => $4)) RETURNING *`,
     [tenantId, planId, price, periodDays]
   );
   return r.rows[0];
@@ -488,7 +500,7 @@ module.exports = {
   createTenant, getTenants, getTenant, getTenantByNumberId, getTenantByPanelLogin, updateTenant, deleteTenant,
   hashPassword, verifyPassword, normalizePhoneBr,
   // planos e assinaturas
-  getPlans, createPlan, deletePlan,
+  getPlans, createPlan, updatePlan, deletePlan, countSubscriptionsByPlan,
   getSubscriptions, getSubscriptionsByTenant, getActiveSubscription, createSubscription,
   renewSubscription, renewSubscriptionMark, cancelSubscription, getExpiringSubscriptions,
   // catálogos

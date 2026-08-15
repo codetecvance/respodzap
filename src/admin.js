@@ -673,40 +673,111 @@ router.get('/admin/assinaturas', requireAuth, async (req, res) => {
   const subs = await repo.getSubscriptions();
   const flash = req.query.msg ? `<div id="flashMsg">${esc(req.query.msg)}</div>` : '';
 
-  const rows = subs.map(s => `<tr>
-    <td><b>${esc(s.tenant_name)}</b></td><td>${esc(s.plan_name || '—')}</td><td>${money(s.price)}</td>
-    <td>${statusBadge(s.status)}</td>
-    <td>${s.expires_at ? esc(String(s.expires_at).slice(0, 10)) : '—'}</td>
-    <td style="white-space:nowrap">
-      <form class="inline-form" method="POST" action="/admin/assinaturas/renovar"><input type="hidden" name="id" value="${s.id}"><input type="hidden" name="days" value="${s.plan_id ? (plans.find(p => p.id === s.plan_id)?.period_days || 30) : 30}"><button class="btn green small">Renovar</button></form>
-      <form class="inline-form" method="POST" action="/admin/assinaturas/pix"><input type="hidden" name="id" value="${s.id}"><button class="btn amber small">Gerar PIX</button></form>
-      ${s.status === 'ativa' ? `<form class="inline-form" method="POST" action="/admin/assinaturas/cancelar"><input type="hidden" name="id" value="${s.id}"><button class="btn red small">Cancelar</button></form>` : ''}
-    </td>
-  </tr>`).join('');
+  const rows = subs.map(s => {
+    const plan = plans.find(p => p.id === s.plan_id);
+    const custom = plan && (Number(s.price) !== Number(plan.price) || Number(s.period_days) !== Number(plan.period_days));
+    const days = s.period_days || plan?.period_days || 30;
+    return `<tr>
+      <td><b>${esc(s.tenant_name)}</b></td>
+      <td>${esc(s.plan_name || '—')} ${custom ? '<span class="badge wait">personalizado</span>' : ''}</td>
+      <td>${money(s.price)}<br><small style="color:#94a3b8">${days} dias</small></td>
+      <td>${statusBadge(s.status)}</td>
+      <td>${s.expires_at ? esc(String(s.expires_at).slice(0, 10)) : '—'}</td>
+      <td style="white-space:nowrap">
+        <form class="inline-form" method="POST" action="/admin/assinaturas/renovar"><input type="hidden" name="id" value="${s.id}"><input type="hidden" name="days" value="${days}"><button class="btn green small">Renovar</button></form>
+        <form class="inline-form" method="POST" action="/admin/assinaturas/pix"><input type="hidden" name="id" value="${s.id}"><button class="btn amber small">Gerar PIX</button></form>
+        ${s.status === 'ativa' ? `<form class="inline-form" method="POST" action="/admin/assinaturas/cancelar"><input type="hidden" name="id" value="${s.id}"><button class="btn red small">Cancelar</button></form>` : ''}
+      </td>
+    </tr>`;
+  }).join('');
 
   const tenantOptions = tenants.map(t => `<option value="${t.id}">${esc(t.name)}</option>`).join('');
   const planOptions = plans.map(p => `<option value="${p.id}">${esc(p.name)} — ${money(p.price)}/${p.period_days} dias</option>`).join('');
+
+  // Seção de planos (editar / novo / excluir)
+  const plansRows = plans.map(async p => {
+    const emUso = await repo.countSubscriptionsByPlan(p.id);
+    return `<form id="plano-${p.id}" method="POST" action="/admin/planos/salvar"><input type="hidden" name="id" value="${p.id}"></form>
+    <tr>
+      <td><input form="plano-${p.id}" type="text" name="name" value="${esc(p.name)}" required style="min-width:140px"></td>
+      <td><input form="plano-${p.id}" type="text" name="price" value="${p.price}" style="width:100px"></td>
+      <td><input form="plano-${p.id}" type="number" name="period_days" value="${p.period_days}" style="width:90px"></td>
+      <td style="white-space:nowrap">
+        <button form="plano-${p.id}" class="btn green small" type="submit">Salvar</button>
+        ${emUso > 0
+          ? `<button class="btn red small" type="button" title="Plano em uso por ${emUso} cliente(s)" disabled>🗑 (em uso)</button>`
+          : `<button form="plano-${p.id}" class="btn red small" type="submit" formaction="/admin/planos/excluir?plan=${p.id}" formnovalidate>🗑 Excluir</button>`}
+      </td>
+    </tr>`;
+  });
+  const plansHtml = (await Promise.all(plansRows)).join('');
 
   res.send(layout('Assinaturas', '/admin/assinaturas', `${flash}
     <div class="panel"><h2>➕ Nova licença</h2>
       <form method="POST" action="/admin/assinaturas/nova" style="display:flex;gap:10px;align-items:end;flex-wrap:wrap">
         <div style="min-width:200px"><label>CLIENTE</label><select name="tenant_id" required>${tenantOptions}</select></div>
         <div style="min-width:200px"><label>PLANO</label><select name="plan_id" required>${planOptions}</select></div>
+        <div style="min-width:130px"><label>PREÇO (R$) — vazio = do plano</label><input type="text" name="preco_custom" placeholder="Ex: 250,00"></div>
+        <div style="min-width:120px"><label>PERÍODO (dias) — vazio = do plano</label><input type="number" name="dias_custom" placeholder="Ex: 45"></div>
         <button class="btn green" type="submit">+ Criar licença</button>
       </form>
-      <p style="font-size:12px;color:#64748b;margin-top:8px">O bot envia o PIX de renovação automaticamente 3 dias antes do vencimento.</p>
+      <p style="font-size:12px;color:#64748b;margin-top:8px">Preencha preço/período para personalizar o valor desse cliente. O bot envia o PIX de renovação automaticamente 3 dias antes do vencimento.</p>
     </div>
-    <div class="panel"><table>
+    <div class="panel"><h2>🏷️ Planos de assinatura <span class="right"><small style="font-weight:400;color:#94a3b8">edite os valores que aparecem no select acima</small></span></h2>
+      <table>
+        <thead><tr><th>Nome</th><th>Preço (R$)</th><th>Período (dias)</th><th>Ações</th></tr></thead>
+        <tbody>${plansHtml || '<tr><td colspan="4"><div class="empty">Nenhum plano ainda.</div></td></tr>'}</tbody>
+      </table>
+      <details style="margin-top:10px"><summary style="cursor:pointer;font-size:13px;color:#2563eb;font-weight:600">+ Adicionar novo plano</summary>
+        <form method="POST" action="/admin/planos/novo" style="display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin-top:10px">
+          <div><label>NOME</label><input type="text" name="name" required placeholder="Ex: Promocional"></div>
+          <div><label>PREÇO (R$)</label><input type="text" name="price" required placeholder="Ex: 199,00"></div>
+          <div><label>PERÍODO (dias)</label><input type="number" name="period_days" required placeholder="Ex: 30" value="30"></div>
+          <button class="btn green" type="submit">+ Criar plano</button>
+        </form>
+      </details>
+    </div>
+    <div class="panel"><h2>📋 Licenças ativas</h2><table>
       <thead><tr><th>Cliente</th><th>Plano</th><th>Valor</th><th>Status</th><th>Vencimento</th><th>Ações</th></tr></thead>
       <tbody>${rows || '<tr><td colspan="6"><div class="empty">Nenhuma assinatura ainda.</div></td></tr>'}</tbody>
     </table></div>`));
 });
 
+router.post('/admin/planos/novo', requireAuth, async (req, res) => {
+  const b = req.body;
+  await repo.createPlan(b.name, parseFloat(String(b.price).replace(',', '.')) || 0, Number(b.period_days) || 30);
+  res.redirect('/admin/assinaturas?msg=' + encodeURIComponent(`Plano "${b.name}" criado!`));
+});
+
+router.post('/admin/planos/salvar', requireAuth, async (req, res) => {
+  const b = req.body;
+  await repo.updatePlan(Number(b.id), b.name, parseFloat(String(b.price).replace(',', '.')) || 0, Number(b.period_days) || 30);
+  res.redirect('/admin/assinaturas?msg=' + encodeURIComponent('Plano atualizado!'));
+});
+
+router.post('/admin/planos/excluir', requireAuth, async (req, res) => {
+  const planId = Number(req.query.plan);
+  const emUso = await repo.countSubscriptionsByPlan(planId);
+  if (emUso > 0) {
+    return res.redirect('/admin/assinaturas?msg=' + encodeURIComponent(`Não é possível excluir: plano em uso por ${emUso} cliente(s).`) + '&type=err');
+  }
+  await repo.deletePlan(planId);
+  res.redirect('/admin/assinaturas?msg=' + encodeURIComponent('Plano excluído.'));
+});
+
 router.post('/admin/assinaturas/nova', requireAuth, async (req, res) => {
-  const plan = (await repo.getPlans()).find(p => p.id === Number(req.body.plan_id));
+  const b = req.body;
+  const plan = (await repo.getPlans()).find(p => p.id === Number(b.plan_id));
   if (!plan) return res.redirect('/admin/assinaturas?msg=' + encodeURIComponent('Plano inválido.') + '&type=err');
-  await repo.createSubscription(Number(req.body.tenant_id), plan.id, plan.price, plan.period_days);
-  res.redirect('/admin/assinaturas?msg=' + encodeURIComponent(`Licença criada: ${plan.name} — vence em ${plan.period_days} dias.`));
+
+  const precoCustom = String(b.preco_custom || '').trim();
+  const diasCustom = String(b.dias_custom || '').trim();
+  const price = precoCustom !== '' ? parseFloat(precoCustom.replace(',', '.')) : Number(plan.price);
+  const days = diasCustom !== '' ? Number(diasCustom) : Number(plan.period_days);
+
+  await repo.createSubscription(Number(b.tenant_id), plan.id, price, days);
+  const nota = (precoCustom !== '' || diasCustom !== '') ? ` (personalizado: R$ ${price} / ${days} dias)` : '';
+  res.redirect('/admin/assinaturas?msg=' + encodeURIComponent(`Licença criada: ${plan.name} — vence em ${days} dias.${nota}`));
 });
 
 router.post('/admin/assinaturas/renovar', requireAuth, async (req, res) => {

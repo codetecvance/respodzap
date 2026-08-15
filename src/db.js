@@ -156,6 +156,7 @@ async function initDb() {
 
   // Migrações leves (rodam a cada inicialização)
   await query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS panel_password TEXT`);
+  await query(`ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS period_days INTEGER`);
 }
 
 module.exports = { pool, query, initDb };

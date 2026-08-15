@@ -95,12 +95,10 @@ router.post('/mercadopago/webhook', async (req, res) => {
       const subs = await repo.getSubscriptions();
       const sub = subs.find(s => s.id === subId);
       if (sub && status.status === 'approved') {
-        const plan = await repo.getPlans();
-        const planInfo = plan.find(p => p.id === sub.plan_id);
-        const days = planInfo?.period_days || 30;
+        const days = sub.period_days || 30;
         await repo.renewSubscription(subId, days);
         const { notifyAdmin, notifyTenant } = require('./notify');
-        await notifyAdmin('LICENÇA RENOVADA', `Cliente: ${sub.tenant_name}\nPlano: ${planInfo?.name || '—'}\nValor: R$ ${sub.price}\nRenovado por ${days} dias via PIX.`);
+        await notifyAdmin('LICENÇA RENOVADA', `Cliente: ${sub.tenant_name}\nPlano: ${sub.plan_name || '—'}\nValor: R$ ${sub.price}\nRenovado por ${days} dias via PIX.`);
         const tenant = await repo.getTenant(sub.tenant_id);
         if (tenant) {
           await notifyTenant(tenant, '✅ PAGAMENTO RECEBIDO', `Sua assinatura foi renovada com sucesso por mais ${days} dias. Obrigado!`);
