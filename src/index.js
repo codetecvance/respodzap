@@ -66,10 +66,12 @@ app.get('/api/menu-image', async (req, res) => {
     if (!products.length) return res.status(404).send('categoria vazia');
 
     // Configuração do tenant + overrides (para o preview ao vivo)
+    // Identidade por ramo quando o tenant não personalizou as cores
+    const theme = catalog.segmentTheme(tenant.segment_name);
     const m = data.store?.menu_image || {};
     const cfg = {
-      headerBg: req.query.header_bg || m.header_bg || '#1e3a8a',
-      priceColor: req.query.price_color || m.price_color || '#1d4ed8',
+      headerBg: req.query.header_bg || m.header_bg || theme.headerBg,
+      priceColor: req.query.price_color || m.price_color || theme.priceColor,
       showPrice: req.query.show_price !== undefined ? req.query.show_price === '1' : m.show_price !== false,
       showNumbers: req.query.show_numbers !== undefined ? req.query.show_numbers === '1' : m.show_numbers !== false,
       footerText: req.query.footer_text || m.footer_text || '',

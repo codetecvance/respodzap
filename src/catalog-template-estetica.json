@@ -1,0 +1,216 @@
+{
+  "company": {
+    "name": "",
+    "display_name": "",
+    "phone": "",
+    "email": "",
+    "instagram": "",
+    "website": "",
+    "logo_url": "",
+    "address": {
+      "street": "",
+      "neighborhood": "",
+      "city": "",
+      "state": "",
+      "zip": ""
+    },
+    "business_hours": "Seg a Sex: 9h às 19h · Sáb: 9h às 17h"
+  },
+
+  "categories": [
+    {
+      "id": "servicos",
+      "name": "Serviços",
+      "description": "Agende seu horário pelo WhatsApp",
+      "emoji": "💆‍♀️",
+      "products": [
+        {
+          "id": "corte-feminino",
+          "name": "Corte Feminino",
+          "short_description": "Corte, lavagem e finalização",
+          "long_description": "Corte personalizado com consultoria de estilo, lavagem e finalização inclusas.",
+          "price": 65.00,
+          "image": "placeholder.png",
+          "unit": "serviço",
+          "available": true,
+          "digital": true,
+          "adicionais": [
+            {
+              "grupo": "Finalização",
+              "unico": true,
+              "opcoes": [
+                { "nome": "Escova", "preco": 0 },
+                { "nome": "Escova + chapinha", "preco": 20.00 },
+                { "nome": "Babyliss", "preco": 25.00 }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "manicure",
+          "name": "Manicure Completa",
+          "short_description": "Mãos + pés com esmaltação",
+          "long_description": "Manicure completa de mãos e pés com esmaltação comum.",
+          "price": 45.00,
+          "image": "placeholder.png",
+          "unit": "serviço",
+          "available": true,
+          "digital": true,
+          "adicionais": [
+            {
+              "grupo": "Cobertura",
+              "unico": true,
+              "opcoes": [
+                { "nome": "Esmaltação comum", "preco": 0 },
+                { "nome": "Blindagem", "preco": 15.00 }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "sobrancelha",
+          "name": "Design de Sobrancelha",
+          "short_description": "Design personalizado",
+          "long_description": "Design de sobrancelha personalizado com henna.",
+          "price": 30.00,
+          "image": "placeholder.png",
+          "unit": "serviço",
+          "available": true,
+          "digital": true
+        }
+      ]
+    },
+    {
+      "id": "pacotes",
+      "name": "Pacotes & Combos",
+      "description": "Melhores preços em combos",
+      "emoji": "✨",
+      "products": [
+        {
+          "id": "pacote-completo",
+          "name": "Pacote Completo",
+          "short_description": "Corte + sobrancelha + manicure",
+          "long_description": "Corte feminino, design de sobrancelha e manicure completa. Economia de R$ 20!",
+          "price": 120.00,
+          "image": "placeholder.png",
+          "unit": "pacote",
+          "available": true,
+          "digital": true,
+          "plans": [
+            {
+              "id": "unico",
+              "name": "Sessão única",
+              "price": 120.00,
+              "period": "por sessão",
+              "popular": true,
+              "features": "Corte feminino\nDesign de sobrancelha\nManicure completa"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "produtos",
+      "name": "Produtos",
+      "description": "Para cuidar da pele e do cabelo",
+      "emoji": "🧴",
+      "products": [
+        {
+          "id": "kit-cabelo",
+          "name": "Kit Tratamento Capilar",
+          "short_description": "Shampoo + máscara + leave-in",
+          "long_description": "Kit com shampoo, máscara de tratamento e leave-in para cabelos danificados.",
+          "price": 89.90,
+          "image": "placeholder.png",
+          "unit": "kit",
+          "available": true,
+          "digital": false
+        },
+        {
+          "id": "protetor-solar",
+          "name": "Protetor Solar Facial FPS 60",
+          "short_description": "Toque seco, 50g",
+          "long_description": "Protetor solar facial FPS 60 com toque seco.",
+          "price": 59.90,
+          "image": "placeholder.png",
+          "unit": "unidade",
+          "available": true,
+          "digital": false
+        }
+      ]
+    }
+  ],
+
+  "store": {
+    "currency": "BRL",
+    "currency_symbol": "R$",
+    "min_order": 0,
+    "delivery_free_full": 999999,
+    "delivery_fee": 0,
+    "pix_discount_percent": 5,
+    "installments_max": 1,
+    "payment_methods": [
+      { "type": "pix", "label": "PIX (5% desconto)", "discount_percent": 5 },
+      { "type": "credit_card", "label": "Cartão de Crédito" },
+      { "type": "debit_card", "label": "Cartão de Débito" }
+    ],
+    "menu_image": {
+      "enabled": true,
+      "header_bg": "#9d174d",
+      "price_color": "#db2777",
+      "show_price": true,
+      "show_numbers": true,
+      "footer_text": ""
+    }
+  },
+
+  "questionnaires": {
+    "checkout": {
+      "label": "Dados do agendamento",
+      "questions": [
+        {
+          "key": "horario",
+          "question": "Qual horário e dia você prefere para o atendimento?",
+          "optional": false
+        },
+        {
+          "key": "observacao",
+          "question": "Alguma observação? (opcional)",
+          "optional": true
+        }
+      ]
+    }
+  },
+
+  "messages": {
+    "welcome": "Olá, {nome}! Bem-vindo(a) ao salão {empresa} 💆‍♀️\n\nEscolha uma opção abaixo:",
+    "no_categories": "Nenhuma categoria disponível.",
+    "categories_title": "✨ O que você procura hoje?",
+    "no_products": "Nenhum item nesta categoria.",
+    "product_not_found": "Item não encontrado.",
+    "product_detail": "*{nome}*\n\n{descricao}\n\n💰 {preco}",
+    "added_to_cart": "✅ \"{produto}\" adicionado ao seu agendamento!\nItens: {total}",
+    "cart_empty": "Seu carrinho está vazio. Que tal dar uma olhada nos nossos serviços?",
+    "cart_title": "*Seu agendamento:*",
+    "cart_item": "{n}. {produto}{adicionais} — {qtd}x R$ {preco}",
+    "cart_total": "*Total: R$ {total}*",
+    "checkout_ask_name": "Qual o nome do cliente?",
+    "checkout_confirm": "Confirme seu agendamento:\n\nCliente: {nome}\nSubtotal: R$ {subtotal}\nEntrega: R$ {frete}\n*Total: R$ {total}*",
+    "order_created_payment": "✅ *Agendamento #{pedido} criado!*\n\nValor total: R$ {total}\n\n*Escolha a forma de pagamento (pode pagar no dia):*",
+    "payment_pix": "✅ *Agendamento #{pedido}*\n\n💵 Pagamento via *PIX*\n💰 Total: R$ {total} (5% de desconto aplicado)\n\n*1️⃣* Escaneie o QR Code abaixo, ou\n*2️⃣* Use o *PIX copia e cola*:\n\n```\n{qr}\n```\n\n⏳ Assim que o pagamento for aprovado, você recebe a confirmação automática aqui.",
+    "payment_card": "✅ *Agendamento #{pedido}*\n\n💳 Pagamento via *{tipo}*\n💰 Total: R$ {total}\n\nPara pagar, toque no link abaixo:\n\n🔗 {link}\n\n⏳ Assim que o pagamento for aprovado, você recebe a confirmação automática aqui.",
+    "payment_error": "Seu agendamento foi criado, mas houve um problema ao gerar o pagamento. Um atendente vai te ajudar em instantes.",
+    "payment_confirmed": "🎉 *Pagamento confirmado!*\n\n{resumo}\n\nSeu horário está garantido! Até logo 💖",
+    "ask_support_name": "Informe seu nome completo:",
+    "ask_support_reason": "Qual o motivo do seu contato?",
+    "support_escalation": "Um dos nossos atendentes vai falar com você em breve pelo WhatsApp!",
+    "no_orders": "Você não tem agendamentos ainda.",
+    "order_status": "Seu último agendamento: #{pedido} — Status: {status}",
+    "cart_cleared": "Agendamento esvaziado.",
+    "plans_title": "{produto} — escolha o plano:",
+    "plan_detail": "*{produto} — {plano}*\n\n💰 {preco}\n\n{recursos}",
+    "addon_group": "*{produto}* — escolha o *{grupo}*:",
+    "addon_done": "Adicionais registrados!",
+    "out_of_area": "😔 Desculpe, seu bairro está fora da nossa área de entrega."
+  }
+}

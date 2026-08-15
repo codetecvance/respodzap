@@ -1,0 +1,272 @@
+{
+  "company": {
+    "name": "",
+    "display_name": "",
+    "phone": "",
+    "email": "",
+    "instagram": "",
+    "website": "",
+    "logo_url": "",
+    "address": {
+      "street": "",
+      "neighborhood": "",
+      "city": "",
+      "state": "",
+      "zip": ""
+    },
+    "business_hours": "Seg a Sáb: 6h às 20h · Dom: 7h às 13h"
+  },
+
+  "categories": [
+    {
+      "id": "paes",
+      "name": "Pães",
+      "description": "Pães fresquinhos todos os dias",
+      "emoji": "🥖",
+      "products": [
+        {
+          "id": "pao-frances",
+          "name": "Pão Francês",
+          "short_description": "Crocante por fora, macio por dentro",
+          "long_description": "Pão francês assado na hora. Vendido por quilo (Kg).",
+          "price": 16.90,
+          "image": "placeholder.png",
+          "unit": "kg",
+          "available": true,
+          "adicionais": [
+            {
+              "grupo": "Quantidade",
+              "unico": true,
+              "opcoes": [
+                { "nome": "½ Kg", "preco": 0 },
+                { "nome": "1 Kg", "preco": 8.45 }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "pao-integral",
+          "name": "Pão Integral",
+          "short_description": "Com grãos de chia e linhaça",
+          "long_description": "Pão integral artesanal com grãos, 500g.",
+          "price": 13.50,
+          "image": "placeholder.png",
+          "unit": "unidade",
+          "available": true
+        },
+        {
+          "id": "baguete",
+          "name": "Baguete Francesa",
+          "short_description": "Tradicional e crocante",
+          "long_description": "Baguete crocante de fermentação natural.",
+          "price": 8.90,
+          "image": "placeholder.png",
+          "unit": "unidade",
+          "available": true
+        }
+      ]
+    },
+    {
+      "id": "bolos",
+      "name": "Bolos & Tortas",
+      "description": "Feitos com ingredientes selecionados",
+      "emoji": "🎂",
+      "products": [
+        {
+          "id": "bolo-chocolate",
+          "name": "Bolo de Chocolate",
+          "short_description": "Massa fofa com cobertura de brigadeiro",
+          "long_description": "Bolo de chocolate com cobertura cremosa de brigadeiro. 1,5kg.",
+          "price": 54.90,
+          "image": "placeholder.png",
+          "unit": "unidade",
+          "available": true,
+          "adicionais": [
+            {
+              "grupo": "Recheio",
+              "unico": true,
+              "opcoes": [
+                { "nome": "Sem recheio", "preco": 0 },
+                { "nome": "Brigadeiro", "preco": 12.00 },
+                { "nome": "Morango", "preco": 15.00 }
+              ]
+            },
+            {
+              "grupo": "Personalização",
+              "max": 1,
+              "opcoes": [
+                { "nome": "Mensagem no bolo", "preco": 5.00 },
+                { "nome": "Decoração artística", "preco": 25.00 }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "torta-limao",
+          "name": "Torta de Limão",
+          "short_description": "Merengue de limão sílício",
+          "long_description": "Torta de limão com merengue italiano e massa crocante.",
+          "price": 39.90,
+          "image": "placeholder.png",
+          "unit": "unidade",
+          "available": true
+        }
+      ]
+    },
+    {
+      "id": "salgados",
+      "name": "Salgados",
+      "description": "Assados na hora, direto do forno",
+      "emoji": "🥟",
+      "products": [
+        {
+          "id": "coxinha",
+          "name": "Coxinha de Frango",
+          "short_description": "Recheio cremoso de frango com catupiry",
+          "long_description": "Coxinha grande de frango com catupiry, empanada na hora.",
+          "price": 6.50,
+          "image": "placeholder.png",
+          "unit": "unidade",
+          "available": true,
+          "adicionais": [
+            {
+              "grupo": "Acompanhamento",
+              "unico": true,
+              "opcoes": [
+                { "nome": "Sem acompanhamento", "preco": 0 },
+                { "nome": "Molho de pimenta", "preco": 2.00 }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "pao-queijo",
+          "name": "Pão de Queijo",
+          "short_description": "Receita mineira, 20 unidades",
+          "long_description": "Pão de queijo mineiro assado na hora, porção com 20 unidades.",
+          "price": 15.90,
+          "image": "placeholder.png",
+          "unit": "porção",
+          "available": true
+        }
+      ]
+    },
+    {
+      "id": "cafe",
+      "name": "Café & Bebidas",
+      "description": "Para acompanhar nosso cardápio",
+      "emoji": "☕",
+      "products": [
+        {
+          "id": "cafe-expresso",
+          "name": "Café Expresso",
+          "short_description": "Grãos selecionados, 50ml",
+          "long_description": "Café expresso com grãos de torra média.",
+          "price": 6.00,
+          "image": "placeholder.png",
+          "unit": "xícara",
+          "available": true,
+          "adicionais": [
+            {
+              "grupo": "Tamanho",
+              "unico": true,
+              "opcoes": [
+                { "nome": "Simples", "preco": 0 },
+                { "nome": "Duplo", "preco": 4.00 }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "cappuccino",
+          "name": "Cappuccino",
+          "short_description": "Leite vaporizado e canela",
+          "long_description": "Cappuccino cremoso com canela.",
+          "price": 11.00,
+          "image": "placeholder.png",
+          "unit": "xícara",
+          "available": true
+        }
+      ]
+    }
+  ],
+
+  "store": {
+    "currency": "BRL",
+    "currency_symbol": "R$",
+    "min_order": 10.00,
+    "delivery_free_full": 100.00,
+    "delivery_fee": 7.00,
+    "pix_discount_percent": 5,
+    "installments_max": 1,
+    "payment_methods": [
+      { "type": "pix", "label": "PIX (5% desconto)", "discount_percent": 5 },
+      { "type": "credit_card", "label": "Cartão de Crédito" },
+      { "type": "debit_card", "label": "Cartão de Débito" }
+    ],
+    "menu_image": {
+      "enabled": true,
+      "header_bg": "#92400e",
+      "price_color": "#a16207",
+      "show_price": true,
+      "show_numbers": true,
+      "footer_text": ""
+    },
+    "delivery_areas": [
+      { "bairro": "Centro", "taxa": 5.00 },
+      { "bairro": "Trindade", "taxa": 6.00 },
+      { "bairro": "Itacorubi", "taxa": 8.00 }
+    ]
+  },
+
+  "questionnaires": {
+    "checkout": {
+      "label": "Dados do pedido",
+      "questions": [
+        {
+          "key": "endereco",
+          "field": "delivery_address",
+          "question": "Qual o endereço de entrega? (rua e número)",
+          "optional": false
+        },
+        {
+          "key": "observacao",
+          "question": "Alguma observação? (opcional)",
+          "optional": true
+        }
+      ]
+    }
+  },
+
+  "messages": {
+    "welcome": "Olá, {nome}! Bem-vindo(a) à padaria {empresa} 🥐\n\nEscolha uma opção abaixo:",
+    "no_categories": "Nenhuma categoria disponível.",
+    "categories_title": "🥐 O que você procura hoje?",
+    "no_products": "Nenhum item nesta categoria.",
+    "product_not_found": "Item não encontrado.",
+    "product_detail": "*{nome}*\n\n{descricao}\n\n💰 {preco}",
+    "added_to_cart": "✅ \"{produto}\" adicionado ao pedido!\nItens: {total}",
+    "cart_empty": "Seu pedido está vazio. Que tal dar uma olhada no nosso cardápio?",
+    "cart_title": "*Seu pedido:*",
+    "cart_item": "{n}. {produto}{adicionais} — {qtd}x R$ {preco}",
+    "cart_total": "*Total: R$ {total}*",
+    "checkout_ask_name": "Qual o nome do pedido?",
+    "checkout_confirm": "Confirme seu pedido:\n\nCliente: {nome}\nSubtotal: R$ {subtotal}\nEntrega: R$ {frete}\n*Total: R$ {total}*",
+    "order_created_payment": "✅ *Pedido #{pedido} criado!*\n\nValor total: R$ {total}\n\n*Escolha a forma de pagamento:*",
+    "payment_pix": "✅ *Pedido #{pedido}*\n\n💵 Pagamento via *PIX*\n💰 Total: R$ {total} (5% de desconto aplicado)\n\n*1️⃣* Escaneie o QR Code abaixo, ou\n*2️⃣* Use o *PIX copia e cola*:\n\n```\n{qr}\n```\n\n⏳ Assim que o pagamento for aprovado, você recebe a confirmação automática aqui.",
+    "payment_card": "✅ *Pedido #{pedido}*\n\n💳 Pagamento via *{tipo}*\n💰 Total: R$ {total}\n\nPara pagar, toque no link abaixo:\n\n🔗 {link}\n\n⏳ Assim que o pagamento for aprovado, você recebe a confirmação automática aqui.",
+    "payment_error": "Seu pedido foi criado, mas houve um problema ao gerar o pagamento. Um atendente vai te ajudar em instantes.",
+    "payment_confirmed": "🎉 *Pagamento confirmado!*\n\n{resumo}\n\nSeu pedido está sendo preparado! Obrigado por escolher a {empresa}.",
+    "ask_support_name": "Informe seu nome completo:",
+    "ask_support_reason": "Qual o motivo do seu contato?",
+    "support_escalation": "Um dos nossos atendentes vai falar com você em breve pelo WhatsApp!",
+    "no_orders": "Você não tem pedidos ainda.",
+    "order_status": "Seu último pedido: #{pedido} — Status: {status}",
+    "cart_cleared": "Pedido esvaziado.",
+    "plans_title": "{produto} — escolha o plano:",
+    "plan_detail": "*{produto} — {plano}*\n\n💰 {preco}\n\n{recursos}",
+    "addon_group": "*{produto}* — escolha o *{grupo}*:",
+    "addon_done": "Adicionais registrados!",
+    "out_of_area": "😔 Desculpe, seu bairro está fora da nossa área de entrega. Entre em contato para retirada no local."
+  }
+}

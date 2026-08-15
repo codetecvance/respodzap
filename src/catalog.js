@@ -91,8 +91,24 @@ function formatPrice(value) {
   return `R$ ${Number(value || 0).toFixed(2).replace('.', ',')}`;
 }
 
+/**
+ * Identidade visual por ramo (painel + imagem do menu).
+ * sidebar: [cor1, cor2] do gradiente do painel do cliente.
+ */
+const SEGMENT_THEMES = {
+  vendas:       { headerBg: '#1e3a8a', priceColor: '#1d4ed8', sidebar: ['#0f172a', '#1e3a8a'], active: '#2563eb', name: 'Vendas' },
+  restaurante:  { headerBg: '#991b1b', priceColor: '#b45309', sidebar: ['#450a0a', '#991b1b'], active: '#dc2626', name: 'Restaurante' },
+  delivery:     { headerBg: '#b45309', priceColor: '#b91c1c', sidebar: ['#431407', '#b45309'], active: '#d97706', name: 'Delivery' },
+  padaria:      { headerBg: '#92400e', priceColor: '#a16207', sidebar: ['#451a03', '#92400e'], active: '#b45309', name: 'Padaria & Confeitaria' },
+  estetica:     { headerBg: '#9d174d', priceColor: '#db2777', sidebar: ['#500724', '#9d174d'], active: '#db2777', name: 'Beleza & Estética' },
+};
+
+function segmentTheme(segmentName) {
+  return SEGMENT_THEMES[segmentName] || SEGMENT_THEMES.vendas;
+}
+
 module.exports = {
   loadTenantCatalog, saveTenantCatalog, getCompanyInfo, getCategories,
   getProductsByCategory, findProduct, getStoreConfig, getMessages,
-  getQuestionnaire, msg, formatPrice,
+  getQuestionnaire, msg, formatPrice, segmentTheme,
 };

@@ -293,19 +293,26 @@ function layout(title, active, content, tenants = [], activeTenantId = null, cli
     ? `<div class="brand"><div class="logo">${esc((activeTenantId?.name || 'Cliente').slice(0, 2).toUpperCase())}</div><div><b>${esc(activeTenantId?.name || 'Painel')}</b><span>${activeTenantId?.segment_emoji ? `${esc(activeTenantId.segment_emoji)} ${esc(activeTenantId.segment_name)}` : 'Painel do cliente'}</span></div></div>`
     : `<div class="brand"><div class="logo">RZ</div><div><b>RespVZap</b><span>Painel SaaS</span></div></div>`;
 
+  // Identidade visual por ramo (painel do cliente)
+  const theme = catalog.segmentTheme(activeTenantId?.segment_name);
+  const asideBg = clientMode ? `linear-gradient(180deg,${theme.sidebar[0]},${theme.sidebar[1]})` : 'linear-gradient(180deg,#0f172a,#1e293b)';
+  const activeColor = clientMode ? theme.active : '#3b82f6';
+  const activeBg = clientMode ? theme.active : '#2563eb';
+  const logoGrad = clientMode ? `linear-gradient(135deg,${theme.sidebar[1]},${theme.active})` : 'linear-gradient(135deg,#38bdf8,#2563eb)';
+
   return `<!DOCTYPE html>
 <html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(title)} — RespVZap</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f1f5f9; color: #0f172a; display: flex; min-height: 100vh; }
-  aside { width: 230px; background: linear-gradient(180deg,#0f172a,#1e293b); color: #e2e8f0; padding: 22px 14px; flex-shrink: 0; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+  aside { width: 230px; background: ${asideBg}; color: #e2e8f0; padding: 22px 14px; flex-shrink: 0; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
   .brand { display: flex; align-items: center; gap: 10px; padding: 0 10px 18px; border-bottom: 1px solid rgba(148,163,184,.15); margin-bottom: 14px; }
-  .brand .logo { width: 38px; height: 38px; border-radius: 10px; background: linear-gradient(135deg,#38bdf8,#2563eb); display: flex; align-items: center; justify-content: center; font-weight: 800; color: #fff; }
+  .brand .logo { width: 38px; height: 38px; border-radius: 10px; background: ${logoGrad}; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #fff; }
   .brand b { font-size: 16px; } .brand span { display: block; font-size: 11px; color: #94a3b8; font-weight: 400; }
   .nav-item { display: flex; align-items: center; gap: 9px; padding: 10px 12px; border-radius: 10px; color: #cbd5e1; text-decoration: none; margin-bottom: 3px; font-size: 13.5px; }
   .nav-item:hover { background: rgba(148,163,184,.12); color: #fff; }
-  .nav-item.active { background: linear-gradient(135deg,#2563eb,#3b82f6); color: #fff; box-shadow: 0 4px 14px rgba(37,99,235,.35); }
+  .nav-item.active { background: ${activeBg}; color: #fff; box-shadow: 0 4px 14px ${activeColor}66; }
   .nav-foot { margin-top: 18px; padding-top: 14px; border-top: 1px solid rgba(148,163,184,.15); }
   main { flex: 1; padding: 26px 30px; min-width: 0; }
   h1 { font-size: 22px; margin-bottom: 4px; } .sub { color: #64748b; font-size: 13px; margin-bottom: 20px; }
