@@ -172,7 +172,11 @@ async function clientPanelAuth(req, res, next) {
   const session = getTenantSession(req);
   if (!session) return res.redirect('/painel/login');
   const tenant = await repo.getTenant(session.tenantId);
-  if (!tenant) return res.redirect('/painel/login');
+  if (!tenant) {
+    // Cliente excluído com sessão aberta → limpa o cookie (evita loop)
+    res.setHeader('Set-Cookie', 'rpz_tenant_auth=; Path=/; Max-Age=0');
+    return res.redirect('/painel/login');
+  }
 
   // Licença vencida → bloqueia o painel do cliente
   const sub = await repo.getActiveSubscription(tenant.id);
@@ -455,8 +459,14 @@ ${erro ? `<div class="erro">${esc(erro)}</div>` : ''}
 </div></body></html>`;
 }
 
-router.get('/painel/login', (req, res) => {
-  if (getTenantSession(req)) return res.redirect('/painel');
+router.get('/painel/login', async (req, res) => {
+  const session = getTenantSession(req);
+  if (session) {
+    // Se o cliente foi excluído, limpa o cookie (evita loop de redirect)
+    const tenant = await repo.getTenant(session.tenantId);
+    if (tenant) return res.redirect('/painel');
+    res.setHeader('Set-Cookie', 'rpz_tenant_auth=; Path=/; Max-Age=0');
+  }
   res.send(clientLoginPage(null));
 });
 
