@@ -40,9 +40,13 @@ async function _categories(tenant, lead) {
     await ws.sendText(lead.phone, await catalog.msg(tenant.id, 'no_categories'), tenant);
     return _menu(tenant, lead);
   }
-  const btns = cats.slice(0, 2).map(c => ({ id: `CAT_${c.id}`, title: `${c.emoji || ''} ${c.name}`.slice(0, 20) }));
-  btns.push({ id: 'MENU_BACK', title: 'Voltar' });
-  await ws.sendButtons(lead.phone, await catalog.msg(tenant.id, 'categories_title'), btns, tenant);
+  // Lista interativa (até 10 categorias) + fallback numérico
+  const rows = cats.slice(0, 10).map(c => ({
+    id: `CAT_${c.id}`,
+    title: `${c.emoji || ''} ${c.name}`.slice(0, 24),
+    description: `${c.count} produto(s)`,
+  }));
+  await ws.sendList(lead.phone, await catalog.msg(tenant.id, 'categories_title'), rows, 'Categorias', 'Toque na categoria desejada', tenant);
   await repo.setFlowState(lead.id, ST.CATEGORIES);
 }
 
@@ -66,7 +70,7 @@ async function _products(tenant, lead, categoryId) {
   }
 
   // Janela de seleção: toque no produto
-  const rows = await Promise.all(products.map(async (p, i) => ({
+  const rows = await Promise.all(products.slice(0, 10).map(async (p, i) => ({
     id: `PROD_${p.id}`,
     title: `${i + 1}. ${p.name}`,
     description: p.list_description
@@ -81,6 +85,13 @@ async function _products(tenant, lead, categoryId) {
     'Toque em um dos produtos abaixo',
     tenant
   );
+
+  // Mais de 10 produtos: envia a numeração completa (o cliente pode digitar o número)
+  if (products.length > 10) {
+    const restante = products.slice(10).map((p, i) => `${i + 11}. ${p.name}`).join('\n');
+    await ws.sendText(lead.phone, `Também temos:\n${restante}\n\nDigite o número do produto para escolher.`, tenant);
+  }
+
   await repo.setFlowState(lead.id, ST.PRODUCTS);
 }
 
@@ -277,7 +288,8 @@ function normTxt(v) {
  */
 async function _askBairro(tenant, lead, answers) {
   const store = await catalog.getStoreConfig(tenant.id);
-  const rows = (store.delivery_areas || []).map((a, i) => ({
+  // Reserva o último slot da lista para "Retirar no local"
+  const rows = (store.delivery_areas || []).slice(0, 9).map((a, i) => ({
     id: `BAIRRO_${encodeURIComponent(a.bairro)}`,
     title: `${i + 1}. ${a.bairro}`,
     description: a.taxa > 0 ? `Taxa de entrega: R$ ${Number(a.taxa).toFixed(2)}` : 'Entrega grátis',
@@ -515,10 +527,15 @@ async function _processPayment(tenant, lead, method) {
 
   try {
     if (method === 'pix') {
+      const storeConf = await catalog.getStoreConfig(tenant.id);
+      const desc = Number(storeConf.pix_discount_percent || 0);
       const pix = await payment.criarPix(tenant, order, lead);
-      await ws.sendText(lead.phone, await catalog.msg(tenant.id, 'payment_pix', {
+      let texto = await catalog.msg(tenant.id, 'payment_pix', {
         pedido: order.external_id, total: pix.total.toFixed(2), qr: pix.pix_copy_paste,
-      }), tenant);
+        desconto_info: desc > 0 ? ` (desconto de ${desc}% aplicado)` : '',
+      });
+      if (!texto) texto = `✅ *Pedido ${order.external_id}*\n\n💵 Pagamento via *PIX*\n💰 Total: R$ ${pix.total.toFixed(2)}${desc > 0 ? ` (desconto de ${desc}% aplicado)` : ''}\n\n*1️⃣* Escaneie o QR Code abaixo, ou\n*2️⃣* Use o *PIX copia e cola*:\n\n\`\`\`\n${pix.pix_copy_paste}\n\`\`\`\n\n⏳ Assim que o pagamento for aprovado, você recebe a confirmação automática aqui.`;
+      await ws.sendText(lead.phone, texto, tenant);
     } else {
       const tipo = method === 'credit' ? 'credit' : 'debit';
       const checkout = await payment.criarCheckoutCartao(tenant, order, lead, tipo);
@@ -724,6 +741,13 @@ async function processIncoming(tenant, phone, text, payload, messageId, numberId
   if (state === ST.SOB_CONSULTA_NAME) return _handleSobConsulta(tenant, lead, text);
   if (state === ST.SUPPORT_NAME)      return _support(tenant, lead, 'name', text);
   if (state === ST.SUPPORT_REASON)    return _support(tenant, lead, 'reason', text);
+
+  // Número da categoria (fallback) dentro da listagem
+  if (state === ST.CATEGORIES && /^\d{1,2}$/.test((text || '').trim())) {
+    const cats = await catalog.getCategories(tenant.id);
+    const cat = cats[parseInt(text.trim(), 10) - 1];
+    if (cat) return _products(tenant, lead, cat.id);
+  }
 
   // Número do produto (fallback) dentro da listagem
   if (state === ST.PRODUCTS && /^\d{1,2}$/.test((text || '').trim())) {

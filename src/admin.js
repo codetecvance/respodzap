@@ -345,6 +345,14 @@ function layout(title, active, content, tenants = [], activeTenantId = null, cli
         await printTicket(html);
       } catch(e){ alert('Erro ao gerar teste de impressão'); }
     };
+    window.reimprimirPedido = async function(id){
+      try {
+        const r = await fetch('/painel/api/impressao/reimprimir?id=' + id);
+        if (!r.ok) { alert('Pedido não encontrado'); return; }
+        const html = await r.text();
+        await printTicket(html);
+      } catch(e){ alert('Erro ao gerar ticket'); }
+    };
   </script>` : '';
 
   return `<!DOCTYPE html>
@@ -600,13 +608,30 @@ router.post('/painel/api/impressao/marcar', clientPanelAuth, async (req, res) =>
 });
 
 /**
- * Ticket de teste para calibrar a impressora.
+ * Reimprimir um pedido específico (HTML do ticket).
  */
-router.get('/painel/api/impressao/teste', clientPanelAuth, async (req, res) => {
+router.get('/painel/api/impressao/reimprimir', clientPanelAuth, async (req, res) => {
+  const tenant = req.tenantSession;
+  const orderId = Number(req.query.id);
+  if (!orderId) return res.status(400).send('id inválido');
+  try {
+    const t = await ticket.buildTicket(tenant.id, orderId);
+    if (!t) return res.status(404).send('pedido não encontrado');
+    res.send(t.html);
+  } catch (e) {
+    console.error('[IMPRESSAO] reimprimir:', e.message);
+    res.status(500).send('erro ao gerar ticket');
+  }
+});
+
+/**
+ * Ticket de teste para calibrar a impressora.
+ */router.get('/painel/api/impressao/teste', clientPanelAuth, async (req, res) => {
   const tenant = req.tenantSession;
   res.send(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Teste de impressão</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
+  @page { size: 80mm auto; margin: 0; }
   body { font-family: 'Courier New', monospace; width: 80mm; font-size: 12px; color: #000; padding: 4mm; }
   .center { text-align: center; }
   .empresa { font-size: 16px; font-weight: bold; text-transform: uppercase; margin-bottom: 2px; }
@@ -1258,6 +1283,7 @@ async function pageProdutos(req, res) {
 
   const catsHtml = data.categories.map((cat, ci) => {
     const prods = cat.products.map((p, pi) => {
+      const base = clientMode ? '/painel' : '/admin';
       const plans = (p.plans || []).map((pl, k) => `
       <tr>
         <td><input type="hidden" name="plans[${k}][id]" value="${esc(pl.id || '')}"><input type="text" name="plans[${k}][name]" value="${esc(pl.name || '')}" placeholder="Ex: Mensal"></td>
@@ -1267,10 +1293,9 @@ async function pageProdutos(req, res) {
         <td><input type="text" name="plans[${k}][payment_link]" value="${esc(pl.payment_link || '')}" placeholder="https://mpago.li/..." style="min-width:130px"></td>
         <td><input type="text" name="plans[${k}][redirect_link]" value="${esc(pl.redirect_link || '')}" placeholder="https://wa.me/55..." style="min-width:130px"></td>
         <td><textarea name="plans[${k}][features]" rows="3">${esc(pl.features || '')}</textarea></td>
-        <td style="text-align:center"><button class="btn red small" type="submit" formaction="/admin/produtos/excluir-plano?ci=${ci}&pi=${pi}&plan_i=${k}" formnovalidate>🗑</button></td>
+        <td style="text-align:center"><button class="btn red small" type="submit" formaction="${base}/produtos/excluir-plano?ci=${ci}&pi=${pi}&plan_i=${k}" formnovalidate>🗑</button></td>
       </tr>`).join('') || '<tr><td colspan="8" style="color:#94a3b8;font-size:12px">Sem planos — adicione abaixo.</td></tr>';
 
-      const base = clientMode ? '/painel' : '/admin';
       return `
       <div class="panel" style="margin-bottom:14px"><h2>✏️ ${esc(p.name)} ${p.plans?.length ? `<span class="badge info">${p.plans.length} plano(s)</span>` : ''} ${statusBadge(p.available ? 'ok' : 'no')}</h2>
       <form method="POST" action="${base}/produtos/salvar" class="grid2" onsubmit="reindexAddons()">
@@ -1433,10 +1458,10 @@ async function postProdutosSalvar(req, res) {
   }
   p.plans = plans.length ? plans : undefined;
 
-  // Adicionais (editor visual — arrays do form)
-  if (showAddonsEditor) {
+  // Adicionais (editor visual — arrays do form); só processa se o form enviou o campo
+  if (showAddonsEditor && b.adicionais !== undefined) {
     const addons = [];
-    const grupos = b.adicionais ? (Array.isArray(b.adicionais) ? b.adicionais : [b.adicionais]) : [];
+    const grupos = Array.isArray(b.adicionais) ? b.adicionais : [b.adicionais];
     for (const g of grupos) {
       const nomeGrupo = String(g.grupo || '').trim();
       if (!nomeGrupo) continue;
@@ -1672,7 +1697,7 @@ async function pagePedidos(req, res) {
       <td>${esc(lead?.full_name || '—')}<br><small style="color:#94a3b8">${esc(lead?.phone || '')}</small></td>
       <td>${items}</td><td>${money(o.total)}</td><td>${statusBadge(o.status)}</td>
       <td>${methodLabel(pay?.payment_method)}<br><small style="color:#94a3b8">${esc(pay?.mp_payment_id || '')}</small></td>
-      <td>${o.status === 'pending' ? `<form class="inline-form" method="POST" action="${clientMode ? '/painel' : '/admin'}/pedidos/status"><input type="hidden" name="id" value="${o.id}"><input type="hidden" name="status" value="approved"><button class="btn green small">Pago</button></form>` : ''}</td>
+      <td>${o.status === 'pending' ? `<form class="inline-form" method="POST" action="${clientMode ? '/painel' : '/admin'}/pedidos/status"><input type="hidden" name="id" value="${o.id}"><input type="hidden" name="status" value="approved"><button class="btn green small">Pago</button></form>` : ''}${clientMode && ehRamoOperacao(tenant) && o.status === 'approved' ? ` <button class="btn amber small" onclick="reimprimirPedido(${o.id})" title="Reimprimir ticket">🖨️</button>` : ''}</td>
     </tr>`;
   }))).join('');
 

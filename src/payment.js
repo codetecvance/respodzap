@@ -35,8 +35,15 @@ async function criarPix(tenant, order, lead) {
     notification_url: config.webhookUrl ? `${config.webhookUrl}/mercadopago/webhook` : undefined,
   };
 
-  const idempotencyKey = `pedido-${order.external_id || order.id}-${Date.now()}`;
-  const { data: payment } = await axios.post(`${MP_API}/v1/payments`, payload, { headers: mpHeaders(idempotencyKey) });
+  // Chave fixa por pedido (toque duplo não cria cobrança duplicada);
+  // se a cobrança anterior expirou/rejeitou, gera uma nova.
+  const baseKey = `pedido-${order.external_id || order.id}`;
+  let idempotencyKey = baseKey;
+  let { data: payment } = await axios.post(`${MP_API}/v1/payments`, payload, { headers: mpHeaders(idempotencyKey) });
+  if (['expired', 'rejected', 'cancelled'].includes(payment.status)) {
+    idempotencyKey = `${baseKey}-${Date.now()}`;
+    ({ data: payment } = await axios.post(`${MP_API}/v1/payments`, payload, { headers: mpHeaders(idempotencyKey) }));
+  }
 
   const pixData = payment.point_of_interaction?.transaction_data || {};
 

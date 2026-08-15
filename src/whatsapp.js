@@ -55,7 +55,7 @@ async function sendButtons(to, bodyText, buttons, tenant = null) {
       messaging_product: 'whatsapp', to, type: 'interactive',
       interactive: {
         type: 'button',
-        body: { text: String(bodyText) },
+        body: { text: smartCut(String(bodyText), 1024) },
         action: {
           buttons: buttons.map(b => ({
             type: 'reply',

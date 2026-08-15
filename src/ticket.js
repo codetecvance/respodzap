@@ -47,6 +47,7 @@ async function buildTicket(tenantId, orderId) {
 <title>Pedido #${esc(order.external_id)}</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
+  @page { size: 80mm auto; margin: 0; }
   body { font-family: 'Courier New', monospace; width: 80mm; font-size: 12px; color: #000; padding: 4mm; }
   .center { text-align: center; }
   .empresa { font-size: 16px; font-weight: bold; text-transform: uppercase; margin-bottom: 2px; }

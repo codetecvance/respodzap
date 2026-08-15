@@ -125,10 +125,19 @@ router.post('/mercadopago/webhook', async (req, res) => {
       return;
     }
 
-    if (paymentRecord) await repo.updatePaymentStatusByMpId(paymentId, status.status);
-    await repo.updateOrderStatus(order.id, status.status === 'approved' ? 'approved' : 'failed');
+    const mpStatus = status.status;
+    if (paymentRecord) await repo.updatePaymentStatusByMpId(paymentId, mpStatus);
 
-    if (status.status === 'approved') {
+    if (mpStatus === 'approved') {
+      await repo.updateOrderStatus(order.id, 'approved');
+    } else if (mpStatus === 'rejected' || mpStatus === 'cancelled') {
+      await repo.updateOrderStatus(order.id, 'failed');
+    } else {
+      // pending / in_process (ex: cartão processando) — aguarda o próximo webhook
+      return;
+    }
+
+    if (mpStatus === 'approved') {
       const tenant = await repo.getTenant(order.tenant_id);
       const lead = await repo.getLead(order.lead_id);
       if (!lead || !tenant) return;

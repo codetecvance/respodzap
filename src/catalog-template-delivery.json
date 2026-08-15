@@ -209,7 +209,7 @@
     "checkout_ask_name": "Qual o nome do pedido?",
     "checkout_confirm": "Confirme seu pedido:\n\nCliente: {nome}\nSubtotal: R$ {subtotal}\nEntrega: R$ {frete}\n*Total: R$ {total}*",
     "order_created_payment": "✅ *Pedido #{pedido} criado!*\n\nValor total: R$ {total}\n\n*Escolha a forma de pagamento:*",
-    "payment_pix": "✅ *Pedido #{pedido}*\n\n💵 Pagamento via *PIX*\n💰 Total: R$ {total} (5% de desconto aplicado)\n\n*1️⃣* Escaneie o QR Code abaixo, ou\n*2️⃣* Use o *PIX copia e cola*:\n\n```\n{qr}\n```\n\n⏳ Assim que o pagamento for aprovado, você recebe a confirmação automática aqui.",
+    "payment_pix": "✅ *Pedido #{pedido}*\n\n💵 Pagamento via *PIX*\n💰 Total: R$ {total}{desconto_info}\n\n*1️⃣* Escaneie o QR Code abaixo, ou\n*2️⃣* Use o *PIX copia e cola*:\n\n```\n{qr}\n```\n\n⏳ Assim que o pagamento for aprovado, você recebe a confirmação automática aqui.",
     "payment_card": "✅ *Pedido #{pedido}*\n\n💳 Pagamento via *{tipo}*\n💰 Total: R$ {total}\n\nPara pagar, toque no link abaixo:\n\n🔗 {link}\n\n⏳ Assim que o pagamento for aprovado, você recebe a confirmação automática aqui.",
     "payment_error": "Seu pedido foi criado, mas houve um problema ao gerar o pagamento. Um atendente vai te ajudar em instantes.",
     "payment_confirmed": "🎉 *Pagamento confirmado!*\n\n{resumo}\n\nSeu pedido já está sendo preparado e sai em breve! Obrigado por pedir no {empresa}.",

@@ -150,7 +150,9 @@ async function createTenant(data) {
 }
 
 async function getTenants() {
-  const r = await query('SELECT * FROM tenants ORDER BY id');
+  const r = await query(
+    'SELECT t.*, s.name AS segment_name, s.emoji AS segment_emoji FROM tenants t LEFT JOIN segments s ON s.id = t.segment_id ORDER BY t.id'
+  );
   return r.rows;
 }
 
