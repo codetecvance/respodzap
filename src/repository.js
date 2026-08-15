@@ -62,15 +62,87 @@ async function deleteTenantImageDb(tenantId, url) {
 }
 
 // ============================================================
+//  SEGMENTOS (ramos de negócio)
+// ============================================================
+async function createSegment(name, emoji, template) {
+  const r = await query(
+    'INSERT INTO segments (name, emoji, template_json) VALUES ($1,$2,$3) RETURNING *',
+    [name, emoji, JSON.stringify(template)]
+  );
+  return r.rows[0];
+}
+
+async function getSegments() {
+  const r = await query('SELECT * FROM segments ORDER BY id');
+  return r.rows.map(s => ({ ...s, template_json: s.template_json }));
+}
+
+async function getSegment(id) {
+  const r = await query('SELECT * FROM segments WHERE id = $1', [id]);
+  return r.rows[0] || null;
+}
+
+async function updateSegment(id, name, emoji, template) {
+  await query(
+    'UPDATE segments SET name = $2, emoji = $3, template_json = $4 WHERE id = $1',
+    [id, name, emoji, template ? JSON.stringify(template) : undefined]
+  );
+}
+
+async function deleteSegment(id) {
+  await query('DELETE FROM segments WHERE id = $1', [id]);
+}
+
+async function countTenantsBySegment(segmentId) {
+  const r = await query('SELECT COUNT(*) AS c FROM tenants WHERE segment_id = $1', [segmentId]);
+  return Number(r.rows[0].c);
+}
+
+async function getTenantSegment(tenantId) {
+  const r = await query(
+    'SELECT s.id, s.name, s.emoji FROM tenants t JOIN segments s ON s.id = t.segment_id WHERE t.id = $1',
+    [tenantId]
+  );
+  return r.rows[0] || null;
+}
+
+const fs = require('fs');
+const path = require('path');
+
+/**
+ * Garante os segmentos base (vendas, restaurante, delivery) com seus templates.
+ * Idempotente — roda na inicialização.
+ */
+async function seedSegments() {
+  const templates = [
+    { name: 'vendas', emoji: '🛍️', file: 'catalog-template.json' },
+    { name: 'restaurante', emoji: '🍽️', file: 'catalog-template-restaurante.json' },
+    { name: 'delivery', emoji: '🛵', file: 'catalog-template-delivery.json' },
+  ];
+  for (const t of templates) {
+    const exists = await query('SELECT id FROM segments WHERE name = $1', [t.name]);
+    if (exists.rows[0]) continue;
+    const template = JSON.parse(fs.readFileSync(path.join(__dirname, t.file), 'utf-8'));
+    await createSegment(t.name, t.emoji, template);
+    console.log('[SEED] segmento criado:', t.name);
+  }
+  // Backfill: tenants existentes sem ramo → segmento "vendas"
+  const vendas = await query("SELECT id FROM segments WHERE name = 'vendas'");
+  if (vendas.rows[0]) {
+    await query('UPDATE tenants SET segment_id = $1 WHERE segment_id IS NULL', [vendas.rows[0].id]);
+  }
+}
+
+// ============================================================
 //  TENANTS (clientes)
 // ============================================================
 async function createTenant(data) {
   const r = await query(
-    `INSERT INTO tenants (name, contact_name, contact_phone, phone_number_id, access_token, waba_id, notify_phone, notify_email, status, panel_password)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
+    `INSERT INTO tenants (name, contact_name, contact_phone, phone_number_id, access_token, waba_id, notify_phone, notify_email, status, panel_password, segment_id)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
     [data.name, data.contact_name || null, data.contact_phone || null, data.phone_number_id || null,
      data.access_token || null, data.waba_id || null, data.notify_phone || null, data.notify_email || null,
-     data.status || 'ativo', data.panel_password || null]
+     data.status || 'ativo', data.panel_password || null, data.segment_id || null]
   );
   return r.rows[0];
 }
@@ -81,12 +153,18 @@ async function getTenants() {
 }
 
 async function getTenant(id) {
-  const r = await query('SELECT * FROM tenants WHERE id = $1', [id]);
+  const r = await query(
+    'SELECT t.*, s.name AS segment_name, s.emoji AS segment_emoji FROM tenants t LEFT JOIN segments s ON s.id = t.segment_id WHERE t.id = $1',
+    [id]
+  );
   return r.rows[0] || null;
 }
 
 async function getTenantByNumberId(phoneNumberId) {
-  const r = await query('SELECT * FROM tenants WHERE phone_number_id = $1', [String(phoneNumberId)]);
+  const r = await query(
+    'SELECT t.*, s.name AS segment_name, s.emoji AS segment_emoji FROM tenants t LEFT JOIN segments s ON s.id = t.segment_id WHERE t.phone_number_id = $1',
+    [String(phoneNumberId)]
+  );
   return r.rows[0] || null;
 }
 
@@ -116,7 +194,7 @@ function normalizePhoneBr(phone) {
 }
 
 async function updateTenant(id, fields) {
-  const allowed = ['name', 'contact_name', 'contact_phone', 'phone_number_id', 'access_token', 'waba_id', 'notify_phone', 'notify_email', 'status', 'panel_password'];
+  const allowed = ['name', 'contact_name', 'contact_phone', 'phone_number_id', 'access_token', 'waba_id', 'notify_phone', 'notify_email', 'status', 'panel_password', 'segment_id'];
   const entries = Object.entries(fields).filter(([k]) => allowed.includes(k));
   if (!entries.length) return getTenant(id);
   const sets = entries.map(([k], i) => `${k} = $${i + 1}`).join(', ');
@@ -499,6 +577,8 @@ module.exports = {
   // tenants
   createTenant, getTenants, getTenant, getTenantByNumberId, getTenantByPanelLogin, updateTenant, deleteTenant,
   hashPassword, verifyPassword, normalizePhoneBr,
+  // segmentos
+  createSegment, getSegments, getSegment, updateSegment, deleteSegment, countTenantsBySegment, getTenantSegment, seedSegments,
   // planos e assinaturas
   getPlans, createPlan, updatePlan, deletePlan, countSubscriptionsByPlan,
   getSubscriptions, getSubscriptionsByTenant, getActiveSubscription, createSubscription,

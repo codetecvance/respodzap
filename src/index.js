@@ -6,6 +6,12 @@ const adminRoutes = require('./admin');
 const repo = require('./repository');
 const catalog = require('./catalog');
 const { generateMenuImage } = require('./menu');
+const { initDb } = require('./db');
+
+// Inicializa o banco (idempotente) e garante os segmentos base
+initDb()
+  .then(() => repo.seedSegments())
+  .catch(e => console.error('[DB] init:', e.message));
 
 const app = express();
 

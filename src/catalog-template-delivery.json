@@ -1,0 +1,228 @@
+{
+  "company": {
+    "name": "",
+    "display_name": "",
+    "phone": "",
+    "email": "",
+    "instagram": "",
+    "website": "",
+    "logo_url": "",
+    "address": {
+      "street": "",
+      "neighborhood": "",
+      "city": "",
+      "state": "",
+      "zip": ""
+    },
+    "business_hours": "Todos os dias: 18h às 23h30"
+  },
+
+  "categories": [
+    {
+      "id": "cardapio",
+      "name": "Cardápio",
+      "description": "Nossos lanches e pratos",
+      "emoji": "🍔",
+      "products": [
+        {
+          "id": "combo-classico",
+          "name": "Combo Clássico",
+          "short_description": "X-Salada + batata + refrigerante",
+          "long_description": "Hambúrguer 150g com queijo, alface, tomate, batata frita média e refrigerante lata. O combo queridinho da casa!",
+          "price": 29.90,
+          "image": "placeholder.png",
+          "unit": "combo",
+          "available": true,
+          "adicionais": [
+            {
+              "grupo": "Refrigerante",
+              "unico": true,
+              "opcoes": [
+                { "nome": "Coca-Cola", "preco": 0 },
+                { "nome": "Guaraná", "preco": 0 },
+                { "nome": "Fanta Laranja", "preco": 0 }
+              ]
+            },
+            {
+              "grupo": "Adicionais",
+              "max": 3,
+              "opcoes": [
+                { "nome": "Bacon extra", "preco": 4.00 },
+                { "nome": "Cheddar extra", "preco": 4.00 },
+                { "nome": "Batata grande", "preco": 6.00 }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "hot-dog",
+          "name": "Hot Dog Completo",
+          "short_description": "Salsicha, purê, batata palha e milho",
+          "long_description": "Pão macio, salsicha, purê de batata, batata palha, milho e queijo.",
+          "price": 18.90,
+          "image": "placeholder.png",
+          "unit": "lanche",
+          "available": true,
+          "adicionais": [
+            {
+              "grupo": "Extras",
+              "max": 4,
+              "opcoes": [
+                { "nome": "Salsicha extra", "preco": 4.00 },
+                { "nome": "Cheddar", "preco": 3.50 },
+                { "nome": "Bacon", "preco": 4.50 }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "combos",
+      "name": "Combos",
+      "description": "Melhores combinações com desconto",
+      "emoji": "🍟",
+      "products": [
+        {
+          "id": "combo-familia",
+          "name": "Combo Família",
+          "short_description": "4 lanches + 2 batatas + 4 refris",
+          "long_description": "Quatro lanches artesanais, duas batatas grandes e quatro refrigerantes. Perfeito para a família.",
+          "price": 89.90,
+          "image": "placeholder.png",
+          "unit": "combo",
+          "available": true,
+          "adicionais": [
+            {
+              "grupo": "Sabores dos lanches",
+              "unico": true,
+              "opcoes": [
+                { "nome": "Todos X-Salada", "preco": 0 },
+                { "nome": "2 X-Salada + 2 X-Burger", "preco": 0 },
+                { "nome": "Todos X-Bacon", "preco": 12.00 }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "bebidas",
+      "name": "Bebidas",
+      "description": "Refrigerantes, sucos e cervejas",
+      "emoji": "🥤",
+      "products": [
+        {
+          "id": "refri-2l",
+          "name": "Refrigerante 2L",
+          "short_description": "Coca, Guaraná ou Fanta",
+          "long_description": "Refrigerante 2 litros gelado.",
+          "price": 14.00,
+          "image": "placeholder.png",
+          "unit": "garrafa",
+          "available": true
+        },
+        {
+          "id": "agua-mineral",
+          "name": "Água Mineral 500ml",
+          "short_description": "Com ou sem gás",
+          "long_description": "Água mineral 500ml.",
+          "price": 4.00,
+          "image": "placeholder.png",
+          "unit": "unidade",
+          "available": true,
+          "adicionais": [
+            {
+              "grupo": "Tipo",
+              "unico": true,
+              "opcoes": [
+                { "nome": "Sem gás", "preco": 0 },
+                { "nome": "Com gás", "preco": 0 }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+
+  "store": {
+    "currency": "BRL",
+    "currency_symbol": "R$",
+    "min_order": 15.00,
+    "delivery_free_full": 80.00,
+    "delivery_fee": 6.00,
+    "pix_discount_percent": 5,
+    "installments_max": 1,
+    "payment_methods": [
+      { "type": "pix", "label": "PIX (5% desconto)", "discount_percent": 5 },
+      { "type": "credit_card", "label": "Cartão de Crédito" },
+      { "type": "debit_card", "label": "Cartão de Débito" }
+    ],
+    "menu_image": {
+      "enabled": true,
+      "header_bg": "#b45309",
+      "price_color": "#b91c1c",
+      "show_price": true,
+      "show_numbers": true,
+      "footer_text": ""
+    },
+    "delivery_areas": [
+      { "bairro": "Centro", "taxa": 5.00 },
+      { "bairro": "Trindade", "taxa": 6.00 },
+      { "bairro": "Agronômica", "taxa": 7.00 },
+      { "bairro": "Itacorubi", "taxa": 9.00 }
+    ]
+  },
+
+  "questionnaires": {
+    "checkout": {
+      "label": "Dados do pedido",
+      "questions": [
+        {
+          "key": "endereco",
+          "field": "delivery_address",
+          "question": "Qual o endereço de entrega? (rua e número)",
+          "optional": false
+        },
+        {
+          "key": "observacao",
+          "question": "Alguma observação sobre o pedido? (opcional)",
+          "optional": true
+        }
+      ]
+    }
+  },
+
+  "messages": {
+    "welcome": "Olá, {nome}! Bem-vindo(a) ao delivery {empresa} 🛵\n\nEscolha uma opção abaixo:",
+    "no_categories": "Nenhuma categoria disponível.",
+    "categories_title": "🍟 Nosso cardápio:",
+    "no_products": "Nenhum item nesta categoria.",
+    "product_not_found": "Item não encontrado.",
+    "product_detail": "*{nome}*\n\n{descricao}\n\n💰 {preco}",
+    "added_to_cart": "✅ \"{produto}\" adicionado ao pedido!\nItens: {total}",
+    "cart_empty": "Seu pedido está vazio. Que tal dar uma olhada no cardápio?",
+    "cart_title": "*Seu pedido:*",
+    "cart_item": "{n}. {produto}{adicionais} — {qtd}x R$ {preco}",
+    "cart_total": "*Total: R$ {total}*",
+    "checkout_ask_name": "Qual o nome do pedido?",
+    "checkout_confirm": "Confirme seu pedido:\n\nCliente: {nome}\nSubtotal: R$ {subtotal}\nEntrega: R$ {frete}\n*Total: R$ {total}*",
+    "order_created_payment": "✅ *Pedido #{pedido} criado!*\n\nValor total: R$ {total}\n\n*Escolha a forma de pagamento:*",
+    "payment_pix": "✅ *Pedido #{pedido}*\n\n💵 Pagamento via *PIX*\n💰 Total: R$ {total} (5% de desconto aplicado)\n\n*1️⃣* Escaneie o QR Code abaixo, ou\n*2️⃣* Use o *PIX copia e cola*:\n\n```\n{qr}\n```\n\n⏳ Assim que o pagamento for aprovado, você recebe a confirmação automática aqui.",
+    "payment_card": "✅ *Pedido #{pedido}*\n\n💳 Pagamento via *{tipo}*\n💰 Total: R$ {total}\n\nPara pagar, toque no link abaixo:\n\n🔗 {link}\n\n⏳ Assim que o pagamento for aprovado, você recebe a confirmação automática aqui.",
+    "payment_error": "Seu pedido foi criado, mas houve um problema ao gerar o pagamento. Um atendente vai te ajudar em instantes.",
+    "payment_confirmed": "🎉 *Pagamento confirmado!*\n\n{resumo}\n\nSeu pedido já está sendo preparado e sai em breve! Obrigado por pedir no {empresa}.",
+    "ask_support_name": "Informe seu nome completo:",
+    "ask_support_reason": "Qual o motivo do seu contato?",
+    "support_escalation": "Um dos nossos atendentes vai falar com você em breve pelo WhatsApp!",
+    "no_orders": "Você não tem pedidos ainda.",
+    "order_status": "Seu último pedido: #{pedido} — Status: {status}",
+    "cart_cleared": "Pedido esvaziado.",
+    "plans_title": "{produto} — escolha o plano:",
+    "plan_detail": "*{produto} — {plano}*\n\n💰 {preco}\n\n{recursos}",
+    "addon_group": "*{produto}* — escolha o *{grupo}*:",
+    "addon_done": "Adicionais registrados!",
+    "out_of_area": "😔 Desculpe, seu bairro está fora da nossa área de entrega. Entre em contato para retirada no local."
+  }
+}

@@ -268,6 +268,7 @@ function layout(title, active, content, tenants = [], activeTenantId = null, cli
   ] : [
     ['/admin', '📊 Dashboard'],
     ['/admin/clientes', '👥 Clientes'],
+    ['/admin/segmentos', '🏷️ Segmentos'],
     ['/admin/assinaturas', '📋 Assinaturas'],
     ['/admin/produtos', '🛍 Produtos'],
     ['/admin/listas', '📋 Listas'],
@@ -287,7 +288,7 @@ function layout(title, active, content, tenants = [], activeTenantId = null, cli
   }).join('');
 
   const brand = clientMode
-    ? `<div class="brand"><div class="logo">${esc((activeTenantId?.name || 'Cliente').slice(0, 2).toUpperCase())}</div><div><b>${esc(activeTenantId?.name || 'Painel')}</b><span>Painel do cliente</span></div></div>`
+    ? `<div class="brand"><div class="logo">${esc((activeTenantId?.name || 'Cliente').slice(0, 2).toUpperCase())}</div><div><b>${esc(activeTenantId?.name || 'Painel')}</b><span>${activeTenantId?.segment_emoji ? `${esc(activeTenantId.segment_emoji)} ${esc(activeTenantId.segment_name)}` : 'Painel do cliente'}</span></div></div>`
     : `<div class="brand"><div class="logo">RZ</div><div><b>RespVZap</b><span>Painel SaaS</span></div></div>`;
 
   return `<!DOCTYPE html>
@@ -363,7 +364,7 @@ function layout(title, active, content, tenants = [], activeTenantId = null, cli
 function pageSub(active) {
   const map = {
     '/admin': 'Visão geral de toda a operação', '/admin/clientes': 'Crie e gerencie os clientes do SaaS',
-    '/admin/assinaturas': 'Licenças, renovações e vencimentos', '/painel': 'Visão geral do seu negócio',
+    '/admin/assinaturas': 'Licenças, renovações e vencimentos', '/admin/segmentos': 'Ramos de negócio e seus templates', '/painel': 'Visão geral do seu negócio',
     '/painel/produtos': 'Seu catálogo', '/painel/listas': 'Textos dos blocos de seleção do bot',
     '/admin/listas': 'Textos dos blocos de seleção de cada cliente',
     '/painel/pedidos': 'Seus pedidos', '/painel/leads': 'Seus clientes',
@@ -536,9 +537,9 @@ async function pageDashboard(req, res) {
 
   const cards = clientMode
     ? `<div class="cards">
-        <div class="card"><div class="ico blue">👥</div><div class="num blue">${leads.length}</div><div class="label">Leads</div></div>
-        <div class="card"><div class="ico cyan" style="background:#cffafe">🧾</div><div class="num" style="color:#0e7490">${orders.length}</div><div class="label">Pedidos</div></div>
-        <div class="card"><div class="ico green">✅</div><div class="num green">${approved.length}</div><div class="label">Pagamentos</div></div>
+        <div class="card"><div class="ico blue">${esc(tenant.segment_emoji || '🏷️')}</div><div class="num blue" style="font-size:19px">${esc(tenant.segment_name || '—')}</div><div class="label">Ramo do negócio</div></div>
+        <div class="card"><div class="ico cyan" style="background:#cffafe">👥</div><div class="num" style="color:#0e7490">${leads.length}</div><div class="label">Leads</div></div>
+        <div class="card"><div class="ico green">🧾</div><div class="num green">${orders.length}</div><div class="label">Pedidos</div></div>
         <div class="card"><div class="ico violet">💰</div><div class="num violet">${money(revenue)}</div><div class="label">Faturamento</div></div>
       </div>`
     : `<div class="cards">
@@ -574,13 +575,16 @@ router.get('/painel', clientPanelAuth, pageDashboard);
 // ======================================================
 router.get('/admin/clientes', requireAuth, async (req, res) => {
   const tenants = await repo.getTenants();
+  const segments = await repo.getSegments();
   const flash = req.query.msg ? `<div id="flashMsg">${esc(req.query.msg)}</div>` : '';
   const rowsHtml = (await Promise.all(tenants.map(async t => {
     const subs = await repo.getSubscriptionsByTenant(t.id);
     const active = subs.find(s => s.status === 'ativa');
+    const seg = segments.find(s => s.id === t.segment_id);
     return `<tr>
       <td><b>${esc(t.name)}</b><br><small style="color:#94a3b8">#${t.id}</small></td>
       <td>${esc(t.contact_name || '—')}<br><small style="color:#94a3b8">${esc(t.contact_phone || '')}</small></td>
+      <td>${seg ? `${esc(seg.emoji)} ${esc(seg.name)}` : '—'}</td>
       <td>${esc(t.phone_number_id || '—')}</td>
       <td>${statusBadge(t.status)}</td>
       <td>${t.panel_password ? '<span class="badge ok">painel ativo</span>' : '<span style="color:#94a3b8">sem login</span>'}</td>
@@ -592,10 +596,13 @@ router.get('/admin/clientes', requireAuth, async (req, res) => {
     </tr>`;
   }))).join('');
 
+  const segmentOptions = segments.map(sg => `<option value="${sg.id}">${esc(sg.emoji)} ${esc(sg.name)}</option>`).join('');
+
   res.send(layout('Clientes', '/admin/clientes', `${flash}
     <div class="panel"><h2>➕ Novo cliente</h2>
       <form method="POST" action="/admin/clientes/novo" class="grid3">
         <div><label>NOME DO CLIENTE</label><input type="text" name="name" required placeholder="Ex: Loja do João"></div>
+        <div><label>RAMO (segmento)</label><select name="segment_id" required>${segmentOptions}</select></div>
         <div><label>CONTATO (nome)</label><input type="text" name="contact_name" placeholder="Nome do responsável"></div>
         <div><label>WHATSAPP (login do painel dele)</label><input type="text" name="contact_phone" placeholder="5548999999999"></div>
         <div><label>PHONE NUMBER ID (bot)</label><input type="text" name="phone_number_id" placeholder="Ex: 1234567890123456"></div>
@@ -606,33 +613,40 @@ router.get('/admin/clientes', requireAuth, async (req, res) => {
         <div><label>SENHA DO PAINEL</label><input type="text" name="panel_password" placeholder="Defina a senha do cliente"></div>
         <div style="display:flex;align-items:end"><button class="btn green" type="submit">+ Criar cliente</button></div>
       </form>
+      <p style="font-size:12px;color:#64748b;margin-top:8px">O ramo define o template inicial (cardápio, mensagens e configurações do bot).</p>
     </div>
     <div class="panel"><table>
-      <thead><tr><th>Cliente</th><th>Contato</th><th>Phone Number ID</th><th>Status</th><th>Painel</th><th>Licença</th><th>Ações</th></tr></thead>
-      <tbody>${rowsHtml || '<tr><td colspan="7"><div class="empty">Nenhum cliente ainda.</div></td></tr>'}</tbody>
+      <thead><tr><th>Cliente</th><th>Contato</th><th>Ramo</th><th>Phone Number ID</th><th>Status</th><th>Painel</th><th>Licença</th><th>Ações</th></tr></thead>
+      <tbody>${rowsHtml || '<tr><td colspan="8"><div class="empty">Nenhum cliente ainda.</div></td></tr>'}</tbody>
     </table></div>`));
 });
 
 router.post('/admin/clientes/novo', requireAuth, async (req, res) => {
   const b = req.body;
+  const segment = await repo.getSegment(Number(b.segment_id));
+  if (!segment) return res.redirect('/admin/clientes?msg=' + encodeURIComponent('Ramo inválido.') + '&type=err');
   const tenant = await repo.createTenant({
     name: b.name, contact_name: b.contact_name, contact_phone: repo.normalizePhoneBr(b.contact_phone),
     phone_number_id: b.phone_number_id, access_token: b.access_token, waba_id: b.waba_id,
     notify_phone: repo.normalizePhoneBr(b.notify_phone), notify_email: b.notify_email, status: 'ativo',
     panel_password: b.panel_password ? repo.hashPassword(b.panel_password) : null,
+    segment_id: segment.id,
   });
-  // Catálogo LIMPO (sem dados da CodetecVance) — o cliente preenche o dele
-  await repo.saveTenantCatalog(tenant.id, JSON.parse(fs.readFileSync(path.join(__dirname, 'catalog-template.json'), 'utf-8')));
-  res.redirect('/admin/clientes?msg=' + encodeURIComponent(`Cliente "${b.name}" criado! Configure a licença e a senha do painel.`));
+  // Catálogo inicial = template do ramo escolhido
+  await repo.saveTenantCatalog(tenant.id, segment.template_json);
+  res.redirect('/admin/clientes?msg=' + encodeURIComponent(`Cliente "${b.name}" criado no ramo ${segment.emoji} ${segment.name}! Configure a licença e a senha do painel.`));
 });
 
 router.get('/admin/clientes/editar', requireAuth, async (req, res) => {
   const tenant = await repo.getTenant(Number(req.query.tenant));
   if (!tenant) return res.redirect('/admin/clientes');
+  const segments = await repo.getSegments();
+  const segmentOptions = segments.map(sg => `<option value="${sg.id}" ${sg.id === tenant.segment_id ? 'selected' : ''}>${esc(sg.emoji)} ${esc(sg.name)}</option>`).join('');
   res.send(layout('Editar cliente', '/admin/clientes', `
     <form method="POST" action="/admin/clientes/salvar" class="grid2">
       <input type="hidden" name="id" value="${tenant.id}">
       <div><label>NOME</label><input type="text" name="name" value="${esc(tenant.name)}" required></div>
+      <div><label>RAMO (segmento)</label><select name="segment_id">${segmentOptions}</select></div>
       <div><label>CONTATO</label><input type="text" name="contact_name" value="${esc(tenant.contact_name || '')}"></div>
       <div><label>WHATSAPP (login do painel)</label><input type="text" name="contact_phone" value="${esc(tenant.contact_phone || '')}"></div>
       <div><label>PHONE NUMBER ID</label><input type="text" name="phone_number_id" value="${esc(tenant.phone_number_id || '')}"></div>
@@ -647,6 +661,7 @@ router.get('/admin/clientes/editar', requireAuth, async (req, res) => {
       </select></div>
       <div style="grid-column:1/-1;display:flex;gap:8px"><button class="btn" type="submit">💾 Salvar</button>
       <button class="btn red" type="submit" formaction="/admin/clientes/excluir" formnovalidate>🗑 Excluir</button></div>
+      <p style="grid-column:1/-1;font-size:12px;color:#64748b">Trocar o ramo não substitui o catálogo já personalizado do cliente — apenas o selo/identidade.</p>
     </form>`));
 });
 
@@ -656,6 +671,7 @@ router.post('/admin/clientes/salvar', requireAuth, async (req, res) => {
     name: b.name, contact_name: b.contact_name, contact_phone: repo.normalizePhoneBr(b.contact_phone),
     phone_number_id: b.phone_number_id, access_token: b.access_token, waba_id: b.waba_id,
     notify_phone: repo.normalizePhoneBr(b.notify_phone), notify_email: b.notify_email, status: b.status,
+    segment_id: b.segment_id ? Number(b.segment_id) : null,
   };
   if (b.panel_password) fields.panel_password = repo.hashPassword(b.panel_password);
   await repo.updateTenant(Number(b.id), fields);
@@ -665,6 +681,104 @@ router.post('/admin/clientes/salvar', requireAuth, async (req, res) => {
 router.post('/admin/clientes/excluir', requireAuth, async (req, res) => {
   await repo.deleteTenant(Number(req.body.id));
   res.redirect('/admin/clientes?msg=' + encodeURIComponent('Cliente excluído.'));
+});
+
+// ======================================================
+//  SEGMENTOS (ramos de negócio — somente admin)
+// ======================================================
+router.get('/admin/segmentos', requireAuth, async (req, res) => {
+  const segments = await repo.getSegments();
+  const flash = req.query.msg ? `<div id="flashMsg">${esc(req.query.msg)}</div>` : '';
+
+  const rows = (await Promise.all(segments.map(async sg => {
+    const emUso = await repo.countTenantsBySegment(sg.id);
+    return `<form id="seg-${sg.id}" method="POST" action="/admin/segmentos/salvar"><input type="hidden" name="id" value="${sg.id}"></form>
+    <tr>
+      <td><input form="seg-${sg.id}" type="text" name="emoji" value="${esc(sg.emoji)}" style="width:60px"></td>
+      <td><input form="seg-${sg.id}" type="text" name="name" value="${esc(sg.name)}" required style="min-width:140px"></td>
+      <td>${emUso} cliente(s)</td>
+      <td style="white-space:nowrap">
+        <button form="seg-${sg.id}" class="btn green small" type="submit">Salvar</button>
+        <a class="btn small" href="/admin/segmentos/editar?segment=${sg.id}">Template</a>
+        ${emUso > 0
+          ? `<button class="btn red small" type="button" disabled title="Ramo em uso">🗑 (em uso)</button>`
+          : `<button form="seg-${sg.id}" class="btn red small" type="submit" formaction="/admin/segmentos/excluir?segment=${sg.id}" formnovalidate>🗑 Excluir</button>`}
+      </td>
+    </tr>`;
+  }))).join('');
+
+  const copyOptions = segments.map(sg => `<option value="${sg.id}">${esc(sg.emoji)} ${esc(sg.name)}</option>`).join('');
+
+  res.send(layout('Segmentos', '/admin/segmentos', `${flash}
+    <div class="panel"><h2>🏷️ Ramos de negócio (segmentos)</h2>
+      <p style="font-size:13px;color:#64748b;margin-bottom:10px">Cada ramo tem um template inicial de cardápio, mensagens e configurações — escolhido na criação do cliente.</p>
+      <table>
+        <thead><tr><th>Emoji</th><th>Nome</th><th>Uso</th><th>Ações</th></tr></thead>
+        <tbody>${rows || '<tr><td colspan="4"><div class="empty">Nenhum segmento ainda.</div></td></tr>'}</tbody>
+      </table>
+    </div>
+    <div class="panel"><h2>➕ Novo segmento</h2>
+      <form method="POST" action="/admin/segmentos/novo" style="display:flex;gap:10px;align-items:end;flex-wrap:wrap">
+        <div><label>EMOJI</label><input type="text" name="emoji" value="🏷️" style="width:70px"></div>
+        <div><label>NOME DO RAMO</label><input type="text" name="name" required placeholder="Ex: Padaria"></div>
+        <div style="min-width:200px"><label>COPIAR TEMPLATE DE</label><select name="copy_from">${copyOptions}</select></div>
+        <button class="btn green" type="submit">+ Criar segmento</button>
+      </form>
+    </div>`));
+});
+
+router.post('/admin/segmentos/novo', requireAuth, async (req, res) => {
+  const b = req.body;
+  let template = {};
+  const copyFrom = Number(b.copy_from);
+  if (copyFrom) {
+    const src = await repo.getSegment(copyFrom);
+    if (src) template = src.template_json;
+  }
+  await repo.createSegment(b.name, b.emoji || '🏷️', template);
+  res.redirect('/admin/segmentos?msg=' + encodeURIComponent(`Segmento "${b.name}" criado! Edite o template dele.`));
+});
+
+router.post('/admin/segmentos/salvar', requireAuth, async (req, res) => {
+  const b = req.body;
+  await repo.updateSegment(Number(b.id), b.name, b.emoji || '🏷️', undefined);
+  res.redirect('/admin/segmentos?msg=' + encodeURIComponent('Segmento atualizado!'));
+});
+
+router.post('/admin/segmentos/excluir', requireAuth, async (req, res) => {
+  const segmentId = Number(req.query.segment);
+  const emUso = await repo.countTenantsBySegment(segmentId);
+  if (emUso > 0) {
+    return res.redirect('/admin/segmentos?msg=' + encodeURIComponent(`Não é possível excluir: ramo em uso por ${emUso} cliente(s).`) + '&type=err');
+  }
+  await repo.deleteSegment(segmentId);
+  res.redirect('/admin/segmentos?msg=' + encodeURIComponent('Segmento excluído.'));
+});
+
+router.get('/admin/segmentos/editar', requireAuth, async (req, res) => {
+  const segment = await repo.getSegment(Number(req.query.segment));
+  if (!segment) return res.redirect('/admin/segmentos');
+  const templateJson = JSON.stringify(segment.template_json, null, 2);
+  res.send(layout('Template do segmento', '/admin/segmentos', `
+    <div class="panel"><h2>${esc(segment.emoji)} Template do segmento — ${esc(segment.name)}</h2>
+      <p style="font-size:12px;color:#64748b;margin-bottom:10px">Este JSON é o catálogo inicial dos clientes criados neste ramo. Edite categorias, produtos, mensagens, adicionais e áreas de entrega.</p>
+      <form method="POST" action="/admin/segmentos/template">
+        <input type="hidden" name="id" value="${segment.id}">
+        <textarea name="template" style="min-height:500px;font-family:Consolas,monospace;font-size:12px">${esc(templateJson)}</textarea>
+        <div style="margin-top:10px"><button class="btn" type="submit">💾 Salvar template</button></div>
+      </form>
+    </div>`));
+});
+
+router.post('/admin/segmentos/template', requireAuth, async (req, res) => {
+  const b = req.body;
+  try {
+    const template = JSON.parse(b.template);
+    await repo.updateSegment(Number(b.id), undefined, undefined, template);
+    res.redirect('/admin/segmentos?msg=' + encodeURIComponent('Template salvo!'));
+  } catch (e) {
+    res.redirect('/admin/segmentos?msg=' + encodeURIComponent('JSON inválido: ' + e.message) + '&type=err');
+  }
 });
 
 // ======================================================

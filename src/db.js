@@ -138,6 +138,14 @@ async function initDb() {
       added_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
+    CREATE TABLE IF NOT EXISTS segments (
+      id            SERIAL PRIMARY KEY,
+      name          TEXT NOT NULL UNIQUE,
+      emoji         TEXT NOT NULL DEFAULT '🏷️',
+      template_json JSONB NOT NULL,
+      created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
     CREATE TABLE IF NOT EXISTS tenant_images (
       id         SERIAL PRIMARY KEY,
       tenant_id  INTEGER NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
@@ -157,6 +165,7 @@ async function initDb() {
   // Migrações leves (rodam a cada inicialização)
   await query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS panel_password TEXT`);
   await query(`ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS period_days INTEGER`);
+  await query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS segment_id INTEGER REFERENCES segments(id)`);
 }
 
 module.exports = { pool, query, initDb };
