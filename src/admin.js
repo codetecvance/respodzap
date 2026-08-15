@@ -41,7 +41,38 @@ async function saveUploadedImage(tenantId, file) {
     try { if (file.path) require('fs').unlinkSync(file.path); } catch (_) {}
     return result.url;
   }
-  return `/images/${file.filename}`;
+  // Local: move para a subpasta do tenant (isolamento por cliente)
+  const tenantDir = path.join(__dirname, '..', 'public', 'images', `tenant-${tenantId}`);
+  if (!fs.existsSync(tenantDir)) fs.mkdirSync(tenantDir, { recursive: true });
+  const dest = path.join(tenantDir, file.filename);
+  fs.renameSync(file.path, dest);
+  return `/images/tenant-${tenantId}/${file.filename}`;
+}
+
+/**
+ * Lista as imagens do tenant (Blob list em produção; pasta local em dev).
+ */
+async function listTenantImages(tenantId) {
+  const token = process.env.BLOB_READ_WRITE_TOKEN;
+  if (token) {
+    try {
+      const { list } = require('@vercel/blob');
+      const { blobs } = await list({ token, prefix: `tenant-${tenantId}/`, limit: 200 });
+      return blobs.map(b => ({ url: b.url, name: b.pathname.split('/').pop() }));
+    } catch (e) {
+      console.error('[IMAGES]', e.message);
+      return [];
+    }
+  }
+  const dir = path.join(__dirname, '..', 'public', 'images', `tenant-${tenantId}`);
+  try {
+    if (!fs.existsSync(dir)) return [];
+    return fs.readdirSync(dir)
+      .filter(f => /\.(png|jpe?g|webp)$/i.test(f))
+      .map(f => ({ url: `/images/tenant-${tenantId}/${f}`, name: f }));
+  } catch {
+    return [];
+  }
 }
 
 // ======================================================
@@ -683,6 +714,17 @@ async function pageProdutos(req, res) {
   if (!tenant) return res.send(layout('Produtos', clientMode ? '/painel/produtos' : '/admin/produtos', '<div class="empty">Crie um cliente primeiro.</div>', tenants, null, clientMode));
   const flash = req.query.msg ? `<div id="flashMsg">${esc(req.query.msg)}</div>` : '';
   const data = await catalog.loadTenantCatalog(tenant.id);
+  const images = await listTenantImages(tenant.id);
+
+  const gallery = `<div class="panel"><h2>📸 Suas imagens <span class="right badge info">${images.length}</span></h2>
+    <div style="display:flex;flex-wrap:wrap;gap:14px">
+      ${images.map(img => `<div style="text-align:center">
+        <img class="thumb" src="${esc(img.url)}" style="width:64px;height:64px;object-fit:cover;border-radius:9px;background:#f1f5f9">
+        <div style="font-size:10px;color:#64748b;word-break:break-all;max-width:120px;margin:3px 0">${esc(img.name)}</div>
+        <button class="btn gray small" onclick="copyText('${esc(img.url)}', this)">Copiar URL</button>
+      </div>`).join('') || '<span style="font-size:13px;color:#64748b">Nenhuma imagem ainda — envie acima.</span>'}
+    </div>
+  </div>`;
 
   const catsHtml = data.categories.map((cat, ci) => {
     const prods = cat.products.map((p, pi) => {
@@ -708,7 +750,13 @@ async function pageProdutos(req, res) {
           <label>PREÇO (R$)</label><input type="text" name="price" value="${p.price}">
           <div class="grid2"><div><label>UNIDADE</label><input type="text" name="unit" value="${esc(p.unit || '')}"></div><div><label>ESTOQUE</label><input type="number" name="stock" value="${p.stock ?? ''}"></div></div>
           <label>IMAGEM (nome ou URL)</label>
-          <div style="display:flex;gap:8px;align-items:center"><input type="text" name="image" value="${esc(p.image || '')}">${p.image ? `<img class="prod-thumb" src="${productImgSrc(p.image)}" alt="">` : ''}</div>
+          <div style="display:flex;gap:8px;align-items:center"><input type="text" id="img-${ci}-${pi}" name="image" value="${esc(p.image || '')}">${p.image ? `<img class="prod-thumb" src="${productImgSrc(p.image)}" alt="">` : ''}</div>
+          ${images.length ? `<div style="margin-top:8px">
+            <small style="color:#64748b">Clique numa foto para usar:</small>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">
+              ${images.map(img => `<img src="${esc(img.url)}" onclick="document.getElementById('img-${ci}-${pi}').value='${esc(img.url)}'" style="width:40px;height:40px;object-fit:cover;border-radius:6px;cursor:pointer;border:1px solid #e2e8f0" title="Usar esta imagem">`).join('')}
+            </div>
+          </div>` : ''}
           <label style="margin-top:12px"><input type="checkbox" name="digital" ${p.digital ? 'checked' : ''} style="width:auto"> Produto digital (sem frete)</label>
           <label><input type="checkbox" name="sob_consulta" ${p.sob_consulta ? 'checked' : ''} style="width:auto"> Sob consulta (orçamento)</label>
           <label><input type="checkbox" name="available" ${p.available ? 'checked' : ''} style="width:auto"> Produto ativo</label>
@@ -745,8 +793,9 @@ async function pageProdutos(req, res) {
       <form method="POST" action="${clientMode ? '/painel' : '/admin'}/upload" enctype="multipart/form-data">
         <input type="file" id="fileInput" name="foto" accept="image/*" required style="display:none" onchange="this.form.submit()">
       </form>
-      <p style="font-size:12px;color:#64748b">Depois de enviar, <b>copie a URL</b> que aparece no aviso e cole no campo "Imagem" do produto.</p>
+      <p style="font-size:12px;color:#64748b">Depois de enviar, a foto aparece na galeria abaixo — <b>clique nela</b> (nos produtos) para usar, ou copie a URL.</p>
     </div>
+    ${gallery}
     ${catsHtml}`, tenants, tenant, clientMode));
 }
 
