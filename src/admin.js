@@ -1975,6 +1975,14 @@ async function pageBotoes(req, res) {
         <p style="font-size:12px;color:#64748b;margin-bottom:6px">Na notificação, use as variáveis: <b>{nome}</b> (nome do cliente), <b>{telefone}</b> (WhatsApp dele) e <b>{motivo}</b> (o que ele digitou).</p>
         <div class="grid2">${suporte}</div>
       </div>
+      <div class="panel"><h2>📲 Notificações</h2>
+        <div class="grid2">
+          <div><label>WHATSAPP QUE RECEBE AS NOTIFICAÇÕES</label><input type="text" name="notify[phone]" value="${esc(tenant.notify_phone || '')}" placeholder="5548999999999">
+            <p style="font-size:12px;color:#64748b;margin-top:4px">É para esse número que chegam os avisos de <b>novo pedido</b>, <b>atendente</b> e <b>pagamento recebido</b>. Deixe vazio para manter o atual.</p></div>
+          <div><label>E-MAIL DE NOTIFICAÇÕES</label><input type="email" name="notify[email]" value="${esc(tenant.notify_email || '')}" placeholder="seu@email.com">
+            <p style="font-size:12px;color:#64748b;margin-top:4px">Recebe as mesmas notificações por e-mail. Deixe vazio para manter o atual.</p></div>
+        </div>
+      </div>
       <button class="btn" type="submit">💾 Salvar</button>
     </form>`, tenants, tenant, clientMode));
 }
@@ -2003,6 +2011,18 @@ async function postBotoesSalvar(req, res) {
       data.messages[chave] = String(valor).trim();
     }
   }
+
+  // Notificações (número/e-mail do tenant) — vazio mantém o atual
+  const ntf = b.notify || {};
+  const upd = {};
+  if (ntf.phone !== undefined && String(ntf.phone).trim()) {
+    upd.notify_phone = repo.normalizePhoneBr(ntf.phone);
+  }
+  if (ntf.email !== undefined && String(ntf.email).trim()) {
+    upd.notify_email = String(ntf.email).trim();
+  }
+  if (Object.keys(upd).length) await repo.updateTenant(tenantId, upd);
+
   await catalog.saveTenantCatalog(tenantId, data);
   res.redirect(`${base}/botoes?msg=` + encodeURIComponent('Botões e atendente salvos!'));
 }
