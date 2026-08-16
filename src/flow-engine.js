@@ -609,17 +609,6 @@ async function _processPayment(tenant, lead, method) {
     if (method === 'pix') {
       const storeConf = await catalog.getStoreConfig(tenant.id);
       const desc = Number(storeConf.pix_discount_percent || 0);
-
-      // QR próprio (chave estática): envia a imagem configurada e aguarda
-      // confirmação manual do dono (botão "Pago" no painel)
-      if (storeConf.pix_mode === 'static' && storeConf.pix_static?.image) {
-        await ws.sendImage(lead.phone, storeConf.pix_static.image, '💠 Pagamento via PIX', tenant);
-        let texto = await catalog.msg(tenant.id, 'payment_pix_static');
-        if (!texto) texto = 'Escaneie o QR Code para pagar 💠\n\n⏳ Assim que o pagamento for confirmado, você recebe a confirmação automática aqui.';
-        await ws.sendText(lead.phone, texto, tenant);
-        return _menu(tenant, lead);
-      }
-
       const pix = await payment.criarPix(tenant, order, lead);
       let texto = await catalog.msg(tenant.id, 'payment_pix', {
         pedido: order.external_id, total: pix.total.toFixed(2), qr: pix.pix_copy_paste,

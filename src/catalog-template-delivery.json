@@ -282,8 +282,7 @@
     "store_closed": "😔 Estamos fechados agora — {horario}.\n\nVolte mais tarde!",
     "support_notify_title": "ATENDIMENTO SOLICITADO",
     "support_notify_body": "Nome: {nome}\nWhatsApp: {telefone}\nMotivo: {motivo}",
-    "ask_observations": "Alguma observação ou alteração no pedido? (ex: sem cebola, ponto da carne) — responda *nenhuma* para continuar.",
-    "payment_pix_static": "Escaneie o QR Code para pagar 💠\n\n⏳ Assim que o pagamento for confirmado, você recebe a confirmação automática aqui."
+    "ask_observations": "Alguma observação ou alteração no pedido? (ex: sem cebola, ponto da carne) — responda *nenhuma* para continuar."
   },
   "buttons": {
     "menu_shop": "Comprar",
