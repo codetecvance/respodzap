@@ -5,7 +5,7 @@ const webhookRoutes = require('./webhook');
 const adminRoutes = require('./admin');
 const repo = require('./repository');
 const catalog = require('./catalog');
-const { generateMenuImage } = require('./menu');
+const { generateMenuImage, generateProductCard } = require('./menu');
 const { initDb } = require('./db');
 
 // Inicializa o banco (idempotente) e garante os segmentos base
@@ -85,6 +85,34 @@ app.get('/api/menu-image', async (req, res) => {
     res.send(buf);
   } catch (e) {
     console.error('[MENU-IMAGE]', e.message);
+    res.status(500).send('erro ao gerar imagem');
+  }
+});
+
+// ======================================================
+//  IMAGEM DO PRODUTO (banner pequeno horizontal 800x200)
+// ======================================================
+app.get('/api/product-image', async (req, res) => {
+  try {
+    const tenantId = Number(req.query.tenant);
+    const pid = String(req.query.pid || '');
+    if (!tenantId || !pid) return res.status(400).send('parâmetros inválidos');
+    const data = await catalog.loadTenantCatalog(tenantId, req.query.refresh === '1');
+    let product = null;
+    for (const cat of data.categories || []) {
+      const p = (cat.products || []).find(p => p.id === pid);
+      if (p) { product = p; break; }
+    }
+    if (!product) return res.status(404).send('produto não encontrado');
+    const store = data.store || {};
+    const buf = await generateProductCard(tenantId, product, {
+      priceColor: store.menu_image?.price_color || '#1d4ed8',
+    });
+    res.set('Content-Type', 'image/png');
+    res.set('Cache-Control', 'no-store');
+    res.send(buf);
+  } catch (e) {
+    console.error('[PRODUCT-IMAGE]', e.message);
     res.status(500).send('erro ao gerar imagem');
   }
 });

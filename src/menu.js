@@ -108,4 +108,53 @@ async function generateMenuImage(tenantId, cat, products, cfg = {}) {
     .toBuffer();
 }
 
-module.exports = { generateMenuImage };
+module.exports = { generateMenuImage, generateProductCard };
+
+/**
+ * Banner pequeno e horizontal do produto (foto pequena à esquerda,
+ * nome + descrição + preço à direita) — 800x200, exibido compacto no WhatsApp.
+ */
+async function generateProductCard(tenantId, product, cfg = {}) {
+  const W = 800;
+  const H = 200;
+  const pad = 24;
+  const thumb = 152;
+  const imagesDir = path.join(__dirname, '..', 'public', 'images');
+
+  const preco = product.sob_consulta
+    ? 'Sob consulta'
+    : catalog.formatPrice(product.price);
+  const nome = String(product.name || 'Produto').slice(0, 32);
+  const desc = String(product.short_description || '').slice(0, 42);
+
+  let svg = `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">`;
+  svg += `<rect x="0" y="0" width="${W}" height="${H}" fill="#ffffff"/>`;
+  svg += `<rect x="${pad}" y="0" width="${thumb}" height="${H}" fill="#f1f5f9"/>`;
+  svg += `<text x="${pad + thumb + 28}" y="86" font-family="Arial" font-size="40" font-weight="bold" fill="#0f172a">${escSvg(nome)}</text>`;
+  if (desc) svg += `<text x="${pad + thumb + 28}" y="134" font-family="Arial" font-size="24" fill="#64748b">${escSvg(desc)}</text>`;
+  svg += `<text x="${W - pad}" y="132" font-family="Arial" font-size="36" font-weight="bold" fill="${escSvg(cfg.priceColor || '#1d4ed8')}" text-anchor="end">${escSvg(preco)}</text>`;
+  svg += '</svg>';
+
+  const layers = [{ input: Buffer.from(svg) }];
+
+  // Foto pequena do produto (à esquerda)
+  let imgBuf = null;
+  try {
+    const image = product.image || 'placeholder.png';
+    const imgPath = /^https?:\/\//.test(image) ? null : path.join(imagesDir, image);
+    if (imgPath && fs.existsSync(imgPath)) {
+      imgBuf = await sharp(imgPath).resize(thumb, H, { fit: 'cover' }).png().toBuffer();
+    } else if (/^https?:\/\//.test(image)) {
+      imgBuf = await fetchRemoteThumb(image, thumb);
+    }
+  } catch { imgBuf = null; }
+  if (!imgBuf) {
+    imgBuf = await sharp(path.join(imagesDir, 'placeholder.png')).resize(thumb, H, { fit: 'cover' }).png().toBuffer();
+  }
+  layers.push({ input: imgBuf, left: pad, top: 0 });
+
+  return sharp({ create: { width: W, height: H, channels: 4, background: { r: 255, g: 255, b: 255, alpha: 1 } } })
+    .composite(layers)
+    .png()
+    .toBuffer();
+}

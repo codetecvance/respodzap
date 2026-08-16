@@ -25,6 +25,52 @@ function logError(tag, err) {
   console.error(`[WHATSAPP] ${tag}:`, err.response?.data || err.message);
 }
 
+// Cache de media_id (válido ~30 dias na Meta) — evita re-upload e o
+// problema de "Failed to resolve host" ao baixar imagem de link externo.
+const mediaCache = new Map();
+const MEDIA_TTL = 25 * 24 * 3600 * 1000;
+
+/**
+ * Faz upload da imagem para o WhatsApp e retorna o media_id (ou null).
+ * O envio passa a usar o media_id — o WhatsApp não baixa mais de link.
+ */
+async function uploadMedia(imageUrl, api) {
+  if (!imageUrl) return null;
+  const hit = mediaCache.get(imageUrl);
+  if (hit && Date.now() - hit.at < MEDIA_TTL) return hit.id;
+  try {
+    const resp = await axios.get(imageUrl, { responseType: 'arraybuffer', timeout: 15000 });
+    const buf = Buffer.from(resp.data);
+    const mime = String(resp.headers['content-type'] || 'image/jpeg').split(';')[0];
+    const ext = mime.includes('png') ? 'png' : 'jpg';
+    const form = new FormData();
+    form.append('messaging_product', 'whatsapp');
+    form.append('type', mime);
+    form.append('file', new Blob([buf], { type: mime }), `media.${ext}`);
+    const { data } = await axios.post(
+      `https://graph.facebook.com/${config.graphVersion}/${api.phoneNumberId}/media`,
+      form,
+      { headers: { Authorization: `Bearer ${api.accessToken}` } }
+    );
+    if (data?.id) {
+      mediaCache.set(imageUrl, { id: data.id, at: Date.now() });
+      return data.id;
+    }
+  } catch (err) {
+    console.error('[MEDIA] upload falhou:', err.response?.data || err.message);
+  }
+  return null;
+}
+
+/**
+ * Monta o header de imagem do interactive: usa media_id quando possível.
+ */
+async function imageHeader(imageUrl, api) {
+  if (!imageUrl) return undefined;
+  const id = await uploadMedia(imageUrl, api);
+  return id ? { type: 'image', image: { id } } : { type: 'image', image: { link: imageUrl } };
+}
+
 /**
  * Envia texto simples (opcionalmente pelo número do tenant).
  */
@@ -91,11 +137,12 @@ async function sendProductCard(to, product, imageUrl, buttons = null, tenant = n
   }
   try {
     const api = tenantApi(tenant);
+    const header = await imageHeader(imageUrl, api);
     const data = await callApi({
       messaging_product: 'whatsapp', recipient_type: 'individual', to, type: 'interactive',
       interactive: {
         type: 'button',
-        header: { type: 'image', image: { link: imageUrl } },
+        header,
         body: { text: bodyText },
         footer: { text: product.unit ? `por ${product.unit}` : 'Clique para comprar' },
         action: { buttons: actionButtons },
@@ -114,11 +161,14 @@ async function sendProductCard(to, product, imageUrl, buttons = null, tenant = n
 async function sendImage(to, imageUrl, caption = '', tenant = null) {
   try {
     const api = tenantApi(tenant);
-    const data = await callApi({
+    const payload = {
       messaging_product: 'whatsapp', recipient_type: 'individual', to, type: 'image',
-      image: { link: imageUrl },
       caption: caption || undefined,
-    }, api);
+    };
+    const id = await uploadMedia(imageUrl, api);
+    if (id) payload.image = { id };
+    else payload.image = { link: imageUrl };
+    const data = await callApi(payload, api);
     if (tenant?.id) await repo.addMessage(tenant.id, to, 'out', caption || '[Imagem]', 'image');
     return data;
   } catch (err) {
@@ -217,5 +267,5 @@ async function sendWelcomeMenu(to, nome = '', tenant = null) {
 
 module.exports = {
   sendText, sendButtons, sendProductCard, sendImage, sendList, sendCtaButton, markRead,
-  sendWelcomeMenu,
+  sendWelcomeMenu, uploadMedia,
 };
