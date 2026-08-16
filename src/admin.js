@@ -1251,6 +1251,20 @@ function productImgSrc(image) {
 }
 
 /**
+ * Renderiza uma área de entrega como editor visual (caixa bairro + valor).
+ */
+function areasEditorHtml(areas) {
+  const lista = Array.isArray(areas) ? areas : [];
+  if (!lista.length) return '<div class="muted" style="font-size:12px;margin:4px 0">Nenhum bairro cadastrado. Clique em "+ Adicionar bairro" para cadastrar o bairro e a taxa de entrega.</div>';
+  return lista.map((a, i) => `
+    <div class="area-linha" style="display:flex;gap:8px;margin-bottom:6px;align-items:center">
+      <input type="text" name="store[delivery_areas][${i}][bairro]" value="${esc(a.bairro || '')}" placeholder="Bairro (ex: Centro)" style="flex:1">
+      <div style="display:flex;align-items:center;gap:4px;width:130px;flex-shrink:0"><span style="font-size:12px;color:#64748b">R$</span><input type="text" name="store[delivery_areas][${i}][taxa]" value="${esc(a.taxa ?? '')}" placeholder="0,00"></div>
+      <button type="button" class="btn red small" onclick="removeArea(this)">✕</button>
+    </div>`).join('');
+}
+
+/**
  * Renderiza um grupo de adicionais como editor visual (caixas nome + valor).
  */
 function addonsGrupoHtml(gi, g) {
@@ -1991,16 +2005,17 @@ async function pageConfig(req, res) {
   const logoThumb = logoUrl ? `<div style="margin-top:8px"><img src="${esc(logoUrl)}" style="max-height:56px;border-radius:8px"><button class="btn red small" style="margin-left:8px" onclick="document.getElementById('logoUrlField').value=''">Remover</button></div>` : '';
 
   res.send(layout('Configurações', clientMode ? '/painel/config' : '/admin/config', `${tenantSelector(tenant.id, tenants, clientMode)}
-    <form method="POST" action="${base}/config/salvar"><input type="hidden" name="tenant" value="${tenant.id}">
+    <form method="POST" action="${base}/config/salvar" onsubmit="reindexAreas()"><input type="hidden" name="tenant" value="${tenant.id}">
       <div class="panel"><h2>🏪 Loja</h2><div class="grid3">
         <div><label>FRETE (R$)</label><input type="text" name="store[delivery_fee]" value="${s.delivery_fee ?? 0}"></div>
         <div><label>FRETE GRÁTIS ACIMA (R$)</label><input type="text" name="store[delivery_free_full]" value="${s.delivery_free_full ?? 0}"></div>
         <div><label>DESCONTO PIX (%)</label><input type="text" name="store[pix_discount_percent]" value="${s.pix_discount_percent ?? 0}"></div>
       </div>
       ${showAreasEditor ? `<div style="margin-top:10px;border-top:1px dashed #e2e8f0;padding-top:12px">
-        <h3 style="font-size:13px;margin-bottom:6px">🛵 ÁREAS DE ENTREGA <small style="font-weight:400;color:#94a3b8">— o bot pergunta o bairro no checkout</small></h3>
-        <textarea name="store[delivery_areas]" rows="5" style="font-family:Consolas,monospace;font-size:12px" placeholder='[{"bairro":"Centro","taxa":5},{"bairro":"Trindade","taxa":7}]'>${esc(JSON.stringify(areas || [], null, 2))}</textarea>
-        <p style="font-size:12px;color:#64748b;margin-top:6px">Bairros fora da lista são <b>bloqueados</b> no checkout com sugestão de contato. Se a lista estiver vazia, vale o frete fixo acima.</p>
+        <h3 style="font-size:13px;margin-bottom:6px">🛵 ÁREAS DE ENTREGA <small style="font-weight:400;color:#94a3b8">— o bot pergunta o bairro no checkout e cobra a taxa de cada um</small></h3>
+        <div id="areasList">${areasEditorHtml(areas)}</div>
+        <button type="button" class="btn gray small" style="margin-top:6px" onclick="addArea()">+ Adicionar bairro</button>
+        <p style="font-size:12px;color:#64748b;margin-top:6px">Bairros fora da lista são <b>bloqueados</b> no checkout com sugestão de contato. Lista vazia = vale o frete fixo acima.</p>
       </div>` : ''}
       </div>
       <div class="panel"><h2>🏢 Empresa</h2><div class="grid2">
@@ -2048,6 +2063,24 @@ async function pageConfig(req, res) {
       <p style="font-size:12px;color:#64748b;margin-top:8px">Atualiza conforme você muda as cores/acima. Salve para aplicar no bot (em até 15s).</p>
     </div>
     <script>
+      function areaLinhaHtml(){
+        return '<div class="area-linha" style="display:flex;gap:8px;margin-bottom:6px;align-items:center">' +
+          '<input type="text" name="store[delivery_areas][0][bairro]" placeholder="Bairro (ex: Centro)" style="flex:1">' +
+          '<div style="display:flex;align-items:center;gap:4px;width:130px;flex-shrink:0"><span style="font-size:12px;color:#64748b">R$</span><input type="text" name="store[delivery_areas][0][taxa]" placeholder="0,00"></div>' +
+          '<button type="button" class="btn red small" onclick="removeArea(this)">✕</button></div>';
+      }
+      function addArea(){
+        const el = document.getElementById('areasList');
+        if (el) el.insertAdjacentHTML('beforeend', areaLinhaHtml());
+      }
+      function removeArea(btn){ btn.closest('.area-linha').remove(); }
+      function reindexAreas(){
+        document.querySelectorAll('#areasList .area-linha').forEach(function(linha, i){
+          linha.querySelectorAll('input[name^="store[delivery_areas]"]').forEach(function(el){
+            el.name = el.name.replace(/^store\[delivery_areas\]\[\d+\]/, 'store[delivery_areas][' + i + ']');
+          });
+        });
+      }
       function toggleHorario(i){
         const rows = document.querySelectorAll('table tbody tr');
         const row = rows[i];
@@ -2081,23 +2114,13 @@ async function postConfigSalvar(req, res) {
   if (s.delivery_free_full !== undefined) data.store.delivery_free_full = parseFloat(String(s.delivery_free_full).replace(',', '.')) || 0;
   if (s.pix_discount_percent !== undefined) data.store.pix_discount_percent = parseFloat(String(s.pix_discount_percent).replace(',', '.')) || 0;
 
-  // Áreas de entrega (JSON) — ramo de operação
+  // Áreas de entrega (editor visual — caixas bairro + taxa)
   if (s.delivery_areas !== undefined) {
-    const raw = String(s.delivery_areas).trim();
-    if (raw) {
-      try {
-        const areas = JSON.parse(raw);
-        if (Array.isArray(areas) && areas.every(a => a.bairro && a.taxa !== undefined)) {
-          data.store.delivery_areas = areas;
-        } else {
-          return res.redirect(`${base}/config?msg=` + encodeURIComponent('Áreas de entrega: JSON inválido (cada área precisa de "bairro" e "taxa").') + '&type=err');
-        }
-      } catch (e) {
-        return res.redirect(`${base}/config?msg=` + encodeURIComponent('Áreas de entrega: JSON inválido — ' + e.message) + '&type=err');
-      }
-    } else {
-      data.store.delivery_areas = undefined;
-    }
+    const areasRaw = Array.isArray(s.delivery_areas) ? s.delivery_areas : [s.delivery_areas];
+    const areas = areasRaw
+      .map(a => ({ bairro: String(a?.bairro || '').trim(), taxa: parseFloat(String(a?.taxa || '0').replace(',', '.')) || 0 }))
+      .filter(a => a.bairro);
+    data.store.delivery_areas = areas.length ? areas : undefined;
   }
 
   // Horário de funcionamento (por dia da semana — ramo de operação)
