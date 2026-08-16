@@ -28,7 +28,59 @@ function logError(tag, err) {
 // Cache de media_id (válido ~30 dias na Meta) — evita re-upload e o
 // problema de "Failed to resolve host" ao baixar imagem de link externo.
 const mediaCache = new Map();
+const bufferCache = new Map();
 const MEDIA_TTL = 25 * 24 * 3600 * 1000;
+
+/**
+ * Faz upload de um buffer de imagem direto (sem baixar de URL).
+ * hashKey = chave de cache do media_id.
+ */
+async function uploadMediaBuffer(buf, mime, api, hashKey) {
+  const hit = bufferCache.get(hashKey);
+  if (hit && Date.now() - hit.at < MEDIA_TTL) return hit.id;
+  try {
+    const ext = String(mime).includes('png') ? 'png' : 'jpg';
+    const form = new FormData();
+    form.append('messaging_product', 'whatsapp');
+    form.append('type', mime);
+    form.append('file', new Blob([buf], { type: mime }), `media.${ext}`);
+    const { data } = await axios.post(
+      `https://graph.facebook.com/${config.graphVersion}/${api.phoneNumberId}/media`,
+      form,
+      { headers: { Authorization: `Bearer ${api.accessToken}` } }
+    );
+    if (data?.id) {
+      bufferCache.set(hashKey, { id: data.id, at: Date.now() });
+      return data.id;
+    }
+  } catch (err) {
+    console.error('[MEDIA] upload buffer falhou:', err.response?.data || err.message);
+  }
+  return null;
+}
+
+/**
+ * Envia imagem a partir de um buffer (sem self-request; o media_id é cacheado).
+ */
+async function sendImageBuffer(to, buffer, mime, hashKey, caption = '', tenant = null) {
+  try {
+    const api = tenantApi(tenant);
+    const id = await uploadMediaBuffer(buffer, mime, api, hashKey);
+    if (!id) {
+      console.warn('[WHATSAPP] sendImageBuffer sem mídia');
+      return null;
+    }
+    const data = await callApi({
+      messaging_product: 'whatsapp', recipient_type: 'individual', to, type: 'image',
+      image: { id },
+      caption: caption || undefined,
+    }, api);
+    if (tenant?.id) await repo.addMessage(tenant.id, to, 'out', caption || '[Imagem]', 'image');
+    return data;
+  } catch (err) {
+    logError('sendImageBuffer', err);
+  }
+}
 
 /**
  * Faz upload da imagem para o WhatsApp e retorna o media_id (ou null).
@@ -272,5 +324,5 @@ async function sendWelcomeMenu(to, nome = '', tenant = null) {
 
 module.exports = {
   sendText, sendButtons, sendProductCard, sendImage, sendList, sendCtaButton, markRead,
-  sendWelcomeMenu, uploadMedia,
+  sendWelcomeMenu, uploadMedia, uploadMediaBuffer, sendImageBuffer, tenantApi,
 };

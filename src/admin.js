@@ -1730,7 +1730,26 @@ router.get('/painel/pedidos', clientPanelAuth, pagePedidos);
 async function postPedidosStatus(req, res) {
   const tenantId = tenantIdFromReq(req, req.query.tenant);
   const base = req.clientMode ? '/painel' : '/admin';
-  await repo.updateOrderStatus(Number(req.body.id), String(req.body.status));
+  const orderId = Number(req.body.id);
+  const status = String(req.body.status);
+  await repo.updateOrderStatus(orderId, status);
+
+  // Confirmação manual (ex: PIX com QR próprio): notifica o cliente automaticamente
+  if (status === 'approved') {
+    try {
+      const order = await repo.getOrder(orderId);
+      const tenant = await repo.getTenant(order.tenant_id);
+      const lead = await repo.getLead(order.lead_id);
+      if (order && tenant && lead) {
+        const { sendText } = require('./whatsapp');
+        const catalogMod = require('./catalog');
+        const resumo = `Pedido #${order.external_id}\nTotal: R$ ${Number(order.total || 0).toFixed(2)}`;
+        await sendText(lead.phone, await catalogMod.msg(tenant.id, 'payment_confirmed', { resumo }), tenant);
+      }
+    } catch (e) {
+      console.error('[PEDIDO] erro ao notificar pagamento aprovado:', e.message);
+    }
+  }
   res.redirect(`${base}/pedidos`);
 }
 
@@ -1982,6 +2001,7 @@ async function pageConfig(req, res) {
   const base = clientMode ? '/painel' : '/admin';
   const showAreasEditor = !!tenant.segment_name && tenant.segment_name !== 'vendas';
   const areas = Array.isArray(s.delivery_areas) ? s.delivery_areas : [];
+  const pixStaticImage = (s.pix_static || {}).image || '';
   const firstCat = (data.categories || []).find(cat => (cat.products || []).some(p => p.available)) || data.categories?.[0];
 
   // Horário de funcionamento (por dia da semana)
@@ -2031,6 +2051,22 @@ async function pageConfig(req, res) {
         <tbody>${hoursRows}</tbody></table>
         <p style="font-size:12px;color:#64748b;margin-top:8px">Dia marcado como <b>Fechado</b> bloqueia pedidos o dia inteiro. Cliente fora do horário recebe aviso e não consegue comprar/finalizar.</p>
       </div>` : ''}
+      <div class="panel"><h2>💠 PIX</h2>
+        <div class="grid2">
+          <div><label>FORMA DE PAGAMENTO PIX</label><select name="store[pix_mode]" onchange="document.getElementById('pixStaticBox').style.display = this.value === 'static' ? 'block' : 'none'">
+            <option value="auto" ${s.pix_mode !== 'static' ? 'selected' : ''}>QR automático (confirmação automática)</option>
+            <option value="static" ${s.pix_mode === 'static' ? 'selected' : ''}>Meu QR PIX (confirmação manual por você)</option>
+          </select></div>
+        </div>
+        <div id="pixStaticBox" style="${s.pix_mode === 'static' ? 'display:block' : 'display:none'};margin-top:10px;border-top:1px dashed #e2e8f0;padding-top:12px">
+          <label>IMAGEM DO QR CODE (URL da galeria)</label>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <input type="text" id="pixQrField" name="store[pix_static][image]" value="${esc(pixStaticImage)}" placeholder="https://... (URL da imagem do QR)" style="flex:1">
+            ${pixStaticImage ? `<img src="${esc(pixStaticImage)}" style="max-height:52px;border-radius:6px;border:1px solid #e2e8f0">` : ''}
+          </div>
+          <p style="font-size:12px;color:#64748b;margin-top:6px">Envie a imagem do QR na página de <a href="${base}/produtos">Produtos</a> (galeria) e cole a URL aqui. Com o QR próprio, a confirmação é feita por você com o botão <b>"Pago"</b> em Pedidos — o cliente recebe a confirmação automaticamente e o ticket imprime.</p>
+        </div>
+      </div>
       <div class="panel"><h2>🖼️ Imagem do menu (lista de produtos)</h2>
         <div class="grid3">
           <div><label>COR DO CABEÇALHO</label><input type="color" id="miHeaderBg" name="store[menu_image][header_bg]" value="${esc(mi.header_bg || '#1e3a8a')}" oninput="previewMenu()"></div>
@@ -2131,6 +2167,15 @@ async function postConfigSalvar(req, res) {
 
   // Horário de funcionamento (por dia da semana — ramo de operação)
   const checkboxVal = (v) => (Array.isArray(v) ? v[v.length - 1] : v) === 'on';
+
+  // PIX (QR próprio / automático)
+  if (s.pix_mode !== undefined) data.store.pix_mode = s.pix_mode === 'static' ? 'static' : 'auto';
+  if (s.pix_static !== undefined) {
+    const img = String(s.pix_static?.image || '').trim();
+    if (img) data.store.pix_static = { image: img };
+    else data.store.pix_static = undefined;
+  }
+
   if (s.hours) {
     const hours = {};
     for (const [chave, v] of Object.entries(s.hours)) {

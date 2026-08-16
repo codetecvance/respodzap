@@ -62,20 +62,50 @@ async function _products(tenant, lead, categoryId) {
   const cat = (data.categories || []).find(c => c.id === categoryId);
   await repo.setSurvey(lead.id, { cat: categoryId });
 
-  // Imagem-menu: visão geral da categoria (gerada por /api/menu-image)
-  const menuEnabled = data.store?.menu_image?.enabled !== false;
-  if (menuEnabled && config.webhookUrl) {
-    const sig = Buffer.from(products.map(p => `${p.id}|${p.price}|${p.image}|${p.name}`).join('#')).toString('base64').replace(/[^a-zA-Z0-9]/g, '').slice(0, 24);
-    const menuUrl = `${config.webhookUrl}/api/menu-image?tenant=${tenant.id}&cat=${encodeURIComponent(categoryId)}&sig=${sig}`;
-    await ws.sendImage(lead.phone, menuUrl, `${cat?.emoji || ''} ${cat?.name || 'Produtos'}`, tenant);
+  const store = data.store || {};
+  const menuEnabled = store.menu_image?.enabled !== false;
+  const cfg = {
+    headerBg: store.menu_image?.header_bg,
+    priceColor: store.menu_image?.price_color,
+    showPrice: store.menu_image?.show_price !== false,
+    showNumbers: store.menu_image?.show_numbers !== false,
+    footerText: store.menu_image?.footer_text || '',
+    companyName: data.company?.name || cat?.name || 'Produtos',
+    logoUrl: data.company?.logo_url || '',
+  };
+
+  // Gera menu-image + banners em memória (cacheado) — sem self-request
+  const { generateMenuImage, generateProductCard } = require('./menu');
+  const jobs = [];
+  if (menuEnabled) jobs.push({ key: `menu:${tenant.id}:${categoryId}`, fn: () => generateMenuImage(tenant.id, cat, products, cfg) });
+  for (const p of products) {
+    const sig = Buffer.from(`${p.id}|${p.price}|${p.image}|${p.name}`).toString('base64').replace(/[^a-zA-Z0-9]/g, '').slice(0, 16);
+    jobs.push({ key: `prod:${tenant.id}:${p.id}:${sig}`, fn: () => generateProductCard(tenant.id, p, { priceColor: cfg.priceColor }) });
   }
 
-  // Um card por produto: imagem compacta (miniatura à esquerda + textos à direita)
-  // + mensagem de botões logo abaixo (o WhatsApp corta imagens de cards interativos)
+  const buffers = await mapLimit(jobs, 3, async (j) => {
+    const hit = bannerCache.get(j.key);
+    if (hit && Date.now() - hit.at < BANNER_TTL_MS) return hit.buf;
+    const buf = await j.fn();
+    bannerCache.set(j.key, { buf, at: Date.now() });
+    return buf;
+  });
+
+  // Pré-upload das mídias em paralelo (a ordem de envio é preservada)
+  const api = ws.tenantApi(tenant);
+  await mapLimit(jobs, 3, async (j, i) => {
+    await ws.uploadMediaBuffer(buffers[i], 'image/png', api, j.key);
+  });
+
+  // Envio ordenado: menu-image → (imagem + botões) por produto
+  let idx = 0;
+  if (menuEnabled) {
+    await ws.sendImageBuffer(lead.phone, buffers[idx], 'image/png', jobs[idx].key, `${cat?.emoji || ''} ${cat?.name || 'Produtos'}`, tenant);
+    idx++;
+  }
   for (const p of products) {
-    const hash = Buffer.from(`${p.id}|${p.price}|${p.image}|${p.name}`).toString('base64').replace(/[^a-zA-Z0-9]/g, '').slice(0, 16);
-    const bannerUrl = `${config.webhookUrl || ''}/api/product-image?tenant=${tenant.id}&pid=${encodeURIComponent(p.id)}&v=${hash}`;
-    await ws.sendImage(lead.phone, bannerUrl, '', tenant);
+    await ws.sendImageBuffer(lead.phone, buffers[idx], 'image/png', jobs[idx].key, '', tenant);
+    idx++;
     const preco = p.sob_consulta ? 'Sob consulta' : catalog.formatPrice(p.price);
     await ws.sendButtons(lead.phone, `*${p.name}* — ${preco}${p.unit ? ` (por ${p.unit})` : ''}`, [
       { id: `BUY_${p.id}`, title: String(await catalog.getButton(tenant.id, 'add_product')).slice(0, 20) },
@@ -89,6 +119,26 @@ async function _products(tenant, lead, categoryId) {
   ], tenant);
   await repo.setFlowState(lead.id, ST.PRODUCTS);
 }
+
+/**
+ * Executa itens com limite de concorrência, preservando a ordem dos resultados.
+ */
+async function mapLimit(items, limit, fn) {
+  const results = new Array(items.length);
+  let idx = 0;
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (idx < items.length) {
+      const i = idx++;
+      results[i] = await fn(items[i], i);
+    }
+  });
+  await Promise.all(workers);
+  return results;
+}
+
+// Cache das imagens geradas (banners/menu) — evitam regenerar a cada toque
+const bannerCache = new Map();
+const BANNER_TTL_MS = 60 * 60 * 1000;
 
 /**
  * Exibe preço formatado ou "Sob consulta".
@@ -559,6 +609,17 @@ async function _processPayment(tenant, lead, method) {
     if (method === 'pix') {
       const storeConf = await catalog.getStoreConfig(tenant.id);
       const desc = Number(storeConf.pix_discount_percent || 0);
+
+      // QR próprio (chave estática): envia a imagem configurada e aguarda
+      // confirmação manual do dono (botão "Pago" no painel)
+      if (storeConf.pix_mode === 'static' && storeConf.pix_static?.image) {
+        await ws.sendImage(lead.phone, storeConf.pix_static.image, '💠 Pagamento via PIX', tenant);
+        let texto = await catalog.msg(tenant.id, 'payment_pix_static');
+        if (!texto) texto = 'Escaneie o QR Code para pagar 💠\n\n⏳ Assim que o pagamento for confirmado, você recebe a confirmação automática aqui.';
+        await ws.sendText(lead.phone, texto, tenant);
+        return _menu(tenant, lead);
+      }
+
       const pix = await payment.criarPix(tenant, order, lead);
       let texto = await catalog.msg(tenant.id, 'payment_pix', {
         pedido: order.external_id, total: pix.total.toFixed(2), qr: pix.pix_copy_paste,
