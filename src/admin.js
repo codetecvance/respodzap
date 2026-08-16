@@ -1310,7 +1310,7 @@ async function pageProdutos(req, res) {
         <td><input type="text" name="plans[${k}][payment_link]" value="${esc(pl.payment_link || '')}" placeholder="https://mpago.li/..." style="min-width:130px"></td>
         <td><input type="text" name="plans[${k}][redirect_link]" value="${esc(pl.redirect_link || '')}" placeholder="https://wa.me/55..." style="min-width:130px"></td>
         <td><textarea name="plans[${k}][features]" rows="3">${esc(pl.features || '')}</textarea></td>
-        <td style="text-align:center"><button class="btn red small" type="submit" formaction="${base}/produtos/excluir-plano?ci=${ci}&pi=${pi}&plan_i=${k}" formnovalidate>🗑</button></td>
+        <td style="text-align:center"><button class="btn red small" type="button" onclick="enviarFormAcao(this.form, '${base}/produtos/excluir-plano?ci=${ci}&pi=${pi}&plan_i=${k}')">🗑</button></td>
       </tr>`).join('') || '<tr><td colspan="8" style="color:#94a3b8;font-size:12px">Sem planos — adicione abaixo.</td></tr>';
 
       return `
@@ -1347,11 +1347,10 @@ async function pageProdutos(req, res) {
           <h3 style="font-size:13px;margin:4px 0 8px">📋 PLANOS DE ASSINATURA <small style="font-weight:400;color:#94a3b8">(opcional)</small></h3>
           <table><thead><tr><th>Nome</th><th>Preço</th><th>Período</th><th>★</th><th>Link pagamento</th><th>Link redirecionamento</th><th>Recursos</th><th></th></tr></thead>
           <tbody>${plans}</tbody></table>
-          <button class="btn gray small" type="submit" formaction="${base}/produtos/novo-plano?ci=${ci}&pi=${pi}" formnovalidate style="margin-top:8px">+ Adicionar plano</button>
+          <button class="btn gray small" type="button" onclick="enviarFormAcao(this.form, '${base}/produtos/novo-plano?ci=${ci}&pi=${pi}')" style="margin-top:8px">+ Adicionar plano</button>
         </div>
         <div style="grid-column:1/-1;display:flex;gap:8px;margin-top:6px">
-          <button class="btn" type="submit">💾 Salvar</button>
-          <button class="btn red" type="submit" formaction="${base}/produtos/excluir" formnovalidate>🗑 Excluir produto</button>
+          <button class="btn red" type="button" onclick="enviarFormAcao(this.form, '${base}/produtos/excluir')">🗑 Excluir produto</button>
         </div>
       </form></div>`;
     });
@@ -1369,6 +1368,10 @@ async function pageProdutos(req, res) {
   }).join('');
 
   res.send(layout('Produtos', clientMode ? '/painel/produtos' : '/admin/produtos', `${tenantSelector(tenant.id, tenants, clientMode)}${flash}
+    <div class="panel" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <button class="btn green" onclick="salvarTudo()">💾 Salvar tudo</button>
+      <span class="muted" style="font-size:13px">Altere quantos produtos quiser e salve tudo de uma vez (as ações por produto continuam funcionando).</span>
+    </div>
     <div class="panel"><h2>📤 Enviar foto de produto <span class="right"><button class="btn small" onclick="document.getElementById('fileInput').click()">Escolher arquivo</button></span></h2>
       <form method="POST" action="${base}/upload" enctype="multipart/form-data">
         <input type="file" id="fileInput" name="foto" accept="image/*" required style="display:none" onchange="this.form.submit()">
@@ -1377,7 +1380,26 @@ async function pageProdutos(req, res) {
     </div>
     ${gallery}
     ${catsHtml}
+    <div class="panel" style="display:flex;gap:10px;align-items:center">
+      <button class="btn green" onclick="salvarTudo()">💾 Salvar tudo</button>
+      <span class="muted" style="font-size:13px">Salva todos os produtos desta página.</span>
+    </div>
     <script>
+      function enviarFormAcao(form, url){
+        form.action = url;
+        form.submit();
+      }
+      async function salvarTudo(){
+        reindexAddons();
+        const forms = Array.from(document.querySelectorAll('form[action*="/produtos/salvar"]'));
+        if (!forms.length) { alert('Nenhum produto para salvar.'); return; }
+        for (const f of forms) {
+          const body = new URLSearchParams(new FormData(f)).toString();
+          const r = await fetch(f.action, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body });
+          if (!r.ok) { alert('Erro ao salvar — recarregue e tente novamente.'); return; }
+        }
+        location.href = location.pathname + '?msg=' + encodeURIComponent('Todos os produtos foram salvos!');
+      }
       function addonsOpcaoHtml(){
         return '<div class="addons-opcao" style="display:flex;gap:8px;margin-bottom:6px;align-items:center"><input type="text" name="adicionais[0][opcoes][0][nome]" placeholder="Nome (ex: Bacon)" style="flex:1"><div style="display:flex;align-items:center;gap:4px;width:130px;flex-shrink:0"><span style="font-size:12px;color:#64748b">R$</span><input type="text" name="adicionais[0][opcoes][0][preco]" placeholder="0,00"></div><button type="button" class="btn red small" onclick="removeAddonsOpcao(this)">✕</button></div>';
       }
