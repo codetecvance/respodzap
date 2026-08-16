@@ -4,7 +4,6 @@
     { "source": "/(.*)", "destination": "/api/index" }
   ],
   "crons": [
-    { "path": "/api/cron", "schedule": "0 9 * * *" },
-    { "path": "/api/health", "schedule": "*/10 * * * *" }
+    { "path": "/api/cron", "schedule": "0 9 * * *" }
   ]
 }
