@@ -2124,6 +2124,7 @@ async function postConfigSalvar(req, res) {
   }
 
   // Horário de funcionamento (por dia da semana — ramo de operação)
+  const checkboxVal = (v) => (Array.isArray(v) ? v[v.length - 1] : v) === 'on';
   if (s.hours) {
     const hours = {};
     for (const [chave, v] of Object.entries(s.hours)) {
@@ -2139,7 +2140,6 @@ async function postConfigSalvar(req, res) {
 
   // Imagem do menu
   const mi = s.menu_image || {};
-  const checkboxVal = (v) => (Array.isArray(v) ? v[v.length - 1] : v) === 'on';
   if (!data.store.menu_image) data.store.menu_image = {};
   if (mi.header_bg !== undefined) data.store.menu_image.header_bg = mi.header_bg || '#1e3a8a';
   if (mi.price_color !== undefined) data.store.menu_image.price_color = mi.price_color || '#1d4ed8';
