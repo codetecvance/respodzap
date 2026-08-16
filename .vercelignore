@@ -1,0 +1,10 @@
+node_modules
+data
+.vercel
+*.mp3
+*.mp4
+*.jfif
+ig-respodzap-*.jpg
+narracao-*.txt
+public/images/tenant-*/
+public/images/menu/
