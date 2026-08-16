@@ -8,3 +8,10 @@ public/images/menu/
 .vercel
 .env*
 public/images/tenant-*/
+
+# Materiais de marketing (não vão para o repositório)
+*.mp3
+*.mp4
+*.jfif
+ig-respodzap-*.jpg
+narracao-*.txt
