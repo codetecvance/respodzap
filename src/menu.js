@@ -122,4 +122,55 @@ async function generateMenuImage(tenantId, cat, products, cfg = {}) {
     .toBuffer();
 }
 
-module.exports = { generateMenuImage };
+module.exports = { generateMenuImage, generateProductCard };
+
+/**
+ * Banner pequeno e horizontal do produto: foto pequena à esquerda,
+ * nome + descrição à direita e preço no canto — 800x180 (compacto no WhatsApp).
+ * Usa a fonte embutida (AppFont) — sem depender do fontconfig do servidor.
+ */
+async function generateProductCard(tenantId, product, cfg = {}) {
+  const W = 800;
+  const H = 180;
+  const pad = 20;
+  const thumb = 140;
+  const imagesDir = path.join(__dirname, '..', 'public', 'images');
+
+  const preco = product.sob_consulta
+    ? 'Sob consulta'
+    : catalog.formatPrice(product.price);
+  const nome = String(product.name || 'Produto').slice(0, 34);
+  const desc = String(product.short_description || '').slice(0, 46);
+
+  let svg = `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">`;
+  svg += fontFaceSvg();
+  svg += `<rect x="0" y="0" width="${W}" height="${H}" fill="#ffffff"/>`;
+  svg += `<rect x="${pad}" y="${(H - thumb) / 2}" width="${thumb}" height="${thumb}" rx="12" fill="#f1f5f9"/>`;
+  svg += `<text x="${pad + thumb + 24}" y="${H / 2 - 2}" font-family="AppFont" font-size="36" font-weight="bold" fill="#0f172a">${escSvg(nome)}</text>`;
+  if (desc) svg += `<text x="${pad + thumb + 24}" y="${H / 2 + 36}" font-family="AppFont" font-size="22" fill="#64748b">${escSvg(desc)}</text>`;
+  svg += `<text x="${W - pad}" y="${H / 2 + 8}" font-family="AppFont" font-size="34" font-weight="bold" fill="${escSvg(cfg.priceColor || '#1d4ed8')}" text-anchor="end">${escSvg(preco)}</text>`;
+  svg += '</svg>';
+
+  const layers = [{ input: Buffer.from(svg) }];
+
+  // Foto pequena do produto (à esquerda)
+  let imgBuf = null;
+  try {
+    const image = product.image || 'placeholder.png';
+    const imgPath = /^https?:\/\//.test(image) ? null : path.join(imagesDir, image);
+    if (imgPath && fs.existsSync(imgPath)) {
+      imgBuf = await sharp(imgPath).resize(thumb, thumb, { fit: 'cover' }).png().toBuffer();
+    } else if (/^https?:\/\//.test(image)) {
+      imgBuf = await fetchRemoteThumb(image, thumb);
+    }
+  } catch { imgBuf = null; }
+  if (!imgBuf) {
+    imgBuf = await sharp(path.join(imagesDir, 'placeholder.png')).resize(thumb, thumb, { fit: 'cover' }).png().toBuffer();
+  }
+  layers.push({ input: imgBuf, left: pad, top: (H - thumb) / 2 });
+
+  return sharp({ create: { width: W, height: H, channels: 4, background: { r: 255, g: 255, b: 255, alpha: 1 } } })
+    .composite(layers)
+    .png()
+    .toBuffer();
+}
