@@ -267,11 +267,6 @@
           "field": "delivery_address",
           "question": "Qual o endereço de entrega? (rua e número)",
           "optional": false
-        },
-        {
-          "key": "observacao",
-          "question": "Alguma observação sobre o pedido? (opcional)",
-          "optional": true
         }
       ]
     }
@@ -308,7 +303,8 @@
     "out_of_area": "😔 Desculpe, seu bairro está fora da nossa área de entrega. Entre em contato com a gente para retirada no local.",
     "store_closed": "😔 Estamos fechados agora — {horario}.\n\nVolte mais tarde!",
     "support_notify_title": "ATENDIMENTO SOLICITADO",
-    "support_notify_body": "Nome: {nome}\nWhatsApp: {telefone}\nMotivo: {motivo}"
+    "support_notify_body": "Nome: {nome}\nWhatsApp: {telefone}\nMotivo: {motivo}",
+    "ask_observations": "Alguma observação ou alteração no pedido? (ex: sem cebola, ponto da carne) — responda *nenhuma* para continuar."
   },
   "buttons": {
     "menu_shop": "Comprar",

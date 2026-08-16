@@ -82,6 +82,7 @@ async function buildTicket(tenantId, orderId) {
   <div class="bloco"><div class="rot">CLIENTE</div><div>${esc(lead?.full_name || '—')}</div>
   <div>${esc(lead?.phone || '')}</div></div>
   ${endereco}
+  ${order.observations ? `<div class="bloco"><div class="rot">OBSERVAÇÕES</div><div>${esc(order.observations)}</div></div>` : ''}
   <div class="div"></div>
   <div class="rodape">${esc(company.website || company.instagram || '')}</div>
 </body></html>`;

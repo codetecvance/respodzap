@@ -66,11 +66,6 @@
           "field": "delivery_address",
           "question": "Qual o endereço de entrega? (rua, número, bairro, cidade)",
           "optional": false
-        },
-        {
-          "key": "observacao",
-          "question": "Alguma observação sobre o pedido? (opcional)",
-          "optional": true
         }
       ]
     }
@@ -104,7 +99,8 @@
     "plans_title": "{produto} — escolha o plano:",
     "plan_detail": "*{produto} — {plano}*\n\n💰 {preco}\n\n{recursos}",
     "support_notify_title": "ATENDIMENTO SOLICITADO",
-    "support_notify_body": "Nome: {nome}\nWhatsApp: {telefone}\nMotivo: {motivo}"
+    "support_notify_body": "Nome: {nome}\nWhatsApp: {telefone}\nMotivo: {motivo}",
+    "ask_observations": "Alguma observação ou alteração no pedido? (ex: sem cebola, ponto da carne) — responda *nenhuma* para continuar."
   },
   "buttons": {
     "menu_shop": "Comprar",

@@ -169,6 +169,7 @@ async function initDb() {
   await query(`ALTER TABLE cart_items ADD COLUMN IF NOT EXISTS addons JSONB`);
   await query(`ALTER TABLE order_items ADD COLUMN IF NOT EXISTS addons JSONB`);
   await query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS printed_at TIMESTAMPTZ`);
+  await query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS observations TEXT`);
 }
 
 module.exports = { pool, query, initDb };

@@ -542,6 +542,10 @@ async function updateOrderStatus(orderId, status) {
   await query(`UPDATE orders SET status = $2, updated_at = NOW() WHERE id = $1`, [orderId, status]);
 }
 
+async function updateOrderObservations(orderId, observations) {
+  await query(`UPDATE orders SET observations = $2, updated_at = NOW() WHERE id = $1`, [orderId, observations]);
+}
+
 async function getLeadOrders(tenantId, leadId) {
   const r = await query(
     'SELECT * FROM orders WHERE tenant_id = $1 AND lead_id = $2 ORDER BY created_at DESC',
@@ -659,7 +663,7 @@ module.exports = {
   getCart, addToCart, removeFromCart, clearCart, updateCartItemQuantity, cartTotal, cartCount,
   formatAddons, addonsTotal,
   // pedidos
-  createOrder, getOrder, getOrderByExternal, getOrderItems, updateOrderStatus, getLeadOrders, getOrders,
+  createOrder, getOrder, getOrderByExternal, getOrderItems, updateOrderStatus, updateOrderObservations, getLeadOrders, getOrders,
   getOrdersToPrint, markOrderPrinted,
   // pagamentos
   createPayment, getPaymentByMpId, getPaymentByOrderId, updatePaymentStatusByMpId,

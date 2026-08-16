@@ -72,15 +72,23 @@ async function sendButtons(to, bodyText, buttons, tenant = null) {
 }
 
 /**
- * Envia card de produto com imagem.
+ * Envia card de produto com imagem (bloco: foto + nome + preço + botões).
+ * Sob consulta → botão "Quero saber mais". Com planos → "Ver planos" via BUY_.
  */
 async function sendProductCard(to, product, imageUrl, buttons = null, tenant = null) {
-  const priceFormatted = `R$ ${Number(product.price).toFixed(2).replace('.', ',')}`;
+  const priceFormatted = product.sob_consulta ? 'Sob consulta' : `R$ ${Number(product.price).toFixed(2).replace('.', ',')}`;
   const bodyText = `*${product.name}*\n${product.short_description || ''}\n\n💰 ${priceFormatted}`;
-  const actionButtons = buttons || [
-    { type: 'reply', reply: { id: `BUY_${product.id}`, title: '🛒 Comprar' } },
-    { type: 'reply', reply: { id: `DETAIL_${product.id}`, title: '📋 Detalhes' } },
-  ];
+  let actionButtons = buttons;
+  if (!actionButtons) {
+    if (product.sob_consulta) {
+      actionButtons = [{ type: 'reply', reply: { id: `QUOTE_${product.id}`, title: String(await catalog.getButton(tenant?.id, 'quote')).slice(0, 20) } }];
+    } else {
+      actionButtons = [
+        { type: 'reply', reply: { id: `BUY_${product.id}`, title: String(await catalog.getButton(tenant?.id, 'add_product')).slice(0, 20) } },
+        { type: 'reply', reply: { id: `DETAIL_${product.id}`, title: String(await catalog.getButton(tenant?.id, 'detail')).slice(0, 20) } },
+      ];
+    }
+  }
   try {
     const api = tenantApi(tenant);
     const data = await callApi({

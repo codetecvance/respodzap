@@ -1712,7 +1712,7 @@ async function pagePedidos(req, res) {
     return `<tr>
       <td><b>#${esc(o.external_id)}</b><br><small style="color:#94a3b8">${esc(String(o.created_at).slice(0, 16))}</small></td>
       <td>${esc(lead?.full_name || '—')}<br><small style="color:#94a3b8">${esc(lead?.phone || '')}</small></td>
-      <td>${items}</td><td>${money(o.total)}</td><td>${statusBadge(o.status)}</td>
+      <td>${items}${o.observations ? `<br><small style="color:#b45309">📝 ${esc(o.observations)}</small>` : ''}</td><td>${money(o.total)}</td><td>${statusBadge(o.status)}</td>
       <td>${methodLabel(pay?.payment_method)}<br><small style="color:#94a3b8">${esc(pay?.mp_payment_id || '')}</small></td>
       <td>${o.status === 'pending' ? `<form class="inline-form" method="POST" action="${clientMode ? '/painel' : '/admin'}/pedidos/status"><input type="hidden" name="id" value="${o.id}"><input type="hidden" name="status" value="approved"><button class="btn green small">Pago</button></form>` : ''}${clientMode && ehRamoOperacao(tenant) && o.status === 'approved' ? ` <button class="btn amber small" onclick="reimprimirPedido(${o.id})" title="Reimprimir ticket">🖨️</button>` : ''}</td>
     </tr>`;
@@ -1885,6 +1885,8 @@ const BOTOES_ROTULOS = {
   back: 'Voltar',
   buy: 'Comprar (na página do produto)',
   quote: 'Quero saber mais (sob consulta)',
+  add_product: 'Adicionar ao carrinho (card do produto)',
+  detail: 'Detalhes (card do produto)',
   add_to_cart: 'Continuar comprando (após adicionar)',
   cart_show: 'Ver carrinho (após adicionar)',
   cart_buy: 'Finalizar pedido (no carrinho)',

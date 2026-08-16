@@ -117,6 +117,8 @@ const DEFAULT_BUTTONS = {
   back: '← Voltar',
   buy: '🛒 Comprar',
   quote: '📞 Quero saber mais',
+  add_product: '🛒 Adicionar ao carrinho',
+  detail: '📋 Detalhes',
   add_to_cart: 'Continuar comprando',
   cart_show: 'Ver carrinho',
   cart_buy: 'Finalizar pedido',

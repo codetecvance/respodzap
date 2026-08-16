@@ -16,6 +16,7 @@ const ST = {
   CHECKOUT_NAME: 'CHECKOUT_NAME',
   CHECKOUT_BAIRRO: 'CHECKOUT_BAIRRO',
   CHECKOUT_CONFIRM: 'CHECKOUT_CONFIRM',
+  CHECKOUT_OBS: 'CHECKOUT_OBS',
   CHECKOUT_PAYMENT: 'CHECKOUT_PAYMENT',
   SURVEY: 'SURVEY',
   SOB_CONSULTA_NAME: 'SOB_CONSULTA_NAME',
@@ -61,7 +62,7 @@ async function _products(tenant, lead, categoryId) {
   const cat = (data.categories || []).find(c => c.id === categoryId);
   await repo.setSurvey(lead.id, { cat: categoryId });
 
-  // Imagem-menu: lista vertical com miniaturas (gerada por /api/menu-image)
+  // Imagem-menu: visão geral da categoria (gerada por /api/menu-image)
   const menuEnabled = data.store?.menu_image?.enabled !== false;
   if (menuEnabled && config.webhookUrl) {
     const sig = Buffer.from(products.map(p => `${p.id}|${p.price}|${p.image}|${p.name}`).join('#')).toString('base64').replace(/[^a-zA-Z0-9]/g, '').slice(0, 24);
@@ -69,29 +70,15 @@ async function _products(tenant, lead, categoryId) {
     await ws.sendImage(lead.phone, menuUrl, `${cat?.emoji || ''} ${cat?.name || 'Produtos'}`, tenant);
   }
 
-  // Janela de seleção: toque no produto
-  const rows = await Promise.all(products.slice(0, 10).map(async (p, i) => ({
-    id: `PROD_${p.id}`,
-    title: `${i + 1}. ${p.name}`,
-    description: p.list_description
-      ? p.list_description
-      : `${await precoExibicao(tenant.id, p)} — ${p.short_description || ''}`,
-  })));
-  await ws.sendList(
-    lead.phone,
-    `${cat?.emoji || ''} *${cat?.name || 'Produtos'}* — toque no produto:`,
-    rows,
-    cat?.name || 'Produtos',
-    'Toque em um dos produtos abaixo',
-    tenant
-  );
-
-  // Mais de 10 produtos: envia a numeração completa (o cliente pode digitar o número)
-  if (products.length > 10) {
-    const restante = products.slice(10).map((p, i) => `${i + 11}. ${p.name}`).join('\n');
-    await ws.sendText(lead.phone, `Também temos:\n${restante}\n\nDigite o número do produto para escolher.`, tenant);
+  // Um card por produto (foto + botões "Adicionar ao carrinho" / "Detalhes")
+  for (const p of products) {
+    await ws.sendProductCard(lead.phone, p, productImageUrl(p), null, tenant);
   }
 
+  await ws.sendButtons(lead.phone, `Fim de *${cat?.name || 'Produtos'}* — escolha outro item ou volte.`, [
+    { id: 'MENU_SHOP', title: String(await catalog.getButton(tenant.id, 'back')).slice(0, 20) },
+    { id: 'CART_SHOW', title: String(await catalog.getButton(tenant.id, 'cart_show')).slice(0, 20) },
+  ], tenant);
   await repo.setFlowState(lead.id, ST.PRODUCTS);
 }
 
@@ -409,36 +396,71 @@ async function _checkout(tenant, lead, step, answer) {
     const store = await catalog.getStoreConfig(tenant.id);
     const survey = await repo.getSurvey(lead.id);
     const frete = freteDoPedido(items, store, survey?.checkoutBairro);
-    const bairro = survey?.checkoutBairro?.bairro || null;
     const total = subtotal + frete;
 
     const order = await repo.createOrder(tenant.id, lead.id, items, subtotal, 0, frete, total);
     await repo.clearCart(lead.id);
-    await repo.setFlowState(lead.id, ST.CHECKOUT_PAYMENT);
 
-    // Notifica o contato do tenant
-    const answers = survey?.answers || {};
-    await repo.setSurvey(lead.id, null);
-    const surveyLines = Object.entries(answers).map(([k, v]) => `• ${k}: ${v}`).join('\n');
-    const itensTxt = items.map(it => `${it.quantity}x ${it.product_name}${repo.formatAddons(it.addons) ? ` (${repo.formatAddons(it.addons)})` : ''}`).join(', ');
-    const { notifyTenant } = require('./notify');
-    await notifyTenant(
-      tenant,
-      'NOVO PEDIDO',
-      `Pedido: #${order.external_id}\nCliente: ${lead.full_name || '—'}\nItens: ${itensTxt}\n${bairro ? `Bairro: ${bairro}\n` : ''}Entrega: R$ ${frete.toFixed(2)}\nTotal: R$ ${total.toFixed(2)}\nStatus: aguardando pagamento${surveyLines ? '\nRespostas:\n' + surveyLines : ''}`,
-      lead.phone
-    );
-
-    return ws.sendButtons(lead.phone, await catalog.msg(tenant.id, 'order_created_payment', {
-      pedido: order.external_id, total: total.toFixed(2),
-    }), [
-      { id: 'PAY_PIX', title: await catalog.getButton(tenant.id, 'pay_pix') },
-      { id: 'PAY_CREDIT', title: await catalog.getButton(tenant.id, 'pay_credit') },
-      { id: 'PAY_DEBIT', title: await catalog.getButton(tenant.id, 'pay_debit') },
-    ], tenant);
+    // Último passo antes do pagamento: observação/alteração
+    await repo.setSurvey(lead.id, { orderId: order.id, answers: survey?.answers || {}, checkoutBairro: survey?.checkoutBairro || null });
+    await repo.setFlowState(lead.id, ST.CHECKOUT_OBS);
+    let q = await catalog.msg(tenant.id, 'ask_observations');
+    if (!q) q = 'Alguma observação ou alteração no pedido? (ex: sem cebola, ponto da carne) — responda *nenhuma* para continuar.';
+    return ws.sendText(lead.phone, q, tenant);
   }
 
   return _menu(tenant, lead);
+}
+
+/**
+ * Trata a resposta de observação e vai para o pagamento.
+ */
+async function _handleObservations(tenant, lead, text) {
+  const survey = await repo.getSurvey(lead.id);
+  if (!survey?.orderId) return _menu(tenant, lead);
+  const order = await repo.getOrder(survey.orderId);
+  if (!order) return _menu(tenant, lead);
+
+  const t = String(text || '').trim();
+  const obs = (!t || /^(nenhuma|nao|não|sem obs|sem observacao|sem observação|-|x)$/i.test(t)) ? '' : t.slice(0, 500);
+  if (obs) await repo.updateOrderObservations(order.id, obs);
+
+  const answers = survey.answers || {};
+  const bairro = survey.checkoutBairro?.bairro || null;
+  await repo.setSurvey(lead.id, null);
+
+  await _notifyOrderCreated(tenant, lead, order, answers, bairro, obs);
+  return _sendPaymentButtons(tenant, lead, order);
+}
+
+/**
+ * Notifica o dono do novo pedido (itens, bairro, observações, total).
+ */
+async function _notifyOrderCreated(tenant, lead, order, answers, bairro, obs) {
+  const items = await repo.getOrderItems(order.id);
+  const surveyLines = Object.entries(answers).map(([k, v]) => `• ${k}: ${v}`).join('\n');
+  const itensTxt = items.map(it => `${it.quantity}x ${it.product_name}${repo.formatAddons(it.addons) ? ` (${repo.formatAddons(it.addons)})` : ''}`).join(', ');
+  const { notifyTenant } = require('./notify');
+  await notifyTenant(
+    tenant,
+    'NOVO PEDIDO',
+    `Pedido: #${order.external_id}\nCliente: ${lead.full_name || '—'}\nItens: ${itensTxt}\n${bairro ? `Bairro: ${bairro}\n` : ''}Entrega: R$ ${Number(order.delivery_fee || 0).toFixed(2)}\nTotal: R$ ${Number(order.total || 0).toFixed(2)}\nStatus: aguardando pagamento${obs ? `\n📝 Observações: ${obs}` : ''}${surveyLines ? '\nRespostas:\n' + surveyLines : ''}`,
+    lead.phone
+  );
+}
+
+/**
+ * Botões de pagamento do pedido recém-criado.
+ */
+async function _sendPaymentButtons(tenant, lead, order) {
+  await repo.setFlowState(lead.id, ST.CHECKOUT_PAYMENT);
+  return ws.sendButtons(lead.phone, await catalog.msg(tenant.id, 'order_created_payment', {
+    pedido: order.external_id, total: Number(order.total || 0).toFixed(2),
+  }), [
+    { id: 'PAY_PIX', title: await catalog.getButton(tenant.id, 'pay_pix') },
+    { id: 'PAY_CREDIT', title: await catalog.getButton(tenant.id, 'pay_credit') },
+    { id: 'PAY_DEBIT', title: await catalog.getButton(tenant.id, 'pay_debit') },
+  ], tenant);
 }
 
 /**
@@ -734,6 +756,7 @@ async function processIncoming(tenant, phone, text, payload, messageId, numberId
   const state = lead.flow_state;
   if (state === ST.ADDONS)            return _handleAddonsAnswer(tenant, lead, text);
   if (state === ST.CHECKOUT_BAIRRO)   return _handleBairro(tenant, lead, text, null);
+  if (state === ST.CHECKOUT_OBS)      return _handleObservations(tenant, lead, text);
   if (state === ST.CHECKOUT_NAME)     return _checkout(tenant, lead, 'name', text);
   if (state === ST.SURVEY)            return _handleSurveyAnswer(tenant, lead, text);
   if (state === ST.SOB_CONSULTA_NAME) return _handleSobConsulta(tenant, lead, text);
