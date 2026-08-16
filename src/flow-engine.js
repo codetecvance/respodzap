@@ -70,11 +70,9 @@ async function _products(tenant, lead, categoryId) {
     await ws.sendImage(lead.phone, menuUrl, `${cat?.emoji || ''} ${cat?.name || 'Produtos'}`, tenant);
   }
 
-  // Um card por produto (banner pequeno horizontal: foto à esquerda, textos à direita)
+  // Um card por produto: foto original do produto + nome/descrição/preço no corpo
   for (const p of products) {
-    const hash = Buffer.from(`${p.id}|${p.price}|${p.image}|${p.name}`).toString('base64').replace(/[^a-zA-Z0-9]/g, '').slice(0, 16);
-    const bannerUrl = `${config.webhookUrl || ''}/api/product-image?tenant=${tenant.id}&pid=${encodeURIComponent(p.id)}&v=${hash}`;
-    await ws.sendProductCard(lead.phone, p, bannerUrl, null, tenant);
+    await ws.sendProductCard(lead.phone, p, productImageUrl(p), null, tenant);
   }
 
   await ws.sendButtons(lead.phone, `Fim de *${cat?.name || 'Produtos'}* — escolha outro item ou volte.`, [
