@@ -70,12 +70,17 @@ async function _products(tenant, lead, categoryId) {
     await ws.sendImage(lead.phone, menuUrl, `${cat?.emoji || ''} ${cat?.name || 'Produtos'}`, tenant);
   }
 
-  // Um card por produto: banner compacto (miniatura à esquerda + textos à direita)
-  // + botões "Adicionar ao carrinho" / "Detalhes"
+  // Um card por produto: imagem compacta (miniatura à esquerda + textos à direita)
+  // + mensagem de botões logo abaixo (o WhatsApp corta imagens de cards interativos)
   for (const p of products) {
     const hash = Buffer.from(`${p.id}|${p.price}|${p.image}|${p.name}`).toString('base64').replace(/[^a-zA-Z0-9]/g, '').slice(0, 16);
     const bannerUrl = `${config.webhookUrl || ''}/api/product-image?tenant=${tenant.id}&pid=${encodeURIComponent(p.id)}&v=${hash}`;
-    await ws.sendProductCard(lead.phone, p, bannerUrl, null, tenant);
+    await ws.sendImage(lead.phone, bannerUrl, '', tenant);
+    const preco = p.sob_consulta ? 'Sob consulta' : catalog.formatPrice(p.price);
+    await ws.sendButtons(lead.phone, `*${p.name}* — ${preco}${p.unit ? ` (por ${p.unit})` : ''}`, [
+      { id: `BUY_${p.id}`, title: String(await catalog.getButton(tenant.id, 'add_product')).slice(0, 20) },
+      { id: `DETAIL_${p.id}`, title: String(await catalog.getButton(tenant.id, 'detail')).slice(0, 20) },
+    ], tenant);
   }
 
   await ws.sendButtons(lead.phone, `Fim de *${cat?.name || 'Produtos'}* — escolha outro item ou volte.`, [
