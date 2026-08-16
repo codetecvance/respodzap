@@ -63,12 +63,13 @@ async function uploadMedia(imageUrl, api) {
 }
 
 /**
- * Monta o header de imagem do interactive: usa media_id quando possível.
+ * Monta o header de imagem do interactive: usa media_id quando o upload
+ * funciona; senão, envia SEM imagem (o card nunca é descartado).
  */
 async function imageHeader(imageUrl, api) {
   if (!imageUrl) return undefined;
   const id = await uploadMedia(imageUrl, api);
-  return id ? { type: 'image', image: { id } } : { type: 'image', image: { link: imageUrl } };
+  return id ? { type: 'image', image: { id } } : undefined;
 }
 
 /**
@@ -161,14 +162,16 @@ async function sendProductCard(to, product, imageUrl, buttons = null, tenant = n
 async function sendImage(to, imageUrl, caption = '', tenant = null) {
   try {
     const api = tenantApi(tenant);
-    const payload = {
-      messaging_product: 'whatsapp', recipient_type: 'individual', to, type: 'image',
-      caption: caption || undefined,
-    };
     const id = await uploadMedia(imageUrl, api);
-    if (id) payload.image = { id };
-    else payload.image = { link: imageUrl };
-    const data = await callApi(payload, api);
+    if (!id) {
+      console.warn('[WHATSAPP] sendImage sem mídia (upload falhou) — pulando imagem:', imageUrl);
+      return null;
+    }
+    const data = await callApi({
+      messaging_product: 'whatsapp', recipient_type: 'individual', to, type: 'image',
+      image: { id },
+      caption: caption || undefined,
+    }, api);
     if (tenant?.id) await repo.addMessage(tenant.id, to, 'out', caption || '[Imagem]', 'image');
     return data;
   } catch (err) {
