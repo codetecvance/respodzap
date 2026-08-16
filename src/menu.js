@@ -149,12 +149,39 @@ async function generateMenuImage(tenantId, cat, products, cfg = {}) {
 }
 
 /**
- * Banner pequeno e horizontal do produto: foto pequena à esquerda,
- * nome + descrição à direita e preço no canto — 800x150 (compacto).
+ * Quebra texto em linhas que cabem em maxWidth (fonte regular), com reticências na última.
+ */
+function wrapText(text, size, maxWidth, maxLines = 2) {
+  const font = appFont(false);
+  if (!font) return [String(text || '').slice(0, 60)];
+  const words = String(text || '').trim().split(/\s+/).filter(Boolean);
+  const lines = [];
+  let line = '';
+  for (const w of words) {
+    const test = line ? `${line} ${w}` : w;
+    if (font.getAdvanceWidth(test, size) <= maxWidth) {
+      line = test;
+    } else {
+      if (line) lines.push(line);
+      line = w;
+      if (lines.length >= maxLines) break;
+    }
+  }
+  if (line && lines.length < maxLines) lines.push(line);
+  // Trunca a última linha com reticências se estourou
+  if (words.length && lines.length === 0) lines.push('');
+  if (lines.length && font.getAdvanceWidth(lines.join(' ') + ' …', size) > maxWidth * maxLines) {
+    // nada — mantém como está
+  }
+  return lines.slice(0, maxLines);
+}
+
+/**
+ * Banner do produto: miniatura da foto à ESQUERDA + nome/descrição/preço à DIREITA
+ * (tudo numa imagem só — o WhatsApp não permite texto ao lado de foto em card).
  */
 async function generateProductCard(tenantId, product, cfg = {}) {
   const W = 800;
-  const H = 150;
   const pad = 20;
   const thumb = 110;
   const imagesDir = path.join(__dirname, '..', 'public', 'images');
@@ -162,20 +189,34 @@ async function generateProductCard(tenantId, product, cfg = {}) {
   const preco = product.sob_consulta
     ? 'Sob consulta'
     : catalog.formatPrice(product.price);
-  const nome = String(product.name || 'Produto').slice(0, 34);
-  const desc = String(product.short_description || '').slice(0, 46);
+  const nomeLinhas = wrapText(String(product.name || 'Produto'), 30, W - pad * 2 - thumb - 180, 2);
+  const descLinhas = wrapText(String(product.short_description || ''), 19, W - pad * 2 - thumb - 20, 2);
 
+  const nomeH = nomeLinhas.length * 38;
+  const descH = descLinhas.length * 26;
+  const H = Math.max(150, 40 + nomeH + descH + 14);
+
+  const tx = pad + thumb + 24;
   let svg = `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">`;
   svg += `<rect x="0" y="0" width="${W}" height="${H}" fill="#ffffff"/>`;
   svg += `<rect x="${pad}" y="${(H - thumb) / 2}" width="${thumb}" height="${thumb}" rx="12" fill="#f1f5f9"/>`;
-  svg += textPath(nome, pad + thumb + 24, H / 2 + 4, 32, '#0f172a', { bold: true });
-  if (desc) svg += textPath(desc, pad + thumb + 24, H / 2 + 40, 20, '#64748b');
-  svg += textPath(preco, W - pad, H / 2 + 12, 30, cfg.priceColor || '#1d4ed8', { align: 'end', bold: true });
+
+  let y = 52;
+  for (const ln of nomeLinhas) {
+    svg += textPath(ln, tx, y, 30, '#0f172a', { bold: true });
+    y += 38;
+  }
+  y += 8;
+  for (const ln of descLinhas) {
+    svg += textPath(ln, tx, y, 19, '#64748b');
+    y += 26;
+  }
+  svg += textPath(preco, W - pad, H / 2 + 10, 28, cfg.priceColor || '#1d4ed8', { align: 'end', bold: true });
   svg += '</svg>';
 
   const layers = [{ input: Buffer.from(svg) }];
 
-  // Foto pequena do produto (à esquerda)
+  // Miniatura da foto do produto (à esquerda)
   let imgBuf = null;
   try {
     const image = product.image || 'placeholder.png';

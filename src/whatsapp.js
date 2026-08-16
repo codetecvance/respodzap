@@ -124,7 +124,9 @@ async function sendButtons(to, bodyText, buttons, tenant = null) {
  */
 async function sendProductCard(to, product, imageUrl, buttons = null, tenant = null) {
   const priceFormatted = product.sob_consulta ? 'Sob consulta' : `R$ ${Number(product.price).toFixed(2).replace('.', ',')}`;
-  const bodyText = `*${product.name}*\n${product.short_description || ''}\n\n💰 ${priceFormatted}`;
+  const bodyText = product.unit
+    ? `💰 ${priceFormatted} — por ${product.unit}`
+    : `💰 ${priceFormatted}`;
   let actionButtons = buttons;
   if (!actionButtons) {
     if (product.sob_consulta) {
