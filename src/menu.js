@@ -177,46 +177,44 @@ function wrapText(text, size, maxWidth, maxLines = 2) {
 }
 
 /**
- * Banner do produto: miniatura da foto à ESQUERDA + nome/descrição/preço à DIREITA
- * (tudo numa imagem só — o WhatsApp não permite texto ao lado de foto em card).
+ * Card do produto em 16:9 (800x450) — proporção que o WhatsApp NÃO corta.
+ * Miniatura da foto à ESQUERDA + nome/descrição/preço à DIREITA.
  */
 async function generateProductCard(tenantId, product, cfg = {}) {
   const W = 800;
-  const pad = 20;
-  const thumb = 110;
+  const H = 450;
+  const pad = 30;
+  const thumb = 360;
   const imagesDir = path.join(__dirname, '..', 'public', 'images');
 
   const preco = product.sob_consulta
     ? 'Sob consulta'
     : catalog.formatPrice(product.price);
-  const nomeLinhas = wrapText(String(product.name || 'Produto'), 30, W - pad * 2 - thumb - 180, 2);
-  const descLinhas = wrapText(String(product.short_description || ''), 19, W - pad * 2 - thumb - 20, 2);
+  const tx = pad + thumb + 34;
+  const textW = W - tx - pad;
+  const nomeLinhas = wrapText(String(product.name || 'Produto'), 44, textW, 2);
+  const descLinhas = wrapText(String(product.short_description || ''), 26, textW, 3);
 
-  const nomeH = nomeLinhas.length * 38;
-  const descH = descLinhas.length * 26;
-  const H = Math.max(150, 40 + nomeH + descH + 14);
-
-  const tx = pad + thumb + 24;
   let svg = `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">`;
   svg += `<rect x="0" y="0" width="${W}" height="${H}" fill="#ffffff"/>`;
-  svg += `<rect x="${pad}" y="${(H - thumb) / 2}" width="${thumb}" height="${thumb}" rx="12" fill="#f1f5f9"/>`;
+  svg += `<rect x="${pad}" y="${pad}" width="${thumb}" height="${thumb}" rx="16" fill="#f1f5f9"/>`;
 
-  let y = 52;
+  let y = 132;
   for (const ln of nomeLinhas) {
-    svg += textPath(ln, tx, y, 30, '#0f172a', { bold: true });
-    y += 38;
+    svg += textPath(ln, tx, y, 44, '#0f172a', { bold: true });
+    y += 56;
   }
-  y += 8;
+  y += 10;
   for (const ln of descLinhas) {
-    svg += textPath(ln, tx, y, 19, '#64748b');
-    y += 26;
+    svg += textPath(ln, tx, y, 26, '#64748b');
+    y += 34;
   }
-  svg += textPath(preco, W - pad, H / 2 + 10, 28, cfg.priceColor || '#1d4ed8', { align: 'end', bold: true });
+  svg += textPath(preco, tx, 396, 40, cfg.priceColor || '#1d4ed8', { bold: true });
   svg += '</svg>';
 
   const layers = [{ input: Buffer.from(svg) }];
 
-  // Miniatura da foto do produto (à esquerda)
+  // Foto do produto (à esquerda, quadrada)
   let imgBuf = null;
   try {
     const image = product.image || 'placeholder.png';
@@ -230,7 +228,7 @@ async function generateProductCard(tenantId, product, cfg = {}) {
   if (!imgBuf) {
     imgBuf = await sharp(path.join(imagesDir, 'placeholder.png')).resize(thumb, thumb, { fit: 'cover' }).png().toBuffer();
   }
-  layers.push({ input: imgBuf, left: pad, top: (H - thumb) / 2 });
+  layers.push({ input: imgBuf, left: pad, top: pad });
 
   return sharp({ create: { width: W, height: H, channels: 4, background: { r: 255, g: 255, b: 255, alpha: 1 } } })
     .composite(layers)
