@@ -42,12 +42,14 @@ async function getCompanyInfo(tenantId) {
 
 async function getCategories(tenantId) {
   const data = await loadTenantCatalog(tenantId);
-  return (data.categories || []).map(c => ({
-    id: c.id,
-    name: c.name,
-    emoji: c.emoji,
-    count: (c.products || []).filter(p => p.available).length,
-  }));
+  return (data.categories || [])
+    .map(c => ({
+      id: c.id,
+      name: c.name,
+      emoji: c.emoji,
+      count: (c.products || []).filter(p => p.available).length,
+    }))
+    .filter(c => c.count > 0);
 }
 
 async function getProductsByCategory(tenantId, categoryId) {
