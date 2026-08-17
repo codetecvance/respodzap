@@ -307,9 +307,17 @@ function layout(title, active, content, tenants = [], activeTenantId = null, cli
   const activeBg = clientMode ? theme.active : '#2563eb';
   const logoGrad = clientMode ? `linear-gradient(135deg,${theme.sidebar[1]},${theme.active})` : 'linear-gradient(135deg,#38bdf8,#2563eb)';
 
-  // Impressão automática de pedidos pagos (todos os ramos)
+  // Impressão automática de pedidos pagos (painel do cliente e admin — todos os ramos)
   // Modos: Bluetooth (térmica ESC/POS via Web Bluetooth) ou impressora do sistema.
-  const printScript = clientMode ? `
+  const impTid = activeTenantId?.id || 0;
+  const printScript = `
+  <script>
+    const IMP_IS_ADMIN = ${clientMode ? 'false' : 'true'};
+    const IMP_TID = ${impTid};
+    function impBase(){ return IMP_IS_ADMIN ? '/admin/api/impressao?tenant=' + IMP_TID : '/painel/api/impressao'; }
+    function impMarcar(){ return IMP_IS_ADMIN ? '/admin/api/impressao/marcar' : '/painel/api/impressao/marcar'; }
+    function impTeste(){ return IMP_IS_ADMIN ? '/admin/api/impressao/teste?tenant=' + IMP_TID : '/painel/api/impressao/teste'; }
+    function impReimprimir(id){ return IMP_IS_ADMIN ? '/admin/api/impressao/reimprimir?id=' + id + '&tenant=' + IMP_TID : '/painel/api/impressao/reimprimir?id=' + id; }
   <script>
     let imprimindo = false;
     let btDevice = null, btChar = null;
@@ -436,13 +444,13 @@ function layout(title, active, content, tenants = [], activeTenantId = null, cli
     async function checarImpressao(){
       if (imprimindo) return;
       try {
-        const r = await fetch('/painel/api/impressao');
+        const r = await fetch(impBase());
         const lista = await r.json();
         for (const t of lista || []) {
           imprimindo = true;
           try {
             await imprimirTicket(t);
-            await fetch('/painel/api/impressao/marcar', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ id: t.id }) });
+            await fetch(impMarcar(), { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ id: t.id }) });
           } catch(e){}
           imprimindo = false;
         }
@@ -454,7 +462,7 @@ function layout(title, active, content, tenants = [], activeTenantId = null, cli
     window.conectarImpressora = conectarImpressora;
     window.testarImpressora = async function(){
       try {
-        const r = await fetch('/painel/api/impressao/teste');
+        const r = await fetch(impTeste());
         const t = await r.json();
         if (btPrefs.modo === 'bluetooth' && btChar) {
           await enviarTicketBluetooth(t.texto || '');
@@ -468,13 +476,13 @@ function layout(title, active, content, tenants = [], activeTenantId = null, cli
     };
     window.reimprimirPedido = async function(id){
       try {
-        const r = await fetch('/painel/api/impressao/reimprimir?id=' + id);
+        const r = await fetch(impReimprimir(id));
         if (!r.ok) { alert('Pedido não encontrado'); return; }
         const t = await r.json();
         await imprimirTicket(t);
       } catch(e){ alert('Erro ao gerar ticket'); }
     };
-  </script>` : '';
+  </script>`;
 
   return `<!DOCTYPE html>
 <html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
@@ -728,6 +736,58 @@ router.post('/painel/api/impressao/marcar', clientPanelAuth, async (req, res) =>
   }
 });
 
+// ======================================================
+//  IMPRESSORA NO ADMIN (tenant via query — para gerenciar/testar)
+// ======================================================
+router.get('/admin/api/impressao', requireAuth, async (req, res) => {
+  const tenant = await repo.getTenant(Number(req.query.tenant));
+  if (!tenant) return res.json([]);
+  try {
+    const toPrint = await repo.getOrdersToPrint(tenant.id, 5);
+    const tickets = [];
+    for (const o of toPrint) {
+      const t = await ticket.buildTicket(tenant.id, o.id);
+      if (t) tickets.push({ id: o.id, external_id: o.external_id, html: t.html, texto: t.texto });
+    }
+    res.json(tickets);
+  } catch (e) {
+    console.error('[IMPRESSAO-admin] fila:', e.message);
+    res.json([]);
+  }
+});
+
+router.post('/admin/api/impressao/marcar', requireAuth, async (req, res) => {
+  try {
+    const id = Number(req.body?.id);
+    if (id) await repo.markOrderPrinted(id);
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('[IMPRESSAO-admin] marcar:', e.message);
+    res.json({ ok: false });
+  }
+});
+
+router.get('/admin/api/impressao/reimprimir', requireAuth, async (req, res) => {
+  const tenant = await repo.getTenant(Number(req.query.tenant));
+  const orderId = Number(req.query.id);
+  if (!tenant || !orderId) return res.status(400).send('parâmetros inválidos');
+  try {
+    const t = await ticket.buildTicket(tenant.id, orderId);
+    if (!t) return res.status(404).send('pedido não encontrado');
+    res.json({ html: t.html, texto: t.texto });
+  } catch (e) {
+    console.error('[IMPRESSAO-admin] reimprimir:', e.message);
+    res.status(500).send('erro ao gerar ticket');
+  }
+});
+
+router.get('/admin/api/impressao/teste', requireAuth, async (req, res) => {
+  const tenant = await repo.getTenant(Number(req.query.tenant));
+  if (!tenant) return res.status(400).send('tenant inválido');
+  const html = ticketTesteHtml(tenant.name);
+  res.json({ html, texto: ticketTesteTexto(tenant.name) });
+});
+
 /**
  * Reimprimir um pedido específico (HTML + texto do ticket).
  */
@@ -748,9 +808,8 @@ router.get('/painel/api/impressao/reimprimir', clientPanelAuth, async (req, res)
 /**
  * Ticket de teste para calibrar a impressora (HTML + texto).
  */
-router.get('/painel/api/impressao/teste', clientPanelAuth, async (req, res) => {
-  const tenant = req.tenantSession;
-  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Teste de impressão</title>
+function ticketTesteHtml(nomeEmpresa) {
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Teste de impressão</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   @page { size: 80mm auto; margin: 0; }
@@ -766,7 +825,7 @@ router.get('/painel/api/impressao/teste', clientPanelAuth, async (req, res) => {
   .pago { text-align: center; font-weight: bold; font-size: 13px; margin: 4px 0; }
   .rodape { text-align: center; margin-top: 8px; font-size: 11px; }
 </style></head><body>
-  <div class="center"><div class="empresa">${ticket.esc(tenant.name)}</div></div>
+  <div class="center"><div class="empresa">${ticket.esc(nomeEmpresa)}</div></div>
   <div class="div"></div>
   <div class="pedido-num">TESTE</div>
   <div class="center">Impressão de teste — ${new Date().toLocaleString('pt-BR')}</div>
@@ -781,8 +840,11 @@ router.get('/painel/api/impressao/teste', clientPanelAuth, async (req, res) => {
   <div class="div"></div>
   <div class="rodape">Se esta impressão saiu com as bordas cortadas, ajuste as margens da impressora (nenhuma) e o papel 80mm.</div>
 </body></html>`;
-  const texto = [
-    '   ' + ticket.ascii((tenant.name || '').toUpperCase()).slice(0, 42),
+}
+
+function ticketTesteTexto(nomeEmpresa) {
+  return [
+    '   ' + ticket.ascii((nomeEmpresa || '').toUpperCase()).slice(0, 42),
     '-'.repeat(42),
     '                TESTE',
     '   Impressao de teste ' + new Date().toLocaleString('pt-BR'),
@@ -801,7 +863,11 @@ router.get('/painel/api/impressao/teste', clientPanelAuth, async (req, res) => {
     'cortadas, verifique o papel 80mm e',
     'as margens da impressora.',
   ].join('\n');
-  res.json({ html, texto });
+}
+
+router.get('/painel/api/impressao/teste', clientPanelAuth, async (req, res) => {
+  const tenant = req.tenantSession;
+  res.json({ html: ticketTesteHtml(tenant.name), texto: ticketTesteTexto(tenant.name) });
 });
 
 // ======================================================
@@ -1881,8 +1947,8 @@ async function pagePedidos(req, res) {
   }))).join('');
 
   res.send(layout('Pedidos', clientMode ? '/painel/pedidos' : '/admin/pedidos', `${tenantSelector(tenant.id, tenants, clientMode)}
-    <div class="filters">${statusFilter}${clientMode ? `<button class="btn amber small" onclick="testarImpressora()">🖨️ Imprimir teste</button>` : ''}</div>
-    ${clientMode ? `<div class="panel"><h2>🖨️ Impressora</h2>
+    <div class="filters">${statusFilter}<button class="btn amber small" onclick="testarImpressora()">🖨️ Imprimir teste</button></div>
+    <div class="panel"><h2>🖨️ Impressora</h2>
       <div class="grid2">
         <div><label>MODO DE IMPRESSÃO</label><select id="impModo" onchange="salvarPrefImp()">
           <option value="sistema">Impressora do sistema (PC / navegador)</option>
@@ -1898,7 +1964,7 @@ async function pagePedidos(req, res) {
         <span id="impStatus" class="muted" style="font-size:13px;margin-left:10px"></span>
         <p style="font-size:12px;color:#64748b;margin-top:8px">Funciona no <b>Chrome Android</b>. Conecte a térmica bluetooth uma vez — os pedidos pagos imprimem automaticamente. No iPhone/iPad use impressora AirPrint ou um Android na loja.</p>
       </div>
-    </div>` : ''}
+    </div>
     <div class="panel"><table><thead><tr><th>Pedido</th><th>Cliente</th><th>Itens</th><th>Total</th><th>Status</th><th>Pagamento</th><th>Ações</th></tr></thead>
     <tbody>${rowsHtml || '<tr><td colspan="7"><div class="empty">Nenhum pedido com esse filtro.</div></td></tr>'}</tbody></table></div>`, tenants, tenant, clientMode));
 }
