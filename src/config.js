@@ -13,6 +13,8 @@ const config = {
   graphVersion: process.env.GRAPH_VERSION || 'v21.0',
   databaseUrl: process.env.DATABASE_URL || '',
   mpAccessToken: process.env.MP_ACCESS_TOKEN || '',
+  mpClientId: process.env.MP_CLIENT_ID || '',
+  mpClientSecret: process.env.MP_CLIENT_SECRET || '',
   adminPassword: process.env.ADMIN_PASSWORD || 'respodzap123',
   smtp: {
     host: process.env.SMTP_HOST || 'smtp.gmail.com',

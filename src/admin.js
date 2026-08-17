@@ -2266,6 +2266,7 @@ async function pageConfig(req, res) {
   const base = clientMode ? '/painel' : '/admin';
   const showAreasEditor = !!tenant.segment_name && tenant.segment_name !== 'vendas';
   const areas = Array.isArray(s.delivery_areas) ? s.delivery_areas : [];
+  const mpUser = tenant.mp_user_id || '';
   const firstCat = (data.categories || []).find(cat => (cat.products || []).some(p => p.available)) || data.categories?.[0];
 
   // Horário de funcionamento (por dia da semana)
@@ -2315,6 +2316,15 @@ async function pageConfig(req, res) {
         <tbody>${hoursRows}</tbody></table>
         <p style="font-size:12px;color:#64748b;margin-top:8px">Dia marcado como <b>Fechado</b> bloqueia pedidos o dia inteiro. Cliente fora do horário recebe aviso e não consegue comprar/finalizar.</p>
       </div>` : ''}
+      <div class="panel"><h2>💳 Pagamentos (Mercado Pago)</h2>
+        ${mpUser ? `
+          <p style="font-size:13px">✅ <b>Conectado</b> — conta: <b>${esc(mpUser)}</b></p>
+          <p style="font-size:12px;color:#64748b;margin:6px 0 10px">Os pagamentos dos seus pedidos (PIX e cartão) entram <b>direto na sua conta</b> do Mercado Pago, com confirmação automática.</p>
+          <a class="btn red small" href="/mercadopago/desconectar?tenant=${tenant.id}">🔌 Desconectar</a>`
+        : `
+          <p style="font-size:12px;color:#64748b;margin-bottom:10px">Conecte sua conta do Mercado Pago para receber os pagamentos dos pedidos (PIX e cartão) <b>direto nela</b>, com confirmação automática. Sem conexão, os pagamentos caem na conta padrão do sistema.</p>
+          <a class="btn green" href="/mercadopago/connect?tenant=${tenant.id}">🔗 Conectar Mercado Pago</a>`}
+      </div>
       <div class="panel"><h2>🖼️ Imagem do menu (lista de produtos)</h2>
         <div class="grid3">
           <div><label>COR DO CABEÇALHO</label><input type="color" id="miHeaderBg" name="store[menu_image][header_bg]" value="${esc(mi.header_bg || '#1e3a8a')}" oninput="previewMenu()"></div>

@@ -170,6 +170,10 @@ async function initDb() {
   await query(`ALTER TABLE order_items ADD COLUMN IF NOT EXISTS addons JSONB`);
   await query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS printed_at TIMESTAMPTZ`);
   await query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS observations TEXT`);
+  await query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS mp_access_token TEXT`);
+  await query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS mp_refresh_token TEXT`);
+  await query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS mp_user_id TEXT`);
+  await query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS mp_token_expires_at TIMESTAMPTZ`);
 }
 
 module.exports = { pool, query, initDb };

@@ -198,7 +198,8 @@ function normalizePhoneBr(phone) {
 }
 
 async function updateTenant(id, fields) {
-  const allowed = ['name', 'contact_name', 'contact_phone', 'phone_number_id', 'access_token', 'waba_id', 'notify_phone', 'notify_email', 'status', 'panel_password', 'segment_id'];
+  const allowed = ['name', 'contact_name', 'contact_phone', 'phone_number_id', 'access_token', 'waba_id', 'notify_phone', 'notify_email', 'status', 'panel_password', 'segment_id',
+    'mp_access_token', 'mp_refresh_token', 'mp_user_id', 'mp_token_expires_at'];
   const entries = Object.entries(fields).filter(([k]) => allowed.includes(k));
   if (!entries.length) return getTenant(id);
   const sets = entries.map(([k], i) => `${k} = $${i + 1}`).join(', ');

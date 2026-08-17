@@ -83,12 +83,25 @@ router.post('/mercadopago/webhook', async (req, res) => {
     const paymentId = data?.id;
     if (!paymentId) return;
 
-    const { getPaymentStatus, getPaymentFull } = require('./payment');
-    const status = await getPaymentStatus(paymentId);
+    const { getPaymentStatus, getPaymentFull, getTenantMpToken } = require('./payment');
+
+    // Descobre o pedido/pagamento registrado para usar o token da conta correta
+    let paymentRecord = await repo.getPaymentByMpId(paymentId);
+    let order = null;
+    if (paymentRecord) order = await repo.getOrder(paymentRecord.order_id);
+
+    // Renovação de licença usa a conta GLOBAL do SaaS (token padrão)
+    let mpToken = null;
+    if (order) {
+      const tenant = await repo.getTenant(order.tenant_id);
+      if (tenant) mpToken = await getTenantMpToken(tenant);
+    }
+
+    const status = await getPaymentStatus(paymentId, mpToken);
     if (!status) return;
 
     // --- RENOVAÇÃO DE LICENÇA (external_reference = sub-{id}) ---
-    const full = await getPaymentFull(paymentId);
+    const full = await getPaymentFull(paymentId, null);
     const extRef = full?.external_reference || '';
     if (extRef.startsWith('sub-')) {
       const subId = Number(extRef.slice(4));
@@ -109,15 +122,16 @@ router.post('/mercadopago/webhook', async (req, res) => {
     }
 
     // --- PEDIDO NORMAL ---
-    let paymentRecord = await repo.getPaymentByMpId(paymentId);
-    let order = null;
-    if (paymentRecord) {
-      order = await repo.getOrder(paymentRecord.order_id);
-    } else if (extRef) {
+    if (!order && extRef) {
       const allTenants = await repo.getTenants();
       for (const t of allTenants) {
         order = await repo.getOrderByExternal(t.id, extRef);
         if (order) break;
+      }
+      // Token da conta do dono do pedido (se encontrado agora)
+      if (order) {
+        const tenant = await repo.getTenant(order.tenant_id);
+        if (tenant) mpToken = await getTenantMpToken(tenant);
       }
     }
     if (!order) {
@@ -184,5 +198,65 @@ function verificarAssinatura(rawBody, signature) {
   if (a.length !== b.length) return false;
   return crypto.timingSafeEqual(a, b);
 }
+
+// ===================================================
+//  CONEXÃO DO MERCADO PAGO (OAuth por tenant)
+// ===================================================
+const MP_AUTH_URL = 'https://auth.mercadopago.com.br';
+
+/**
+ * Inicia a conexão: redireciona o cliente para autorizar no MP.
+ */
+router.get('/mercadopago/connect', async (req, res) => {
+  const tenantId = Number(req.query.tenant);
+  if (!tenantId || !config.mpClientId || !config.mpClientSecret) {
+    return res.redirect('/painel/config?msg=' + encodeURIComponent('Credenciais do Mercado Pago não configuradas no sistema.') + '&type=err');
+  }
+  const redirectUri = `${config.webhookUrl || 'https://respodzap.vercel.app'}/mercadopago/oauth`;
+  const url = `${MP_AUTH_URL}/authorization?client_id=${config.mpClientId}&response_type=code&platform_id=mp&redirect_uri=${encodeURIComponent(redirectUri)}&state=${tenantId}`;
+  res.redirect(url);
+});
+
+/**
+ * Callback do MP: troca o code por token e salva no tenant (state = tenantId).
+ */
+router.get('/mercadopago/oauth', async (req, res) => {
+  const code = String(req.query.code || '');
+  const state = Number(req.query.state);
+  const redirectUri = `${config.webhookUrl || 'https://respodzap.vercel.app'}/mercadopago/oauth`;
+  if (!code || !state || !config.mpClientId || !config.mpClientSecret) {
+    return res.status(400).send('Falha na conexão com o Mercado Pago (parâmetros inválidos).');
+  }
+  try {
+    const axios = require('axios');
+    const { data } = await axios.post('https://api.mercadopago.com/oauth/token', {
+      grant_type: 'authorization_code',
+      client_id: config.mpClientId,
+      client_secret: config.mpClientSecret,
+      code,
+      redirect_uri: redirectUri,
+    });
+    await repo.updateTenant(state, {
+      mp_access_token: data.access_token,
+      mp_refresh_token: data.refresh_token || null,
+      mp_user_id: String(data.user_id || ''),
+      mp_token_expires_at: new Date(Date.now() + (Number(data.expires_in) || 15552000) * 1000),
+    });
+    return res.redirect('/painel/config?msg=' + encodeURIComponent('Conta do Mercado Pago conectada com sucesso!'));
+  } catch (e) {
+    console.error('[MP-OAUTH]', e.response?.data || e.message);
+    return res.status(500).send('Falha ao conectar com o Mercado Pago: ' + (e.response?.data?.message || e.message));
+  }
+});
+
+/**
+ * Desconecta a conta do MP do tenant.
+ */
+router.get('/mercadopago/desconectar', async (req, res) => {
+  const tenantId = Number(req.query.tenant);
+  if (!tenantId) return res.redirect('/painel/config');
+  await repo.updateTenant(tenantId, { mp_access_token: null, mp_refresh_token: null, mp_user_id: null, mp_token_expires_at: null });
+  res.redirect('/painel/config?msg=' + encodeURIComponent('Mercado Pago desconectado.'));
+});
 
 module.exports = router;

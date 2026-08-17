@@ -15,3 +15,6 @@ public/images/tenant-*/
 *.jfif
 ig-respodzap-*.jpg
 narracao-*.txt
+
+# Credenciais copiadas (Mercado Pago)
+paginamercadopago*.txt

@@ -741,11 +741,37 @@ async function showPlanDetail(tenant, lead, productId, planId) {
 
   await repo.setFlowState(lead.id, ST.PRODUCT_DETAIL);
 
-  if (isRedirect) {
-    await ws.sendText(lead.phone, `${texto}\n\nPara falar com a equipe, toque no link:\n\n🔗 ${link}`, tenant);
-  } else {
-    await ws.sendCtaButton(lead.phone, `${texto}\n\nPagamento seguro via Mercado Pago:`, 'Assinar Agora', paymentLink, tenant);
+  if (link) {
+    if (isRedirect) {
+      await ws.sendText(lead.phone, `${texto}\n\nPara falar com a equipe, toque no link:\n\n🔗 ${link}`, tenant);
+    } else {
+      await ws.sendCtaButton(lead.phone, `${texto}\n\nPagamento seguro via Mercado Pago:`, 'Assinar Agora', paymentLink, tenant);
+    }
+    return;
   }
+
+  // Sem link: plano sob medida → contato da equipe (wa.me)
+  if (!plan.price) {
+    const wa = (tenant.contact_phone || '').replace(/\D/g, '');
+    if (wa) {
+      return ws.sendCtaButton(lead.phone, `${texto}\n\nPara assinar, fale com a equipe:`, 'Falar com a equipe',
+        `https://wa.me/${wa}?text=${encodeURIComponent(`Olá! Quero assinar o plano ${plan.name}`)}`, tenant);
+    }
+    await ws.sendText(lead.phone, `${texto}\n\nPagamento sob medida — fale com a equipe para assinar.`, tenant);
+    return;
+  }
+
+  // Sem link com preço: cria o pedido e gera PIX/cartão do próprio sistema
+  const order = await repo.createOrder(tenant.id, lead.id, [{
+    product_id: product.id,
+    product_name: `${product.name} — ${plan.name}`,
+    unit_price: plan.price,
+    quantity: 1,
+    image: product.image || 'placeholder.png',
+    addons: null,
+  }], plan.price, 0, 0, plan.price);
+  await _notifyOrderCreated(tenant, lead, order, {}, null, '');
+  return _sendPaymentButtons(tenant, lead, order);
 }
 
 // =============================================================
