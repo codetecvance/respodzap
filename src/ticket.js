@@ -17,7 +17,65 @@ const METODO_LABEL = {
 };
 
 /**
- * Monta o ticket de impressão de um pedido (dados + HTML 80mm).
+ * Converte acentos para ASCII (compatível com qualquer térmica ESC/POS).
+ */
+function ascii(v) {
+  const M = { á: 'a', à: 'a', â: 'a', ã: 'a', ä: 'a', é: 'e', è: 'e', ê: 'e', í: 'i', î: 'i', ó: 'o', ô: 'o', õ: 'o', ö: 'o', ú: 'u', û: 'u', ü: 'u', ç: 'c', Ã: 'A', Á: 'A', À: 'A', Â: 'A', Õ: 'O', Ó: 'O', Ô: 'O', É: 'E', È: 'E', Ê: 'E', Í: 'I', Ú: 'U', Û: 'U', Ü: 'U', Ç: 'C', '—': '-', '–': '-', '…': '...', '✅': '', '💠': '', '💳': '', '🚚': '', '📦': '', '❌': '', '⏳': '' };
+  return String(v ?? '').replace(/[áàâãäéèêíîóôõöúûüçÃÁÀÂÕÓÔÉÈÊÍÚÛÜÇ—–…✅💠💳🚚📦❌⏳]/g, ch => M[ch] || '');
+}
+
+/**
+ * Monta o ticket em TEXTO (linhas) para impressão ESC/POS.
+ * largura: '80' (42 chars) ou '58' (32 chars).
+ */
+function buildTicketTexto({ tenant, order, items, pay, lead, company, dataHora }, largura = '80') {
+  const W = largura === '58' ? 32 : 42;
+  const L = [];
+  const center = s => {
+    const t = ascii(s);
+    const pad = Math.max(0, Math.floor((W - t.length) / 2));
+    return ' '.repeat(pad) + t.slice(0, W);
+  };
+  const linha = s => ascii(s).slice(0, W);
+  const METODO_TXT = { pix: 'PIX', credit_card: 'CARTAO CREDITO', debit_card: 'CARTAO DEBITO' };
+
+  L.push(center((company.name || tenant.name).toUpperCase()));
+  if (company.business_hours) L.push(center(company.business_hours));
+  L.push('-'.repeat(W));
+  L.push(center(order.external_id));
+  L.push(center(dataHora));
+  L.push('-'.repeat(W));
+
+  for (const it of items) {
+    const extra = repo.formatAddons(it.addons);
+    L.push(linha(`${it.product_name}${extra ? ` (${extra})` : ''}`));
+    const esq = `${it.quantity}x`;
+    const dir = money(it.unit_price);
+    L.push(linha(esq + ' '.repeat(Math.max(1, W - esq.length - dir.length)) + dir));
+  }
+
+  L.push('-'.repeat(W));
+  L.push(linha('Subtotal' + ' '.repeat(Math.max(1, W - 8 - money(order.subtotal).length)) + money(order.subtotal)));
+  if (Number(order.delivery_fee) > 0) {
+    L.push(linha('Entrega' + ' '.repeat(Math.max(1, W - 7 - money(order.delivery_fee).length)) + money(order.delivery_fee)));
+  }
+  if (Number(order.discount) > 0) {
+    L.push(linha('Desconto' + ' '.repeat(Math.max(1, W - 8 - money(order.discount).length)) + '-' + money(order.discount)));
+  }
+  L.push(center(`TOTAL ${money(order.total)}`));
+  L.push(center(`* ${METODO_TXT[pay?.payment_method] || '-'} - PAGO *`));
+  L.push('-'.repeat(W));
+  L.push(linha(`CLIENTE: ${lead?.full_name || '-'}`));
+  L.push(linha(`ZAP: ${lead?.phone || ''}`));
+  if (lead?.delivery_address) L.push(linha(`ENTREGA: ${lead.delivery_address}`));
+  if (order.observations) L.push(linha(`OBS: ${order.observations}`));
+  if (company.website || company.instagram) L.push(center(company.website || company.instagram));
+
+  return L.join('\n');
+}
+
+/**
+ * Monta o ticket de impressão de um pedido (dados + HTML 80mm + texto).
  */
 async function buildTicket(tenantId, orderId) {
   const tenant = await repo.getTenant(tenantId);
@@ -87,7 +145,8 @@ async function buildTicket(tenantId, orderId) {
   <div class="rodape">${esc(company.website || company.instagram || '')}</div>
 </body></html>`;
 
-  return { order, tenant, items, pay, lead, company, dataHora, html };
+  const base = { order, tenant, items, pay, lead, company, dataHora };
+  return { ...base, html, texto: buildTicketTexto(base) };
 }
 
-module.exports = { buildTicket, esc, money };
+module.exports = { buildTicket, buildTicketTexto, esc, money, ascii };

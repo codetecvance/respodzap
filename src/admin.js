@@ -308,9 +308,112 @@ function layout(title, active, content, tenants = [], activeTenantId = null, cli
   const logoGrad = clientMode ? `linear-gradient(135deg,${theme.sidebar[1]},${theme.active})` : 'linear-gradient(135deg,#38bdf8,#2563eb)';
 
   // Impressão automática de pedidos pagos (ramos de operação)
+  // Modos: Bluetooth (térmica ESC/POS via Web Bluetooth) ou impressora do sistema.
   const printScript = (clientMode && activeTenantId?.segment_name && activeTenantId.segment_name !== 'vendas') ? `
   <script>
     let imprimindo = false;
+    let btDevice = null, btChar = null;
+    const btPrefs = { modo: localStorage.getItem('rpz_imp_modo') || 'sistema', largura: localStorage.getItem('rpz_imp_largura') || '80' };
+
+    // ---------- ESC/POS ----------
+    const SIMPLES_ACENTO = { á:'a',à:'a',â:'a',ã:'a',ä:'a',é:'e',è:'e',ê:'e',í:'i',î:'i',ó:'o',ô:'o',õ:'o',ö:'o',ú:'u',û:'u',ü:'u',ç:'c',Ã:'A',Á:'A',À:'A',Â:'A',Õ:'O',Ó:'O',Ô:'O',É:'E',È:'E',Ê:'E',Í:'I',Ú:'U',Û:'U',Ü:'U',Ç:'C','—':'-','–':'-','…':'...','✅':'','💠':'','💳':'','🚚':'','📦':'','❌':'','⏳':'' };
+    function escposTxt(s){ return String(s ?? '').replace(/[áàâãäéèêíîóôõöúûüçÃÁÀÂÕÓÔÉÈÊÍÚÛÜÇ—–…✅💠💳🚚📦❌⏳]/g, ch => SIMPLES_ACENTO[ch] || ''); }
+    function escposBuffer(texto, largura){
+      const W = largura === '58' ? 32 : 42;
+      const out = [];
+      const push = (...b) => out.push(...b);
+      push(0x1b, 0x40);                       // ESC @ reset
+      push(0x1b, 0x74, 0x11);                 // codepage Windows-1252
+      for (const linhaRaw of String(texto || '').split('\\n')) {
+        let l = escposTxt(linhaRaw);
+        const w = Math.min(W, l.length);
+        push(0x1b, 0x21, 0x00);               // fonte normal
+        const bytes = [];
+        for (let i = 0; i < w; i++) {
+          const c = l.charCodeAt(i);
+          bytes.push(c <= 0xff ? c : 0x3f);
+        }
+        push(...bytes);
+        push(0x0a);
+      }
+      push(0x1d, 0x56, 0x42);                 // GS V B corte
+      return new Uint8Array(out);
+    }
+
+    // ---------- Bluetooth (Web Bluetooth — Chrome/Android) ----------
+    function btStatus(txt){ const el = document.getElementById('impStatus'); if (el) el.textContent = txt; }
+    async function acharCaracteristicaEscrita(device){
+      const srv = await device.gatt.connect();
+      const services = await srv.getPrimaryServices();
+      for (const service of services) {
+        try {
+          const chars = await service.getCharacteristics();
+          for (const ch of chars) {
+            if (ch.properties.write || ch.properties.writeWithoutResponse) return ch;
+          }
+        } catch(e){}
+      }
+      return null;
+    }
+    async function conectarImpressora(){
+      if (!navigator.bluetooth) { alert('Web Bluetooth não suportado neste navegador. Use o Chrome no Android.'); return; }
+      try {
+        btStatus('Aguardando seleção da impressora…');
+        const device = await navigator.bluetooth.requestDevice({ acceptAllDevices: true });
+        const ch = await acharCaracteristicaEscrita(device);
+        if (!ch) throw new Error('impressora sem porta de escrita');
+        btDevice = device; btChar = ch;
+        localStorage.setItem('rpz_bt_device', device.id);
+        btStatus('Conectada: ' + (device.name || device.id));
+        device.addEventListener('gattserverdisconnected', function(){ btDevice = null; btChar = null; btStatus('Desconectada — toque em Conectar.'); });
+      } catch(e){
+        btStatus('');
+        alert('Não foi possível conectar: ' + e.message);
+      }
+    }
+    async function reconectarImpressora(){
+      const saved = localStorage.getItem('rpz_bt_device');
+      if (!saved || !navigator.bluetooth || !navigator.bluetooth.getDevices) return;
+      try {
+        const devices = await navigator.bluetooth.getDevices();
+        const dev = devices.find(d => d.id === saved);
+        if (!dev) return;
+        btDevice = dev;
+        const ch = await acharCaracteristicaEscrita(dev);
+        if (ch) { btChar = ch; btStatus('Conectada: ' + (dev.name || dev.id)); }
+      } catch(e){}
+    }
+    async function enviarTicketBluetooth(texto){
+      if (!btChar) { await reconectarImpressora(); }
+      if (!btChar) throw new Error('impressora desconectada');
+      const buf = escposBuffer(texto, btPrefs.largura);
+      if (btChar.writeValueWithoutResponse) await btChar.writeValueWithoutResponse(buf);
+      else await btChar.writeValue(buf);
+    }
+
+    // ---------- Preferências ----------
+    function aplicarPrefsImp(){
+      const modoEl = document.getElementById('impModo');
+      const larEl = document.getElementById('impLargura');
+      if (modoEl) modoEl.value = btPrefs.modo;
+      if (larEl) larEl.value = btPrefs.largura;
+      const box = document.getElementById('impBtBox');
+      if (box) box.style.display = btPrefs.modo === 'bluetooth' ? 'block' : 'none';
+      if (btPrefs.modo === 'bluetooth' && !btChar) reconectarImpressora();
+    }
+    window.salvarPrefImp = function(){
+      const modoEl = document.getElementById('impModo');
+      const larEl = document.getElementById('impLargura');
+      btPrefs.modo = modoEl ? modoEl.value : 'sistema';
+      btPrefs.largura = larEl ? larEl.value : '80';
+      localStorage.setItem('rpz_imp_modo', btPrefs.modo);
+      localStorage.setItem('rpz_imp_largura', btPrefs.largura);
+      const box = document.getElementById('impBtBox');
+      if (box) box.style.display = btPrefs.modo === 'bluetooth' ? 'block' : 'none';
+      if (btPrefs.modo === 'bluetooth' && !btChar) reconectarImpressora();
+    };
+
+    // ---------- Impressão ----------
     function printTicket(html){
       return new Promise(function(resolve){
         const f = document.createElement('iframe');
@@ -323,6 +426,13 @@ function layout(title, active, content, tenants = [], activeTenantId = null, cli
         f.srcdoc = html;
       });
     }
+    async function imprimirTicket(t){
+      if (btPrefs.modo === 'bluetooth') {
+        await enviarTicketBluetooth(t.texto || '');
+      } else {
+        await printTicket(t.html || '');
+      }
+    }
     async function checarImpressao(){
       if (imprimindo) return;
       try {
@@ -331,7 +441,7 @@ function layout(title, active, content, tenants = [], activeTenantId = null, cli
         for (const t of lista || []) {
           imprimindo = true;
           try {
-            await printTicket(t.html);
+            await imprimirTicket(t);
             await fetch('/painel/api/impressao/marcar', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ id: t.id }) });
           } catch(e){}
           imprimindo = false;
@@ -340,19 +450,28 @@ function layout(title, active, content, tenants = [], activeTenantId = null, cli
     }
     setInterval(checarImpressao, 4000);
     checarImpressao();
+    aplicarPrefsImp();
+    window.conectarImpressora = conectarImpressora;
     window.testarImpressora = async function(){
       try {
         const r = await fetch('/painel/api/impressao/teste');
-        const html = await r.text();
-        await printTicket(html);
+        const t = await r.json();
+        if (btPrefs.modo === 'bluetooth' && btChar) {
+          await enviarTicketBluetooth(t.texto || '');
+        } else if (btPrefs.modo === 'bluetooth') {
+          await conectarImpressora();
+          if (btChar) await enviarTicketBluetooth(t.texto || '');
+        } else {
+          await printTicket(t.html || '');
+        }
       } catch(e){ alert('Erro ao gerar teste de impressão'); }
     };
     window.reimprimirPedido = async function(id){
       try {
         const r = await fetch('/painel/api/impressao/reimprimir?id=' + id);
         if (!r.ok) { alert('Pedido não encontrado'); return; }
-        const html = await r.text();
-        await printTicket(html);
+        const t = await r.json();
+        await imprimirTicket(t);
       } catch(e){ alert('Erro ao gerar ticket'); }
     };
   </script>` : '';
@@ -590,7 +709,7 @@ router.get('/painel/api/impressao', clientPanelAuth, async (req, res) => {
     const tickets = [];
     for (const o of toPrint) {
       const t = await ticket.buildTicket(tenant.id, o.id);
-      if (t) tickets.push({ id: o.id, external_id: o.external_id, html: t.html });
+      if (t) tickets.push({ id: o.id, external_id: o.external_id, html: t.html, texto: t.texto });
     }
     res.json(tickets);
   } catch (e) {
@@ -611,7 +730,7 @@ router.post('/painel/api/impressao/marcar', clientPanelAuth, async (req, res) =>
 });
 
 /**
- * Reimprimir um pedido específico (HTML do ticket).
+ * Reimprimir um pedido específico (HTML + texto do ticket).
  */
 router.get('/painel/api/impressao/reimprimir', clientPanelAuth, async (req, res) => {
   const tenant = req.tenantSession;
@@ -620,7 +739,7 @@ router.get('/painel/api/impressao/reimprimir', clientPanelAuth, async (req, res)
   try {
     const t = await ticket.buildTicket(tenant.id, orderId);
     if (!t) return res.status(404).send('pedido não encontrado');
-    res.send(t.html);
+    res.json({ html: t.html, texto: t.texto });
   } catch (e) {
     console.error('[IMPRESSAO] reimprimir:', e.message);
     res.status(500).send('erro ao gerar ticket');
@@ -628,10 +747,11 @@ router.get('/painel/api/impressao/reimprimir', clientPanelAuth, async (req, res)
 });
 
 /**
- * Ticket de teste para calibrar a impressora.
- */router.get('/painel/api/impressao/teste', clientPanelAuth, async (req, res) => {
+ * Ticket de teste para calibrar a impressora (HTML + texto).
+ */
+router.get('/painel/api/impressao/teste', clientPanelAuth, async (req, res) => {
   const tenant = req.tenantSession;
-  res.send(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Teste de impressão</title>
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Teste de impressão</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   @page { size: 80mm auto; margin: 0; }
@@ -661,7 +781,28 @@ router.get('/painel/api/impressao/reimprimir', clientPanelAuth, async (req, res)
   <div class="pago">✅ PIX — PAGO</div>
   <div class="div"></div>
   <div class="rodape">Se esta impressão saiu com as bordas cortadas, ajuste as margens da impressora (nenhuma) e o papel 80mm.</div>
-</body></html>`);
+</body></html>`;
+  const texto = [
+    '   ' + ticket.ascii((tenant.name || '').toUpperCase()).slice(0, 42),
+    '-'.repeat(42),
+    '                TESTE',
+    '   Impressao de teste ' + new Date().toLocaleString('pt-BR'),
+    '-'.repeat(42),
+    'Produto de exemplo (Bacon, Cheddar)',
+    '1x' + ' '.repeat(30) + 'R$ 24,50',
+    'Refrigerante',
+    '2x' + ' '.repeat(31) + 'R$ 12,00',
+    '-'.repeat(42),
+    'Subtotal' + ' '.repeat(23) + 'R$ 36,50',
+    'Entrega' + ' '.repeat(24) + 'R$ 7,00',
+    '          TOTAL R$ 43,50',
+    '      * PIX - PAGO *',
+    '-'.repeat(42),
+    'Se esta impressao saiu com as bordas',
+    'cortadas, verifique o papel 80mm e',
+    'as margens da impressora.',
+  ].join('\n');
+  res.json({ html, texto });
 });
 
 // ======================================================
@@ -1742,6 +1883,23 @@ async function pagePedidos(req, res) {
 
   res.send(layout('Pedidos', clientMode ? '/painel/pedidos' : '/admin/pedidos', `${tenantSelector(tenant.id, tenants, clientMode)}
     <div class="filters">${statusFilter}${clientMode && ehRamoOperacao(tenant) ? `<button class="btn amber small" onclick="testarImpressora()">🖨️ Imprimir teste</button>` : ''}</div>
+    ${clientMode && ehRamoOperacao(tenant) ? `<div class="panel"><h2>🖨️ Impressora</h2>
+      <div class="grid2">
+        <div><label>MODO DE IMPRESSÃO</label><select id="impModo" onchange="salvarPrefImp()">
+          <option value="sistema">Impressora do sistema (PC / navegador)</option>
+          <option value="bluetooth">Bluetooth (térmica ESC/POS)</option>
+        </select></div>
+        <div><label>LARGURA DO PAPEL</label><select id="impLargura" onchange="salvarPrefImp()">
+          <option value="80">80mm</option>
+          <option value="58">58mm</option>
+        </select></div>
+      </div>
+      <div id="impBtBox" style="display:none;margin-top:10px;border-top:1px dashed #e2e8f0;padding-top:12px">
+        <button class="btn" onclick="conectarImpressora()">🔗 Conectar impressora Bluetooth</button>
+        <span id="impStatus" class="muted" style="font-size:13px;margin-left:10px"></span>
+        <p style="font-size:12px;color:#64748b;margin-top:8px">Funciona no <b>Chrome Android</b>. Conecte a térmica bluetooth uma vez — os pedidos pagos imprimem automaticamente. No iPhone/iPad use impressora AirPrint ou um Android na loja.</p>
+      </div>
+    </div>` : ''}
     <div class="panel"><table><thead><tr><th>Pedido</th><th>Cliente</th><th>Itens</th><th>Total</th><th>Status</th><th>Pagamento</th><th>Ações</th></tr></thead>
     <tbody>${rowsHtml || '<tr><td colspan="7"><div class="empty">Nenhum pedido com esse filtro.</div></td></tr>'}</tbody></table></div>`, tenants, tenant, clientMode));
 }
