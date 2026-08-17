@@ -2297,6 +2297,7 @@ router.post('/painel/perguntas/salvar', clientPanelAuth, postPerguntasSalvar);
 async function pageMensagens(req, res) {
   const { tenant, tenants } = await resolveTenant(req, res);
   const clientMode = !!req.clientMode;
+  const base = clientMode ? '/painel' : '/admin';
   if (!tenant) return res.send(layout('Mensagens', clientMode ? '/painel/mensagens' : '/admin/mensagens', '<div class="empty">Crie um cliente.</div>', tenants, null, clientMode));
   const data = await catalog.loadTenantCatalog(tenant.id);
   const fields = Object.entries(data.messages || {}).map(([key, value]) => `
