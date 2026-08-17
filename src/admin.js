@@ -307,9 +307,9 @@ function layout(title, active, content, tenants = [], activeTenantId = null, cli
   const activeBg = clientMode ? theme.active : '#2563eb';
   const logoGrad = clientMode ? `linear-gradient(135deg,${theme.sidebar[1]},${theme.active})` : 'linear-gradient(135deg,#38bdf8,#2563eb)';
 
-  // Impressão automática de pedidos pagos (ramos de operação)
+  // Impressão automática de pedidos pagos (todos os ramos)
   // Modos: Bluetooth (térmica ESC/POS via Web Bluetooth) ou impressora do sistema.
-  const printScript = (clientMode && activeTenantId?.segment_name && activeTenantId.segment_name !== 'vendas') ? `
+  const printScript = clientMode ? `
   <script>
     let imprimindo = false;
     let btDevice = null, btChar = null;
@@ -703,7 +703,6 @@ function ehRamoOperacao(tenant) {
  */
 router.get('/painel/api/impressao', clientPanelAuth, async (req, res) => {
   const tenant = req.tenantSession;
-  if (!ehRamoOperacao(tenant)) return res.json([]);
   try {
     const toPrint = await repo.getOrdersToPrint(tenant.id, 5);
     const tickets = [];
@@ -1877,13 +1876,13 @@ async function pagePedidos(req, res) {
       <td>${esc(lead?.full_name || '—')}<br><small style="color:#94a3b8">${esc(lead?.phone || '')}</small></td>
       <td>${items}${o.observations ? `<br><small style="color:#b45309">📝 ${esc(o.observations)}</small>` : ''}</td><td>${money(o.total)}</td><td>${statusBadge(o.status)}</td>
       <td>${methodLabel(pay?.payment_method)}<br><small style="color:#94a3b8">${esc(pay?.mp_payment_id || '')}</small></td>
-      <td>${o.status === 'pending' ? `<form class="inline-form" method="POST" action="${clientMode ? '/painel' : '/admin'}/pedidos/status"><input type="hidden" name="id" value="${o.id}"><input type="hidden" name="status" value="approved"><button class="btn green small">Pago</button></form>` : ''}${clientMode && ehRamoOperacao(tenant) && o.status === 'approved' ? ` <button class="btn amber small" onclick="reimprimirPedido(${o.id})" title="Reimprimir ticket">🖨️</button>` : ''}</td>
+      <td>${o.status === 'pending' ? `<form class="inline-form" method="POST" action="${clientMode ? '/painel' : '/admin'}/pedidos/status"><input type="hidden" name="id" value="${o.id}"><input type="hidden" name="status" value="approved"><button class="btn green small">Pago</button></form>` : ''}${clientMode && o.status === 'approved' ? ` <button class="btn amber small" onclick="reimprimirPedido(${o.id})" title="Reimprimir ticket">🖨️</button>` : ''}</td>
     </tr>`;
   }))).join('');
 
   res.send(layout('Pedidos', clientMode ? '/painel/pedidos' : '/admin/pedidos', `${tenantSelector(tenant.id, tenants, clientMode)}
-    <div class="filters">${statusFilter}${clientMode && ehRamoOperacao(tenant) ? `<button class="btn amber small" onclick="testarImpressora()">🖨️ Imprimir teste</button>` : ''}</div>
-    ${clientMode && ehRamoOperacao(tenant) ? `<div class="panel"><h2>🖨️ Impressora</h2>
+    <div class="filters">${statusFilter}${clientMode ? `<button class="btn amber small" onclick="testarImpressora()">🖨️ Imprimir teste</button>` : ''}</div>
+    ${clientMode ? `<div class="panel"><h2>🖨️ Impressora</h2>
       <div class="grid2">
         <div><label>MODO DE IMPRESSÃO</label><select id="impModo" onchange="salvarPrefImp()">
           <option value="sistema">Impressora do sistema (PC / navegador)</option>
