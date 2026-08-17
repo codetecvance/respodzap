@@ -11,7 +11,10 @@ module.exports = async (req, res) => {
     // Rede de segurança: confirma pagamentos pendentes que o webhook não capturou
     const webhook = require('../src/webhook');
     const aprovados = await webhook.verificarPagamentosPendentes();
-    res.json({ ok: true, report, pagamentos_aprovados: aprovados });
+    // Limpeza automática: pedidos pendentes com mais de 3 dias
+    const repo = require('../src/repository');
+    const limpos = await repo.deletePendingOrdersOlderThan(3);
+    res.json({ ok: true, report, pagamentos_aprovados: aprovados, pedidos_pendentes_limpos: limpos });
   } catch (e) {
     console.error('[CRON]', e.message);
     res.status(500).json({ ok: false, error: e.message });

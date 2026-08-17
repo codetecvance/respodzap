@@ -558,6 +558,58 @@ function layout(title, active, content, tenants = [], activeTenantId = null, cli
   window.addEventListener('DOMContentLoaded', ()=>{ const f=document.getElementById('flashMsg'); if(f) showToast(f.textContent, f.dataset?.type||'ok'); });
   function copyText(t, btn){ navigator.clipboard.writeText(t).then(()=>{ if(btn){ btn.textContent='✓ Copiado'; setTimeout(()=>btn.textContent='Copiar',1500); } }); }
   function filterTable(inputId, tableId){ const q=(document.getElementById(inputId).value||'').toLowerCase(); document.querySelectorAll('#'+tableId+' tbody tr').forEach(r=>{ r.style.display=r.textContent.toLowerCase().includes(q)?'':'none'; }); }
+  function toggleAllCbx(cbx, sel){
+    document.querySelectorAll(sel).forEach(c => { c.checked = cbx.checked; });
+  }
+  function excluirRegistro(actionUrl, id, msg){
+    if (!confirm(msg)) return;
+    const f = document.createElement('form');
+    f.method = 'POST'; f.action = actionUrl;
+    const i = document.createElement('input'); i.type='hidden'; i.name='id'; i.value=id;
+    f.appendChild(i); document.body.appendChild(f); f.submit();
+  }
+  function excluirLead(actionUrl, id){
+    const senha = prompt('Para excluir este lead (com pedidos e conversas), digite sua senha:');
+    if (senha === null) return;
+    const f = document.createElement('form');
+    f.method = 'POST'; f.action = actionUrl;
+    const i = document.createElement('input'); i.type='hidden'; i.name='id'; i.value=id;
+    const s = document.createElement('input'); s.type='hidden'; s.name='senha'; s.value=senha;
+    f.appendChild(i); f.appendChild(s);
+    document.body.appendChild(f); f.submit();
+  }
+  function excluirSelecionados(actionUrl, sel, label, nameFn){
+    const marcados = document.querySelectorAll(sel + ':checked');
+    if (!marcados.length) { alert('Selecione pelo menos um ' + label + '.'); return; }
+    if (!confirm('Excluir ' + marcados.length + ' ' + label + '(s)?')) return;
+    const f = document.createElement('form');
+    f.method = 'POST'; f.action = actionUrl;
+    marcados.forEach(c => {
+      const i = document.createElement('input'); i.type='hidden';
+      i.name = nameFn ? nameFn(c) : 'ids[]';
+      i.value = c.dataset.val;
+      f.appendChild(i);
+    });
+    document.body.appendChild(f); f.submit();
+  }
+  function excluirLeadsLote(actionUrl){
+    const marcados = document.querySelectorAll('.sel-lote:checked');
+    const senhaEl = document.getElementById('senhaLoteLeads');
+    const senha = senhaEl ? senhaEl.value : '';
+    if (!marcados.length) { alert('Selecione pelo menos um lead.'); return; }
+    if (!senha) { alert('Digite sua senha para confirmar.'); return; }
+    if (!confirm('Excluir ' + marcados.length + ' lead(s) (com pedidos e conversas)?')) return;
+    const f = document.createElement('form');
+    f.method = 'POST'; f.action = actionUrl;
+    marcados.forEach(c => {
+      const i = document.createElement('input'); i.type='hidden'; i.name='ids[]'; i.value = c.dataset.val;
+      f.appendChild(i);
+    });
+    const s = document.createElement('input'); s.type='hidden'; s.name='senha'; s.value = senha;
+    f.appendChild(s);
+    document.body.appendChild(f); f.submit();
+  }
+  function limparCampo(id){ document.getElementById(id).value=''; }
 </script>
 ${printScript}
 </body></html>`;
@@ -1096,6 +1148,7 @@ router.get('/admin/clientes', requireAuth, async (req, res) => {
     const active = subs.find(s => s.status === 'ativa');
     const seg = segments.find(s => s.id === t.segment_id);
     return `<tr>
+      <td><input type="checkbox" class="sel-lote" data-val="${t.id}"></td>
       <td><b>${esc(t.name)}</b><br><small style="color:#94a3b8">#${t.id}</small></td>
       <td>${esc(t.contact_name || '—')}<br><small style="color:#94a3b8">${esc(t.contact_phone || '')}</small></td>
       <td>${seg ? `${esc(seg.emoji)} ${esc(seg.name)}` : '—'}</td>
@@ -1130,10 +1183,11 @@ router.get('/admin/clientes', requireAuth, async (req, res) => {
       </form>
       <p style="font-size:12px;color:#64748b;margin-top:8px">O ramo define o template inicial (cardápio, mensagens e configurações do bot).</p>
     </div>
-    <div class="panel"><table>
-      <thead><tr><th>Cliente</th><th>Contato</th><th>Ramo</th><th>Phone Number ID</th><th>Status</th><th>Painel</th><th>Licença</th><th>Ações</th></tr></thead>
-      <tbody>${rowsHtml || '<tr><td colspan="8"><div class="empty">Nenhum cliente ainda.</div></td></tr>'}</tbody>
-    </table></div>`));
+    <div class="panel"><h2>Clientes <span class="right"><button class="btn red small" onclick="excluirSelecionados('/admin/clientes/excluir-lote', '.sel-lote', 'cliente')">🗑 Excluir selecionados</button></span></h2>
+      <table>
+      <thead><tr><th><input type="checkbox" onclick="toggleAllCbx(this, '.sel-lote')" title="Selecionar todos"></th><th>Cliente</th><th>Contato</th><th>Ramo</th><th>Phone Number ID</th><th>Status</th><th>Painel</th><th>Licença</th><th>Ações</th></tr></thead>
+      <tbody>${rowsHtml || '<tr><td colspan="9"><div class="empty">Nenhum cliente ainda.</div></td></tr>'}</tbody>
+      </table></div>`));
 });
 
 router.post('/admin/clientes/novo', requireAuth, async (req, res) => {
@@ -1209,6 +1263,7 @@ router.get('/admin/segmentos', requireAuth, async (req, res) => {
     const emUso = await repo.countTenantsBySegment(sg.id);
     return `<form id="seg-${sg.id}" method="POST" action="/admin/segmentos/salvar"><input type="hidden" name="id" value="${sg.id}"></form>
     <tr>
+      <td><input type="checkbox" class="sel-lote" data-val="${sg.id}"></td>
       <td><input form="seg-${sg.id}" type="text" name="emoji" value="${esc(sg.emoji)}" style="width:60px"></td>
       <td><input form="seg-${sg.id}" type="text" name="name" value="${esc(sg.name)}" required style="min-width:140px"></td>
       <td>${emUso} cliente(s)</td>
@@ -1228,9 +1283,10 @@ router.get('/admin/segmentos', requireAuth, async (req, res) => {
     <div class="panel"><h2>🏷️ Ramos de negócio (segmentos)</h2>
       <p style="font-size:13px;color:#64748b;margin-bottom:10px">Cada ramo tem um template inicial de cardápio, mensagens e configurações — escolhido na criação do cliente.</p>
       <table>
-        <thead><tr><th>Emoji</th><th>Nome</th><th>Uso</th><th>Ações</th></tr></thead>
-        <tbody>${rows || '<tr><td colspan="4"><div class="empty">Nenhum segmento ainda.</div></td></tr>'}</tbody>
+        <thead><tr><th><input type="checkbox" onclick="toggleAllCbx(this, '.sel-lote')" title="Selecionar todos"></th><th>Emoji</th><th>Nome</th><th>Uso</th><th>Ações</th></tr></thead>
+        <tbody>${rows || '<tr><td colspan="5"><div class="empty">Nenhum segmento ainda.</div></td></tr>'}</tbody>
       </table>
+      <div style="margin-top:10px"><button class="btn red small" onclick="excluirSelecionados('/admin/segmentos/excluir-lote', '.sel-lote', 'segmento')">🗑 Excluir selecionados</button> <span class="muted" style="font-size:12px">(segmentos em uso são mantidos)</span></div>
     </div>
     <div class="panel"><h2>➕ Novo segmento</h2>
       <form method="POST" action="/admin/segmentos/novo" style="display:flex;gap:10px;align-items:end;flex-wrap:wrap">
@@ -1312,6 +1368,7 @@ router.get('/admin/assinaturas', requireAuth, async (req, res) => {
     const limite = s.product_limit ?? 30;
     const tipo = limite >= 30 ? 'Pro' : 'Starter';
     return `<tr>
+      <td><input type="checkbox" class="sel-lote" data-val="${s.id}"></td>
       <td><b>${esc(s.tenant_name)}</b></td>
       <td>${esc(s.plan_name || '—')} ${custom ? '<span class="badge wait">personalizado</span>' : ''}<br><span class="badge ${tipo === 'Pro' ? 'info' : 'wait'}">${tipo} — ${limite} produtos</span></td>
       <td>${money(s.price)}<br><small style="color:#94a3b8">${days} dias</small></td>
@@ -1380,9 +1437,9 @@ router.get('/admin/assinaturas', requireAuth, async (req, res) => {
         </form>
       </details>
     </div>
-    <div class="panel"><h2>📋 Licenças ativas</h2><table>
-      <thead><tr><th>Cliente</th><th>Plano</th><th>Valor</th><th>Status</th><th>Vencimento</th><th>Ações</th></tr></thead>
-      <tbody>${rows || '<tr><td colspan="6"><div class="empty">Nenhuma assinatura ainda.</div></td></tr>'}</tbody>
+    <div class="panel"><h2>📋 Licenças ativas <span class="right"><button class="btn red small" onclick="excluirSelecionados('/admin/assinaturas/excluir-lote', '.sel-lote', 'licença')">🗑 Excluir selecionadas</button></span></h2><table>
+      <thead><tr><th><input type="checkbox" onclick="toggleAllCbx(this, '.sel-lote')" title="Selecionar todos"></th><th>Cliente</th><th>Plano</th><th>Valor</th><th>Status</th><th>Vencimento</th><th>Ações</th></tr></thead>
+      <tbody>${rows || '<tr><td colspan="7"><div class="empty">Nenhuma assinatura ainda.</div></td></tr>'}</tbody>
     </table></div>`));
 });
 
@@ -1560,7 +1617,8 @@ async function pageProdutos(req, res) {
       </tr>`).join('') || '<tr><td colspan="8" style="color:#94a3b8;font-size:12px">Sem planos — adicione abaixo.</td></tr>';
 
       return `
-      <div class="panel" style="margin-bottom:14px"><h2>✏️ ${esc(p.name)} ${p.plans?.length ? `<span class="badge info">${p.plans.length} plano(s)</span>` : ''} ${statusBadge(p.available ? 'ok' : 'no')}</h2>
+      <div class="panel" style="margin-bottom:14px"><h2>✏️ ${esc(p.name)} ${p.plans?.length ? `<span class="badge info">${p.plans.length} plano(s)</span>` : ''} ${statusBadge(p.available ? 'ok' : 'no')}
+        <label style="margin-left:10px;font-weight:400;font-size:12px;color:#64748b"><input type="checkbox" class="del-prod" data-ci="${ci}" data-val="${pi}"> excluir</label></h2>
       <form method="POST" action="${base}/produtos/salvar" class="grid2" onsubmit="reindexAddons()">
         <input type="hidden" name="tenant" value="${tenant.id}"><input type="hidden" name="ci" value="${ci}"><input type="hidden" name="pi" value="${pi}">
         <div>
@@ -1619,6 +1677,7 @@ async function pageProdutos(req, res) {
     ${limiteHtml}
     <div class="panel" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
       <button class="btn green" onclick="salvarTudo()">💾 Salvar tudo</button>
+      <button class="btn red" onclick="excluirSelecionados('${base}/produtos/excluir-lote', '.del-prod', 'produto', function(c){ return 'del[' + c.dataset.ci + '][]'; })">🗑 Excluir selecionados</button>
       <span class="muted" style="font-size:13px">Altere quantos produtos quiser e salve tudo de uma vez (as ações por produto continuam funcionando).</span>
     </div>
     <div class="panel"><h2>📤 Enviar foto de produto <span class="right"><button class="btn small" onclick="document.getElementById('fileInput').click()">Escolher arquivo</button></span></h2>
@@ -1895,14 +1954,14 @@ async function pageListas(req, res) {
         const plansHtml = (p.plans || []).map((pl, ki) => `
           <div style="margin:10px 0 10px 28px;padding:10px 14px;background:#f8fafc;border-radius:9px">
             <label style="margin-top:0">💠 Plano ${esc(pl.name)}${pl.popular ? ' ★' : ''} — descrição da lista</label>
-            <textarea name="pld[${ci}][${pi}][${ki}]" placeholder="Vazio = ${esc(previewPlano(pl))}">${esc(pl.list_description || '')}</textarea>
-            <div style="font-size:11.5px;color:#64748b;margin-top:4px">Fallback: ${esc(previewPlano(pl))}</div>
+            <textarea id="pld-${ci}-${pi}-${ki}" name="pld[${ci}][${pi}][${ki}]" placeholder="Vazio = ${esc(previewPlano(pl))}">${esc(pl.list_description || '')}</textarea>
+            <div style="font-size:11.5px;color:#64748b;margin-top:4px">Fallback: ${esc(previewPlano(pl))} <button class="btn red small" onclick="limparCampo('pld-${ci}-${pi}-${ki}')" title="Limpar (volta ao padrão)" style="margin-left:8px">🗑</button></div>
           </div>`).join('');
         return `
         <div style="border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin-bottom:12px">
-          <h3 style="font-size:14px;margin-bottom:8px">${pi + 1}. ${esc(p.name)}</h3>
+          <h3 style="font-size:14px;margin-bottom:8px">${pi + 1}. ${esc(p.name)} <button class="btn red small" onclick="limparCampo('ld-${ci}-${pi}')" title="Limpar (volta ao padrão)">🗑</button></h3>
           <label>DESCRIÇÃO DA LISTA (bloco de seleção no WhatsApp)</label>
-          <textarea name="ld[${ci}][${pi}]" placeholder="Vazio = ${esc(previewProduto(p))}">${esc(p.list_description || '')}</textarea>
+          <textarea id="ld-${ci}-${pi}" name="ld[${ci}][${pi}]" placeholder="Vazio = ${esc(previewProduto(p))}">${esc(p.list_description || '')}</textarea>
           <div style="font-size:11.5px;color:#64748b;margin-top:4px">Se vazio, usa: <b>${esc(previewProduto(p))}</b></div>
           ${plansHtml}
         </div>`;
@@ -1994,11 +2053,12 @@ async function pagePedidos(req, res) {
     const pay = await repo.getPaymentByOrderId(o.id);
     const lead = await repo.getLead(o.lead_id);
     return `<tr>
+      <td><input type="checkbox" class="sel-lote" data-val="${o.id}"></td>
       <td><b>#${esc(o.external_id)}</b><br><small style="color:#94a3b8">${esc(String(o.created_at).slice(0, 16))}</small></td>
       <td>${esc(lead?.full_name || '—')}<br><small style="color:#94a3b8">${esc(lead?.phone || '')}</small></td>
       <td>${items}${o.observations ? `<br><small style="color:#b45309">📝 ${esc(o.observations)}</small>` : ''}</td><td>${money(o.total)}</td><td>${statusBadge(o.status)}</td>
       <td>${methodLabel(pay?.payment_method)}<br><small style="color:#94a3b8">${esc(pay?.mp_payment_id || '')}</small></td>
-      <td>${o.status === 'pending' ? `<form class="inline-form" method="POST" action="${clientMode ? '/painel' : '/admin'}/pedidos/status"><input type="hidden" name="id" value="${o.id}"><input type="hidden" name="status" value="approved"><button class="btn green small">Pago</button></form>` : ''}${clientMode && o.status === 'approved' ? ` <button class="btn amber small" onclick="reimprimirPedido(${o.id})" title="Reimprimir ticket">🖨️</button>` : ''}</td>
+      <td style="white-space:nowrap">${o.status === 'pending' ? `<form class="inline-form" method="POST" action="${clientMode ? '/painel' : '/admin'}/pedidos/status"><input type="hidden" name="id" value="${o.id}"><input type="hidden" name="status" value="approved"><button class="btn green small">Pago</button></form>` : ''}${clientMode && o.status === 'approved' ? ` <button class="btn amber small" onclick="reimprimirPedido(${o.id})" title="Reimprimir ticket">🖨️</button>` : ''} <button class="btn red small" onclick="excluirRegistro('${clientMode ? '/painel' : '/admin'}/pedidos/excluir', ${o.id}, 'Excluir o pedido #${esc(o.external_id)}?')" title="Excluir pedido">🗑</button></td>
     </tr>`;
   }))).join('');
 
@@ -2023,8 +2083,10 @@ async function pagePedidos(req, res) {
         <p style="font-size:12px;color:#64748b;margin-top:8px">Funciona no <b>Chrome Android</b>. Conecte a térmica bluetooth uma vez — os pedidos pagos imprimem automaticamente. No iPhone/iPad use impressora AirPrint ou um Android na loja.</p>
       </div>
     </div>
-    <div class="panel"><table><thead><tr><th>Pedido</th><th>Cliente</th><th>Itens</th><th>Total</th><th>Status</th><th>Pagamento</th><th>Ações</th></tr></thead>
-    <tbody>${rowsHtml || '<tr><td colspan="7"><div class="empty">Nenhum pedido com esse filtro.</div></td></tr>'}</tbody></table></div>`, tenants, tenant, clientMode));
+    <div class="panel"><table><thead><tr><th><input type="checkbox" onclick="toggleAllCbx(this, '.sel-lote')" title="Selecionar todos"></th><th>Pedido</th><th>Cliente</th><th>Itens</th><th>Total</th><th>Status</th><th>Pagamento</th><th>Ações</th></tr></thead>
+    <tbody>${rowsHtml || '<tr><td colspan="8"><div class="empty">Nenhum pedido com esse filtro.</div></td></tr>'}</tbody></table>
+    <div style="margin-top:10px"><button class="btn red small" onclick="excluirSelecionados('${clientMode ? '/painel' : '/admin'}/pedidos/excluir-lote', '.sel-lote', 'pedido')">🗑 Excluir selecionados</button></div>
+    </div>`, tenants, tenant, clientMode));
 }
 
 router.get('/admin/pedidos', requireAuth, pagePedidos);
@@ -2073,6 +2135,23 @@ async function postVerificarPagamentos(req, res) {
 router.post('/admin/pedidos/verificar-pagamentos', requireAuth, postVerificarPagamentos);
 router.post('/painel/pedidos/verificar-pagamentos', clientPanelAuth, postVerificarPagamentos);
 
+// ----- EXCLUSÃO DE PEDIDOS (individual + lote) -----
+async function postPedidosExcluir(req, res) {
+  const base = req.clientMode ? '/painel' : '/admin';
+  await repo.deleteOrder(Number(req.body.id));
+  res.redirect(`${base}/pedidos?msg=` + encodeURIComponent('Pedido excluído.'));
+}
+async function postPedidosExcluirLote(req, res) {
+  const base = req.clientMode ? '/painel' : '/admin';
+  const ids = [].concat(req.body.ids || []).map(Number).filter(Boolean);
+  for (const id of ids) await repo.deleteOrder(id);
+  res.redirect(`${base}/pedidos?msg=` + encodeURIComponent(`${ids.length} pedido(s) excluído(s).`));
+}
+router.post('/painel/pedidos/excluir', clientPanelAuth, postPedidosExcluir);
+router.post('/admin/pedidos/excluir', requireAuth, postPedidosExcluir);
+router.post('/painel/pedidos/excluir-lote', clientPanelAuth, postPedidosExcluirLote);
+router.post('/admin/pedidos/excluir-lote', requireAuth, postPedidosExcluirLote);
+
 // ----- LEADS -----
 async function pageLeads(req, res) {
   const { tenant, tenants } = await resolveTenant(req, res);
@@ -2080,17 +2159,21 @@ async function pageLeads(req, res) {
   if (!tenant) return res.send(layout('Leads', clientMode ? '/painel/leads' : '/admin/leads', '<div class="empty">Crie um cliente.</div>', tenants, null, clientMode));
   const leads = await repo.listLeads(tenant.id);
   const rows = leads.map(l => `<tr>
+    <td><input type="checkbox" class="sel-lote" data-val="${l.id}"></td>
     <td><b>${esc(l.full_name || '—')}</b><br><small style="color:#94a3b8">${esc(l.phone)}</small></td>
     <td>${esc(l.delivery_address || '—')}</td>
     <td>${statusBadge(l.status)}</td>
     <td><form class="inline-form" method="POST" action="${clientMode ? '/painel' : '/admin'}/leads/status"><input type="hidden" name="id" value="${l.id}">
       <select name="status" onchange="this.form.submit()">${['novo', 'contatado', 'convertido', 'fechado'].map(s => `<option value="${s}" ${(l.status === s || (l.status?.startsWith('pausado') && s === 'novo')) ? 'selected' : ''}>${s}</option>`).join('')}</select></form></td>
     <td>${esc(String(l.created_at).slice(0, 16))}</td>
-    <td><button class="btn small" onclick="copyText('${esc(l.phone)}', this)">📋 Número</button></td>
+    <td><button class="btn small" onclick="copyText('${esc(l.phone)}', this)">📋 Número</button>
+      <button class="btn red small" onclick="excluirLead('${clientMode ? '/painel' : '/admin'}/leads/excluir', ${l.id})" title="Excluir lead (pede senha)">🗑</button></td>
   </tr>`).join('');
   res.send(layout('Leads', clientMode ? '/painel/leads' : '/admin/leads', `${tenantSelector(tenant.id, tenants, clientMode)}
-    <div class="panel"><table id="tblLeads"><thead><tr><th>Cliente</th><th>Endereço</th><th>Status</th><th>Alterar</th><th>Contato</th><th></th></tr></thead>
-    <tbody>${rows || '<tr><td colspan="6"><div class="empty">Nenhum lead.</div></td></tr>'}</tbody></table></div>`, tenants, tenant, clientMode));
+    <div class="panel"><h2>Leads <span class="right"><input type="password" id="senhaLoteLeads" placeholder="Sua senha" style="width:170px"> <button class="btn red small" onclick="excluirLeadsLote('${clientMode ? '/painel' : '/admin'}/leads/excluir-lote')">🗑 Excluir selecionados</button></span></h2>
+    <table id="tblLeads"><thead><tr><th><input type="checkbox" onclick="toggleAllCbx(this, '.sel-lote')" title="Selecionar todos"></th><th>Cliente</th><th>Endereço</th><th>Status</th><th>Alterar</th><th>Contato</th><th></th></tr></thead>
+    <tbody>${rows || '<tr><td colspan="7"><div class="empty">Nenhum lead.</div></td></tr>'}</tbody></table>
+    <p style="font-size:12px;color:#64748b;margin-top:8px">Excluir lead apaga também os pedidos e conversas dele. A exclusão exige a sua senha de acesso.</p></div>`, tenants, tenant, clientMode));
 }
 
 router.get('/admin/leads', requireAuth, pageLeads);
@@ -2106,6 +2189,33 @@ async function postLeadsStatus(req, res) {
 router.post('/admin/leads/status', requireAuth, postLeadsStatus);
 router.post('/painel/leads/status', clientPanelAuth, postLeadsStatus);
 
+// ----- EXCLUSÃO DE LEADS (individual + lote, confirma com a senha do login) -----
+function senhaLeadValida(req, senha) {
+  if (req.clientMode) return repo.verifyPassword(senha, req.tenantSession.panel_password);
+  return senha === config.adminPassword;
+}
+async function postLeadsExcluir(req, res) {
+  const base = req.clientMode ? '/painel' : '/admin';
+  if (!senhaLeadValida(req, String(req.body.senha || ''))) {
+    return res.redirect(`${base}/leads?msg=` + encodeURIComponent('Senha incorreta — lead não excluído.') + '&type=err');
+  }
+  await repo.deleteLeadCompleto(Number(req.body.id));
+  res.redirect(`${base}/leads?msg=` + encodeURIComponent('Lead excluído (com pedidos e conversas).'));
+}
+async function postLeadsExcluirLote(req, res) {
+  const base = req.clientMode ? '/painel' : '/admin';
+  if (!senhaLeadValida(req, String(req.body.senha || ''))) {
+    return res.redirect(`${base}/leads?msg=` + encodeURIComponent('Senha incorreta — nada foi excluído.') + '&type=err');
+  }
+  const ids = [].concat(req.body.ids || []).map(Number).filter(Boolean);
+  for (const id of ids) await repo.deleteLeadCompleto(id);
+  res.redirect(`${base}/leads?msg=` + encodeURIComponent(`${ids.length} lead(s) excluído(s) (com pedidos e conversas).`));
+}
+router.post('/painel/leads/excluir', clientPanelAuth, postLeadsExcluir);
+router.post('/admin/leads/excluir', requireAuth, postLeadsExcluir);
+router.post('/painel/leads/excluir-lote', clientPanelAuth, postLeadsExcluirLote);
+router.post('/admin/leads/excluir-lote', requireAuth, postLeadsExcluirLote);
+
 // ----- PERGUNTAS -----
 async function pagePerguntas(req, res) {
   const { tenant, tenants } = await resolveTenant(req, res);
@@ -2115,14 +2225,15 @@ async function pagePerguntas(req, res) {
   const base = clientMode ? '/painel' : '/admin';
   const qs = Object.entries(data.questionnaires || {}).map(([qid, q]) => {
     const rows = (q.questions || []).map((question, qi) => `
-      <tr><td><input type="text" name="q[${esc(qid)}][${qi}][key]" value="${esc(question.key)}"></td>
+      <tr><td style="text-align:center"><input type="checkbox" class="del-perg" data-qid="${esc(qid)}" data-val="${qi}"></td>
+      <td><input type="text" name="q[${esc(qid)}][${qi}][key]" value="${esc(question.key)}"></td>
       <td><input type="text" name="q[${esc(qid)}][${qi}][field]" value="${esc(question.field || '')}"></td>
       <td><input type="text" name="q[${esc(qid)}][${qi}][question]" value="${esc(question.question)}" style="min-width:240px"></td>
       <td style="text-align:center"><input type="checkbox" name="q[${esc(qid)}][${qi}][optional]" ${question.optional ? 'checked' : ''}></td>
-      <td style="text-align:center"><button class="btn red small" type="submit" formaction="${base}/perguntas/remover?qid=${esc(qid)}&qi=${qi}" formnovalidate>🗑</button></td></tr>`).join('') || '<tr><td colspan="5" style="color:#64748b">Sem perguntas.</td></tr>';
-    return `<div class="panel"><h2>${esc(q.label || qid)} <span class="badge info">${esc(qid)}</span></h2>
+      <td style="text-align:center"><button class="btn red small" type="submit" formaction="${base}/perguntas/remover?qid=${esc(qid)}&qi=${qi}" formnovalidate>🗑</button></td></tr>`).join('') || '<tr><td colspan="6" style="color:#64748b">Sem perguntas.</td></tr>';
+    return `<div class="panel"><h2>${esc(q.label || qid)} <span class="badge info">${esc(qid)}</span> <span class="right"><button class="btn red small" type="button" onclick="excluirSelecionados('${base}/perguntas/remover-lote', '.del-perg', 'pergunta', function(c){ return 'del[' + c.dataset.qid + '][]'; })">🗑 Excluir selecionadas</button></span></h2>
       <form method="POST" action="${base}/perguntas/salvar"><input type="hidden" name="tenant" value="${tenant.id}">
-        <table><thead><tr><th>Chave</th><th>Campo do lead</th><th>Pergunta</th><th>Opcional</th><th></th></tr></thead><tbody>${rows}</tbody></table>
+        <table><thead><tr><th><input type="checkbox" onclick="toggleAllCbx(this, '.del-perg')" title="Selecionar todas"></th><th>Chave</th><th>Campo do lead</th><th>Pergunta</th><th>Opcional</th><th></th></tr></thead><tbody>${rows}</tbody></table>
         <div style="display:flex;gap:8px;margin-top:12px"><button class="btn" type="submit">💾 Salvar</button>
         <button class="btn gray" type="submit" formaction="${base}/perguntas/nova?qid=${esc(qid)}" formnovalidate>+ Nova pergunta</button></div>
       </form></div>`;
@@ -2189,7 +2300,7 @@ async function pageMensagens(req, res) {
   if (!tenant) return res.send(layout('Mensagens', clientMode ? '/painel/mensagens' : '/admin/mensagens', '<div class="empty">Crie um cliente.</div>', tenants, null, clientMode));
   const data = await catalog.loadTenantCatalog(tenant.id);
   const fields = Object.entries(data.messages || {}).map(([key, value]) => `
-    <div class="panel"><h2>${esc(key)}</h2><textarea name="msgs[${esc(key)}]" style="min-height:80px">${esc(value)}</textarea></div>`).join('');
+    <div class="panel"><h2>${esc(key)} <button class="btn red small" onclick="excluirRegistro('${base}/mensagens/excluir', '${esc(key)}', 'Remover esta mensagem (o bot volta ao texto padrão)?')" title="Remover (volta ao padrão)">🗑</button></h2><textarea name="msgs[${esc(key)}]" style="min-height:80px">${esc(value)}</textarea></div>`).join('');
   res.send(layout('Mensagens', clientMode ? '/painel/mensagens' : '/admin/mensagens', `${tenantSelector(tenant.id, tenants, clientMode)}
     <form method="POST" action="${clientMode ? '/painel' : '/admin'}/mensagens/salvar"><input type="hidden" name="tenant" value="${tenant.id}">
       ${fields}<button class="btn" type="submit">💾 Salvar mensagens</button></form>`, tenants, tenant, clientMode));
@@ -2212,6 +2323,111 @@ async function postMensagensSalvar(req, res) {
 
 router.post('/admin/mensagens/salvar', requireAuth, postMensagensSalvar);
 router.post('/painel/mensagens/salvar', clientPanelAuth, postMensagensSalvar);
+
+// ----- EXCLUSÕES EM LOTE E RESTAURAÇÃO (clientes/assinaturas/segmentos/produtos/perguntas/mensagens/botões/config) -----
+
+// Clientes (lote)
+router.post('/admin/clientes/excluir-lote', requireAuth, async (req, res) => {
+  const ids = [].concat(req.body.ids || []).map(Number).filter(Boolean);
+  for (const id of ids) await repo.deleteTenant(id);
+  res.redirect('/admin/clientes?msg=' + encodeURIComponent(`${ids.length} cliente(s) excluído(s).`));
+});
+
+// Assinaturas (lote)
+router.post('/admin/assinaturas/excluir-lote', requireAuth, async (req, res) => {
+  const ids = [].concat(req.body.ids || []).map(Number).filter(Boolean);
+  for (const id of ids) await repo.deleteSubscription(id);
+  res.redirect('/admin/assinaturas?msg=' + encodeURIComponent(`${ids.length} licença(s) excluída(s).`));
+});
+
+// Segmentos (lote — respeita bloqueio em uso)
+router.post('/admin/segmentos/excluir-lote', requireAuth, async (req, res) => {
+  const ids = [].concat(req.body.ids || []).map(Number).filter(Boolean);
+  let excluidos = 0, bloqueados = 0;
+  for (const id of ids) {
+    const emUso = await repo.countTenantsBySegment(id);
+    if (emUso > 0) { bloqueados++; continue; }
+    await repo.deleteSegment(id);
+    excluidos++;
+  }
+  res.redirect('/admin/segmentos?msg=' + encodeURIComponent(`${excluidos} segmento(s) excluído(s)${bloqueados ? ` — ${bloqueados} em uso mantidos` : ''}.`));
+});
+
+// Produtos (lote — painel + admin)
+async function postProdutosExcluirLote(req, res) {
+  const tenantId = tenantIdFromReq(req, req.body.tenant || req.query.tenant);
+  const base = req.clientMode ? '/painel' : '/admin';
+  const data = await catalog.loadTenantCatalog(tenantId);
+  const marcados = req.body.del || {};
+  let count = 0;
+  for (const [ci, pis] of Object.entries(marcados)) {
+    const cat = data.categories[Number(ci)];
+    if (!cat) continue;
+    const idxs = (Array.isArray(pis) ? pis : [pis]).map(Number).filter(Number.isInteger).sort((a, b) => b - a);
+    for (const pi of idxs) { cat.products.splice(pi, 1); count++; }
+  }
+  if (count) await catalog.saveTenantCatalog(tenantId, data);
+  res.redirect(`${base}/produtos?msg=` + encodeURIComponent(`${count} produto(s) excluído(s).`));
+}
+router.post('/painel/produtos/excluir-lote', clientPanelAuth, postProdutosExcluirLote);
+router.post('/admin/produtos/excluir-lote', requireAuth, postProdutosExcluirLote);
+
+// Perguntas (lote — painel + admin)
+async function postPerguntasRemoverLote(req, res) {
+  const tenantId = tenantIdFromReq(req, req.body.tenant || req.query.tenant);
+  const base = req.clientMode ? '/painel' : '/admin';
+  const data = await catalog.loadTenantCatalog(tenantId);
+  const marcados = req.body.del || {};
+  let count = 0;
+  for (const [qid, pis] of Object.entries(marcados)) {
+    if (!data.questionnaires[qid]) continue;
+    const idxs = (Array.isArray(pis) ? pis : [pis]).map(Number).filter(Number.isInteger).sort((a, b) => b - a);
+    for (const idx of idxs) { data.questionnaires[qid].questions.splice(idx, 1); count++; }
+  }
+  if (count) await catalog.saveTenantCatalog(tenantId, data);
+  res.redirect(`${base}/perguntas?msg=` + encodeURIComponent(`${count} pergunta(s) removida(s).`));
+}
+router.post('/painel/perguntas/remover-lote', clientPanelAuth, postPerguntasRemoverLote);
+router.post('/admin/perguntas/remover-lote', requireAuth, postPerguntasRemoverLote);
+
+// Mensagens (restaurar ao padrão — painel + admin)
+async function postMensagensExcluir(req, res) {
+  const tenantId = tenantIdFromReq(req, req.body.tenant || req.query.tenant);
+  const base = req.clientMode ? '/painel' : '/admin';
+  const key = String(req.body.id || '');
+  const data = await catalog.loadTenantCatalog(tenantId);
+  if (key && data.messages) delete data.messages[key];
+  await catalog.saveTenantCatalog(tenantId, data);
+  res.redirect(`${base}/mensagens?msg=` + encodeURIComponent('Mensagem removida — o bot volta ao texto padrão.'));
+}
+router.post('/painel/mensagens/excluir', clientPanelAuth, postMensagensExcluir);
+router.post('/admin/mensagens/excluir', requireAuth, postMensagensExcluir);
+
+// Botões (restaurar ao padrão — painel + admin)
+async function postBotoesExcluir(req, res) {
+  const tenantId = tenantIdFromReq(req, req.body.tenant || req.query.tenant);
+  const base = req.clientMode ? '/painel' : '/admin';
+  const key = String(req.body.id || '');
+  const data = await catalog.loadTenantCatalog(tenantId);
+  if (key && data.buttons) delete data.buttons[key];
+  await catalog.saveTenantCatalog(tenantId, data);
+  res.redirect(`${base}/botoes?msg=` + encodeURIComponent('Botão restaurado ao nome padrão.'));
+}
+router.post('/painel/botoes/excluir', clientPanelAuth, postBotoesExcluir);
+router.post('/admin/botoes/excluir', requireAuth, postBotoesExcluir);
+
+// Horários (restaurar dia como fechado — painel + admin)
+async function postConfigHorariosExcluir(req, res) {
+  const tenantId = tenantIdFromReq(req, req.body.tenant || req.query.tenant);
+  const base = req.clientMode ? '/painel' : '/admin';
+  const dia = String(req.body.id || '');
+  const data = await catalog.loadTenantCatalog(tenantId);
+  if (data.store.hours && data.store.hours[dia]) delete data.store.hours[dia];
+  await catalog.saveTenantCatalog(tenantId, data);
+  res.redirect(`${base}/config?msg=` + encodeURIComponent('Horário do dia removido — fica fechado.'));
+}
+router.post('/painel/config/horarios/excluir', clientPanelAuth, postConfigHorariosExcluir);
+router.post('/admin/config/horarios/excluir', requireAuth, postConfigHorariosExcluir);
 
 // ----- BOTÕES E ATENDENTE -----
 const BOTOES_ROTULOS = {
@@ -2247,7 +2463,7 @@ async function pageBotoes(req, res) {
 
   const rows = Object.entries(BOTOES_ROTULOS).map(([k, rotulo]) => `
     <tr><td>${esc(rotulo)}</td>
-    <td><input type="text" name="buttons[${k}]" value="${esc(btns[k] || '')}" maxlength="20"></td></tr>`).join('');
+    <td><input type="text" name="buttons[${k}]" value="${esc(btns[k] || '')}" maxlength="20"> <button class="btn red small" onclick="excluirRegistro('${base}/botoes/excluir', '${esc(k)}', 'Restaurar este botão ao nome padrão?')" title="Restaurar ao padrão">🗑</button></td></tr>`).join('');
 
   const suporte = [
     ['notify_title', 'TÍTULO DA NOTIFICAÇÃO (você recebe)', msgs.support_notify_title || 'ATENDIMENTO SOLICITADO', false],
@@ -2356,6 +2572,7 @@ async function pageConfig(req, res) {
       <td style="text-align:center"><input type="checkbox" name="store[hours][${d.chave}][fechado]" value="on" ${fechado ? 'checked' : ''} onchange="toggleHorario(${i})"></td>
       <td><input type="time" name="store[hours][${d.chave}][open]" value="${esc(h?.open || '11:00')}" data-h="1" ${fechado ? 'disabled' : ''}></td>
       <td><input type="time" name="store[hours][${d.chave}][close]" value="${esc(h?.close || '23:00')}" data-h="1" ${fechado ? 'disabled' : ''}></td>
+      <td style="text-align:center">${fechado ? '' : `<button class="btn red small" onclick="excluirRegistro('${base}/config/horarios/excluir', '${d.chave}', 'Remover o horário de ${d.nome} (fica fechado)?')" title="Remover horário (fica fechado)">🗑</button>`}</td>
     </tr>`;
   }).join('');
 
@@ -2384,7 +2601,7 @@ async function pageConfig(req, res) {
         <div><label>CIDADE</label><input type="text" name="company[address][city]" value="${esc(addr.city || '')}"></div>
       </div></div>
       ${showAreasEditor ? `<div class="panel"><h2>🕒 Horário de funcionamento <small style="font-weight:400;color:#94a3b8">— o bot bloqueia pedidos fora do horário</small></h2>
-        <table><thead><tr><th>Dia</th><th>Fechado</th><th>Abre</th><th>Fecha</th></tr></thead>
+        <table><thead><tr><th>Dia</th><th>Fechado</th><th>Abre</th><th>Fecha</th><th></th></tr></thead>
         <tbody>${hoursRows}</tbody></table>
         <p style="font-size:12px;color:#64748b;margin-top:8px">Dia marcado como <b>Fechado</b> bloqueia pedidos o dia inteiro. Cliente fora do horário recebe aviso e não consegue comprar/finalizar.</p>
       </div>` : ''}

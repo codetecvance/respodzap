@@ -599,6 +599,40 @@ async function markOrderPrinted(orderId) {
   await query(`UPDATE orders SET printed_at = NOW(), updated_at = NOW() WHERE id = $1`, [orderId]);
 }
 
+/**
+ * Exclui pedido com itens e pagamentos vinculados.
+ */
+async function deleteOrder(orderId) {
+  await query(`DELETE FROM payments WHERE order_id = $1`, [orderId]);
+  await query(`DELETE FROM order_items WHERE order_id = $1`, [orderId]);
+  await query(`DELETE FROM orders WHERE id = $1`, [orderId]);
+}
+
+/**
+ * Exclui pedidos pendentes antigos (mais de X dias) — limpeza automática.
+ * Retorna quantos foram excluídos.
+ */
+async function deletePendingOrdersOlderThan(days) {
+  const r = await query(
+    `SELECT id FROM orders WHERE status = 'pending' AND created_at < NOW() - ($1 || ' days')::interval`,
+    [days]
+  );
+  for (const row of r.rows) await deleteOrder(row.id);
+  return r.rows.length;
+}
+
+/**
+ * Exclui lead com tudo que depende dele (conversas, carrinho, pedidos e pagamentos).
+ */
+async function deleteLeadCompleto(leadId) {
+  await query(`DELETE FROM payments WHERE order_id IN (SELECT id FROM orders WHERE lead_id = $1)`, [leadId]);
+  await query(`DELETE FROM order_items WHERE order_id IN (SELECT id FROM orders WHERE lead_id = $1)`, [leadId]);
+  await query(`DELETE FROM orders WHERE lead_id = $1`, [leadId]);
+  await query(`DELETE FROM cart_items WHERE lead_id = $1`, [leadId]);
+  await query(`DELETE FROM conversations WHERE lead_id = $1`, [leadId]);
+  await query(`DELETE FROM leads WHERE id = $1`, [leadId]);
+}
+
 // ============================================================
 //  PAGAMENTOS
 // ============================================================
@@ -688,7 +722,7 @@ module.exports = {
   formatAddons, addonsTotal,
   // pedidos
   createOrder, getOrder, getOrderByExternal, getOrderItems, updateOrderStatus, updateOrderObservations, getLeadOrders, getOrders,
-  getOrdersToPrint, markOrderPrinted, getPendingOrdersWithPayments,
+  getOrdersToPrint, markOrderPrinted, getPendingOrdersWithPayments, deleteOrder, deletePendingOrdersOlderThan, deleteLeadCompleto,
   // pagamentos
   createPayment, getPaymentByMpId, getPaymentByOrderId, updatePaymentStatusByMpId,
   // estatísticas
