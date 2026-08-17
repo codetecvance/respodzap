@@ -291,7 +291,7 @@ function layout(title, active, content, tenants = [], activeTenantId = null, cli
   const nav = items.map(([href, label]) => {
     let h = href;
     if (!clientMode && activeTenantId && ['/admin/produtos', '/admin/pedidos', '/admin/leads', '/admin/perguntas', '/admin/mensagens', '/admin/botoes', '/admin/config'].includes(href)) {
-      h += `?tenant=${activeTenantId}`;
+      h += `?tenant=${activeTenantId?.id ?? activeTenantId}`;
     }
     return `<a class="nav-item ${href === active ? 'active' : ''}" href="${h}">${label}</a>`;
   }).join('');
@@ -318,7 +318,7 @@ function layout(title, active, content, tenants = [], activeTenantId = null, cli
     function impMarcar(){ return IMP_IS_ADMIN ? '/admin/api/impressao/marcar' : '/painel/api/impressao/marcar'; }
     function impTeste(){ return IMP_IS_ADMIN ? '/admin/api/impressao/teste?tenant=' + IMP_TID : '/painel/api/impressao/teste'; }
     function impReimprimir(id){ return IMP_IS_ADMIN ? '/admin/api/impressao/reimprimir?id=' + id + '&tenant=' + IMP_TID : '/painel/api/impressao/reimprimir?id=' + id; }
-  <script>
+  </script>
     let imprimindo = false;
     let btDevice = null, btChar = null;
     const btPrefs = { modo: localStorage.getItem('rpz_imp_modo') || 'sistema', largura: localStorage.getItem('rpz_imp_largura') || '80' };
