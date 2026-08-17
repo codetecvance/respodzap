@@ -2356,7 +2356,7 @@ async function pageConfig(req, res) {
     </div>
     <div class="panel"><h2>👁 Preview da imagem do menu</h2>
       ${previewCat
-        ? `<img id="menuPreview" src="/api/menu-image?tenant=${tenant.id}&cat=${encodeURIComponent(previewCat)}&refresh=1&v=1" style="max-width:360px;width:100%;border:1px solid #e2e8f0;border-radius:10px" alt="Preview">`
+        ? `<img id="menuPreview" src="/api/menu-image?tenant=${tenant.id}&cat=${encodeURIComponent(previewCat)}&refresh=1&v=${Date.now()}" style="max-width:360px;width:100%;border:1px solid #e2e8f0;border-radius:10px" alt="Preview">`
         : `<div class="empty" style="border:1px dashed #cbd5e1;border-radius:10px">📭 Nenhum produto ativo para gerar a imagem do menu.<br><br>Cadastre produtos em <a href="${base}/produtos">Produtos</a> e deixe marcado como <b>ativo</b> — a imagem aparece aqui e é enviada no bot.</div>`}
       <p style="font-size:12px;color:#64748b;margin-top:8px">Atualiza conforme você muda as cores/acima. Salve para aplicar no bot (em até 15s).</p>
     </div>

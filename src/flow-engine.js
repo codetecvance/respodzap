@@ -610,6 +610,17 @@ async function _processPayment(tenant, lead, method) {
       const storeConf = await catalog.getStoreConfig(tenant.id);
       const desc = Number(storeConf.pix_discount_percent || 0);
       const pix = await payment.criarPix(tenant, order, lead);
+      // Envia a imagem do QR Code (escaneável) — e depois o copia e cola
+      if (pix.pix_qr_base64) {
+        try {
+          const qrBuf = Buffer.from(pix.pix_qr_base64, 'base64');
+          if (qrBuf.length > 100) {
+            await ws.sendImageBuffer(lead.phone, qrBuf, 'image/png', `pix-${order.external_id}`, '💠 Escaneie o QR Code para pagar', tenant);
+          }
+        } catch (e) {
+          console.error('[FLOW] erro ao enviar QR:', e.message);
+        }
+      }
       let texto = await catalog.msg(tenant.id, 'payment_pix', {
         pedido: order.external_id, total: pix.total.toFixed(2), qr: pix.pix_copy_paste,
         desconto_info: desc > 0 ? ` (desconto de ${desc}% aplicado)` : '',
