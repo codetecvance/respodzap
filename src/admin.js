@@ -318,7 +318,7 @@ function layout(title, active, content, tenants = [], activeTenantId = null, cli
     function impMarcar(){ return IMP_IS_ADMIN ? '/admin/api/impressao/marcar' : '/painel/api/impressao/marcar'; }
     function impTeste(){ return IMP_IS_ADMIN ? '/admin/api/impressao/teste?tenant=' + IMP_TID : '/painel/api/impressao/teste'; }
     function impReimprimir(id){ return IMP_IS_ADMIN ? '/admin/api/impressao/reimprimir?id=' + id + '&tenant=' + IMP_TID : '/painel/api/impressao/reimprimir?id=' + id; }
-  </script>
+  </script><script>
     let imprimindo = false;
     let btDevice = null, btChar = null;
     const btPrefs = { modo: localStorage.getItem('rpz_imp_modo') || 'sistema', largura: localStorage.getItem('rpz_imp_largura') || '80' };
