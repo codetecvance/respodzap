@@ -274,7 +274,9 @@ async function _handleAddonsAnswer(tenant, lead, text) {
 
   const proximo = product.adicionais[state.grupoIdx];
   if (proximo) return _askAddonGroup(tenant, lead, product, state.grupoIdx);
-  await ws.sendText(lead.phone, await catalog.msg(tenant.id, 'addon_done'), tenant);
+  let addonMsg = await catalog.msg(tenant.id, 'addon_done');
+  if (!addonMsg) addonMsg = '✅ Adicionais escolhidos!';
+  await ws.sendText(lead.phone, addonMsg, tenant);
   return _finishAddons(tenant, lead, product, state.selections);
 }
 
@@ -382,7 +384,9 @@ async function _handleBairro(tenant, lead, text, payload) {
         // Fora da área: bloqueia com aviso + sugestão de contato
         const wa = (tenant.contact_phone || '').replace(/[^\d]/g, '');
         const link = wa ? `https://wa.me/${wa}?text=${encodeURIComponent('Olá! Quero fazer um pedido mas meu bairro está fora da área de entrega.')}` : null;
-        await ws.sendText(lead.phone, await catalog.msg(tenant.id, 'out_of_area'), tenant);
+        let foraMsg = await catalog.msg(tenant.id, 'out_of_area');
+        if (!foraMsg) foraMsg = '😔 Seu bairro está fora da nossa área de entrega.';
+        await ws.sendText(lead.phone, foraMsg, tenant);
         if (link) await ws.sendText(lead.phone, `🔗 Fale conosco para retirada no local:\n\n${link}`, tenant);
         await repo.setFlowState(lead.id, ST.MENU);
         return _menu(tenant, lead);

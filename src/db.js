@@ -45,7 +45,7 @@ async function initDb() {
       price             NUMERIC NOT NULL DEFAULT 299,
       status            TEXT NOT NULL DEFAULT 'ativa',
       expires_at        TIMESTAMPTZ,
-      last_notified_day INTEGER,
+      last_notified_day TEXT,
       created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at        TIMESTAMPTZ
     );
@@ -176,6 +176,8 @@ async function initDb() {
   await query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS mp_token_expires_at TIMESTAMPTZ`);
   await query(`ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS product_limit INTEGER`);
   await query(`ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS product_limit INTEGER`);
+  // Correção: last_notified_day guarda marcas de texto (ex: "aviso:3:2026-08-17")
+  await query(`ALTER TABLE subscriptions ALTER COLUMN last_notified_day TYPE TEXT USING last_notified_day::text`);
   // Backfill: clientes existentes recebem PRO (30 produtos)
   await query(`UPDATE subscriptions SET product_limit = 30 WHERE product_limit IS NULL`);
 }

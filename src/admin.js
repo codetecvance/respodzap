@@ -487,6 +487,7 @@ function layout(title, active, content, tenants = [], activeTenantId = null, cli
   return `<!DOCTYPE html>
 <html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(title)} — RespVZap</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232563eb'/%3E%3Ctext x='16' y='22' font-size='16' font-family='sans-serif' font-weight='bold' fill='%23fff' text-anchor='middle'%3ERZ%3C/text%3E%3C/svg%3E">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f1f5f9; color: #0f172a; display: flex; min-height: 100vh; }
@@ -635,7 +636,7 @@ function pageSub(active) {
 // ======================================================
 function loginPage(erro) {
   return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Login — RespVZap</title><style>
+<title>Login — RespVZap</title><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232563eb'/%3E%3Ctext x='16' y='22' font-size='16' font-family='sans-serif' font-weight='bold' fill='%23fff' text-anchor='middle'%3ERZ%3C/text%3E%3C/svg%3E"><style>
   * { box-sizing: border-box; } body { font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg,#0f172a,#1e3a8a); }
   .login-box { background: #fff; padding: 38px; border-radius: 18px; box-shadow: 0 25px 60px rgba(0,0,0,.35); width: 360px; }
   .logo { width: 56px; height: 56px; border-radius: 14px; background: linear-gradient(135deg,#38bdf8,#2563eb); display: flex; align-items: center; justify-content: center; font-weight: 800; color: #fff; font-size: 22px; margin: 0 auto 14px; }
@@ -674,7 +675,7 @@ router.get('/admin/logout', (req, res) => {
 // ======================================================
 function clientLoginPage(erro) {
   return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Painel do Cliente — RespVZap</title><style>
+<title>Painel do Cliente — RespVZap</title><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2316a34a'/%3E%3Ctext x='16' y='22' font-size='16' font-family='sans-serif' font-weight='bold' fill='%23fff' text-anchor='middle'%3ER%3C/text%3E%3C/svg%3E"><style>
   * { box-sizing: border-box; } body { font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg,#14532d,#166534); }
   .login-box { background: #fff; padding: 38px; border-radius: 18px; box-shadow: 0 25px 60px rgba(0,0,0,.35); width: 360px; }
   .logo { width: 56px; height: 56px; border-radius: 14px; background: linear-gradient(135deg,#22c55e,#15803d); display: flex; align-items: center; justify-content: center; font-weight: 800; color: #fff; font-size: 20px; margin: 0 auto 14px; }
@@ -1682,6 +1683,7 @@ async function pageProdutos(req, res) {
     </div>
     <div class="panel"><h2>📤 Enviar foto de produto <span class="right"><button class="btn small" onclick="document.getElementById('fileInput').click()">Escolher arquivo</button></span></h2>
       <form method="POST" action="${base}/upload" enctype="multipart/form-data">
+        <input type="hidden" name="tenant" value="${tenant.id}">
         <input type="file" id="fileInput" name="foto" accept="image/*" required style="display:none" onchange="this.form.submit()">
       </form>
       <p style="font-size:12px;color:#64748b">Depois de enviar, a foto aparece na galeria abaixo — <b>clique nela</b> (nos produtos) para usar, ou copie a URL.</p>
@@ -2099,17 +2101,14 @@ async function postPedidosStatus(req, res) {
   const status = String(req.body.status);
   await repo.updateOrderStatus(orderId, status);
 
-  // Confirmação manual (ex: PIX com QR próprio): notifica o cliente automaticamente
+  // Confirmação manual (ex: PIX com QR próprio): notifica cliente + dono
   if (status === 'approved') {
     try {
       const order = await repo.getOrder(orderId);
       const tenant = await repo.getTenant(order.tenant_id);
-      const lead = await repo.getLead(order.lead_id);
-      if (order && tenant && lead) {
-        const { sendText } = require('./whatsapp');
-        const catalogMod = require('./catalog');
-        const resumo = `Pedido #${order.external_id}\nTotal: R$ ${Number(order.total || 0).toFixed(2)}`;
-        await sendText(lead.phone, await catalogMod.msg(tenant.id, 'payment_confirmed', { resumo }), tenant);
+      if (order && tenant) {
+        const webhook = require('./webhook');
+        await webhook.confirmarPagamentoAprovado(tenant, order);
       }
     } catch (e) {
       console.error('[PEDIDO] erro ao notificar pagamento aprovado:', e.message);

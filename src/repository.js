@@ -493,7 +493,7 @@ async function updateCartItemQuantity(leadId, productId, qty) {
   if (qty <= 0) return removeFromCart(leadId, productId);
   const r = await query('SELECT id, unit_price FROM cart_items WHERE lead_id = $1 AND product_id = $2', [leadId, productId]);
   if (!r.rows[0]) return;
-  await query('UPDATE cart_items SET quantity = $3, total_price = $4 WHERE id = $1', [r.rows[0].id, qty, num(r.rows[0].unit_price) * qty]);
+  await query('UPDATE cart_items SET quantity = $2, total_price = $3 WHERE id = $1', [r.rows[0].id, qty, num(r.rows[0].unit_price) * qty]);
 }
 
 async function cartTotal(leadId) {
@@ -548,6 +548,13 @@ async function getOrderItems(orderId) {
 
 async function updateOrderStatus(orderId, status) {
   await query(`UPDATE orders SET status = $2, updated_at = NOW() WHERE id = $1`, [orderId, status]);
+}
+
+/**
+ * Atualiza desconto e total do pedido (ex: desconto PIX aplicado na hora do pagamento).
+ */
+async function updateOrderTotals(orderId, { discount, total }) {
+  await query(`UPDATE orders SET discount = $2, total = $3, updated_at = NOW() WHERE id = $1`, [orderId, discount, total]);
 }
 
 async function updateOrderObservations(orderId, observations) {
@@ -721,7 +728,7 @@ module.exports = {
   getCart, addToCart, removeFromCart, clearCart, updateCartItemQuantity, cartTotal, cartCount,
   formatAddons, addonsTotal,
   // pedidos
-  createOrder, getOrder, getOrderByExternal, getOrderItems, updateOrderStatus, updateOrderObservations, getLeadOrders, getOrders,
+  createOrder, getOrder, getOrderByExternal, getOrderItems, updateOrderStatus, updateOrderTotals, updateOrderObservations, getLeadOrders, getOrders,
   getOrdersToPrint, markOrderPrinted, getPendingOrdersWithPayments, deleteOrder, deletePendingOrdersOlderThan, deleteLeadCompleto,
   // pagamentos
   createPayment, getPaymentByMpId, getPaymentByOrderId, updatePaymentStatusByMpId,

@@ -313,7 +313,7 @@ async function sendWelcomeMenu(to, nome = '', tenant = null) {
   const company = await catalog.getCompanyInfo(tenant.id);
   const texto = await catalog.msg(tenant.id, 'welcome', {
     nome: nome || 'cliente',
-    empresa: config.businessName || company.name || 'RespVZap',
+    empresa: company.name || config.businessName || 'RespVZap',
   });
   await sendButtons(to, texto, [
     { id: 'MENU_SHOP', title: await catalog.getButton(tenant.id, 'menu_shop') },

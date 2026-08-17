@@ -63,8 +63,19 @@ async function criarPix(tenant, order, lead) {
 
   const storeConf = await catalog.getStoreConfig(tenant.id);
   const discountPercent = storeConf.pix_discount_percent || 0;
-  const total = Number(order.total || 0);
-  const finalTotal = Math.round((total - (total * discountPercent) / 100) * 100) / 100;
+  // Base do cálculo: subtotal + entrega (independe de desconto já persistido —
+  // evita aplicar desconto duplicado se o PIX for gerado novamente).
+  const baseTotal = Math.round((Number(order.subtotal || 0) + Number(order.delivery_fee || 0)) * 100) / 100;
+  const finalTotal = Math.round((baseTotal - (baseTotal * discountPercent) / 100) * 100) / 100;
+
+  // Persiste o desconto no pedido para que todas as telas (confirmação ao cliente,
+  // ticket impresso, notificações e relatórios) mostrem o valor realmente cobrado.
+  if (finalTotal !== Number(order.total)) {
+    await repo.updateOrderTotals(order.id, {
+      discount: Math.round((baseTotal - finalTotal) * 100) / 100,
+      total: finalTotal,
+    });
+  }
 
   const payload = {
     transaction_amount: finalTotal,
@@ -117,6 +128,13 @@ async function criarCheckoutCartao(tenant, order, lead, tipo) {
   if (!token) throw new Error('Token Mercado Pago ausente');
 
   const storeConf = await catalog.getStoreConfig(tenant.id);
+  // Cartão paga o valor cheio (subtotal + entrega) — limpa desconto PIX que
+  // eventualmente tenha sido persistido no pedido e recalcula o total exato.
+  const chargeTotal = Math.round((Number(order.subtotal || 0) + Number(order.delivery_fee || 0)) * 100) / 100;
+  if (Number(order.discount) > 0 || Number(order.total) !== chargeTotal) {
+    await repo.updateOrderTotals(order.id, { discount: 0, total: chargeTotal });
+  }
+
   const items = (await repo.getOrderItems(order.id)).map(it => ({
     title: it.product_name,
     unit_price: Number(it.unit_price),
@@ -164,7 +182,7 @@ async function criarCheckoutCartao(tenant, order, lead, tipo) {
     mp_preference_id: preference.id,
     payment_method: tipo === 'credit' ? 'credit_card' : 'debit_card',
     status: 'pending',
-    total: order.total,
+    total: chargeTotal,
   });
 
   return { preference_id: preference.id, checkout_url: preference.init_point };
