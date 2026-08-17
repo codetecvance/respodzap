@@ -174,6 +174,10 @@ async function initDb() {
   await query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS mp_refresh_token TEXT`);
   await query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS mp_user_id TEXT`);
   await query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS mp_token_expires_at TIMESTAMPTZ`);
+  await query(`ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS product_limit INTEGER`);
+  await query(`ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS product_limit INTEGER`);
+  // Backfill: clientes existentes recebem PRO (30 produtos)
+  await query(`UPDATE subscriptions SET product_limit = 30 WHERE product_limit IS NULL`);
 }
 
 module.exports = { pool, query, initDb };

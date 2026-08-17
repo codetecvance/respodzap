@@ -278,13 +278,20 @@ async function getActiveSubscription(tenantId) {
   return r.rows[0] ? { ...r.rows[0], price: num(r.rows[0].price) } : null;
 }
 
-async function createSubscription(tenantId, planId, price, periodDays) {
+async function createSubscription(tenantId, planId, price, periodDays, productLimit = 30) {
   const r = await query(
-    `INSERT INTO subscriptions (tenant_id, plan_id, price, period_days, status, expires_at)
-     VALUES ($1,$2,$3,$4,'ativa', NOW() + make_interval(days => $4)) RETURNING *`,
-    [tenantId, planId, price, periodDays]
+    `INSERT INTO subscriptions (tenant_id, plan_id, price, period_days, status, expires_at, product_limit)
+     VALUES ($1,$2,$3,$4,'ativa', NOW() + make_interval(days => $4), $5) RETURNING *`,
+    [tenantId, planId, price, periodDays, productLimit]
   );
   return r.rows[0];
+}
+
+/**
+ * Troca o limite de produtos da licença (Starter/Pro) sem mexer na validade.
+ */
+async function updateSubscriptionLimit(id, productLimit) {
+  await query(`UPDATE subscriptions SET product_limit = $2, updated_at = NOW() WHERE id = $1`, [id, productLimit]);
 }
 
 async function renewSubscription(id, days) {
@@ -649,7 +656,7 @@ module.exports = {
   // planos e assinaturas
   getPlans, createPlan, updatePlan, deletePlan, countSubscriptionsByPlan,
   getSubscriptions, getSubscriptionsByTenant, getActiveSubscription, createSubscription,
-  renewSubscription, renewSubscriptionMark, cancelSubscription, deleteSubscription, getExpiringSubscriptions,
+  renewSubscription, renewSubscriptionMark, cancelSubscription, deleteSubscription, updateSubscriptionLimit, getExpiringSubscriptions,
   // catálogos
   getTenantCatalog, saveTenantCatalog,
   // imagens

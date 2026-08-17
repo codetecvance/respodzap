@@ -1309,13 +1309,19 @@ router.get('/admin/assinaturas', requireAuth, async (req, res) => {
     const plan = plans.find(p => p.id === s.plan_id);
     const custom = plan && (Number(s.price) !== Number(plan.price) || Number(s.period_days) !== Number(plan.period_days));
     const days = s.period_days || plan?.period_days || 30;
+    const limite = s.product_limit ?? 30;
+    const tipo = limite >= 30 ? 'Pro' : 'Starter';
     return `<tr>
       <td><b>${esc(s.tenant_name)}</b></td>
-      <td>${esc(s.plan_name || '—')} ${custom ? '<span class="badge wait">personalizado</span>' : ''}</td>
+      <td>${esc(s.plan_name || '—')} ${custom ? '<span class="badge wait">personalizado</span>' : ''}<br><span class="badge ${tipo === 'Pro' ? 'info' : 'wait'}">${tipo} — ${limite} produtos</span></td>
       <td>${money(s.price)}<br><small style="color:#94a3b8">${days} dias</small></td>
       <td>${statusBadge(s.status)}</td>
       <td>${s.expires_at ? esc(String(s.expires_at).slice(0, 10)) : '—'}</td>
       <td style="white-space:nowrap">
+        <form class="inline-form" method="POST" action="/admin/assinaturas/tipo"><input type="hidden" name="id" value="${s.id}"><select name="tipo" onchange="this.form.submit()" title="Trocar tipo da licença (limite de produtos)">
+          <option value="starter" ${tipo === 'Starter' ? 'selected' : ''}>Starter (20)</option>
+          <option value="pro" ${tipo === 'Pro' ? 'selected' : ''}>Pro (30)</option>
+        </select></form>
         <form class="inline-form" method="POST" action="/admin/assinaturas/renovar"><input type="hidden" name="id" value="${s.id}"><input type="hidden" name="days" value="${days}"><button class="btn green small">Renovar</button></form>
         <form class="inline-form" method="POST" action="/admin/assinaturas/pix"><input type="hidden" name="id" value="${s.id}"><button class="btn amber small">Gerar PIX</button></form>
         ${s.status === 'ativa' ? `<form class="inline-form" method="POST" action="/admin/assinaturas/cancelar"><input type="hidden" name="id" value="${s.id}"><button class="btn red small">Cancelar</button></form>` : ''}
@@ -1350,11 +1356,15 @@ router.get('/admin/assinaturas', requireAuth, async (req, res) => {
       <form method="POST" action="/admin/assinaturas/nova" style="display:flex;gap:10px;align-items:end;flex-wrap:wrap">
         <div style="min-width:200px"><label>CLIENTE</label><select name="tenant_id" required>${tenantOptions}</select></div>
         <div style="min-width:200px"><label>PLANO</label><select name="plan_id" required>${planOptions}</select></div>
+        <div style="min-width:150px"><label>TIPO DE PLANO (limite de produtos)</label><select name="tipo" required>
+          <option value="starter">Starter — até 20 produtos</option>
+          <option value="pro" selected>Pro — até 30 produtos</option>
+        </select></div>
         <div style="min-width:130px"><label>PREÇO (R$) — vazio = do plano</label><input type="text" name="preco_custom" placeholder="Ex: 250,00"></div>
         <div style="min-width:120px"><label>PERÍODO (dias) — vazio = do plano</label><input type="number" name="dias_custom" placeholder="Ex: 45"></div>
         <button class="btn green" type="submit">+ Criar licença</button>
       </form>
-      <p style="font-size:12px;color:#64748b;margin-top:8px">Preencha preço/período para personalizar o valor desse cliente. O bot envia o PIX de renovação automaticamente 3 dias antes do vencimento.</p>
+      <p style="font-size:12px;color:#64748b;margin-top:8px">O tipo de plano define quantos produtos o cliente pode cadastrar no painel (Starter: 20 · Pro: 30). Preço e período podem ser personalizados. O bot envia o PIX de renovação automaticamente 3 dias antes do vencimento.</p>
     </div>
     <div class="panel"><h2>🏷️ Planos de assinatura <span class="right"><small style="font-weight:400;color:#94a3b8">edite os valores que aparecem no select acima</small></span></h2>
       <table>
@@ -1407,10 +1417,18 @@ router.post('/admin/assinaturas/nova', requireAuth, async (req, res) => {
   const diasCustom = String(b.dias_custom || '').trim();
   const price = precoCustom !== '' ? parseFloat(precoCustom.replace(',', '.')) : Number(plan.price);
   const days = diasCustom !== '' ? Number(diasCustom) : Number(plan.period_days);
+  const limite = b.tipo === 'starter' ? 20 : 30;
 
-  await repo.createSubscription(Number(b.tenant_id), plan.id, price, days);
+  await repo.createSubscription(Number(b.tenant_id), plan.id, price, days, limite);
+  const tipoNome = limite >= 30 ? 'Pro' : 'Starter';
   const nota = (precoCustom !== '' || diasCustom !== '') ? ` (personalizado: R$ ${price} / ${days} dias)` : '';
-  res.redirect('/admin/assinaturas?msg=' + encodeURIComponent(`Licença criada: ${plan.name} — vence em ${days} dias.${nota}`));
+  res.redirect('/admin/assinaturas?msg=' + encodeURIComponent(`Licença criada: ${plan.name} (${tipoNome} — ${limite} produtos) — vence em ${days} dias.${nota}`));
+});
+
+router.post('/admin/assinaturas/tipo', requireAuth, async (req, res) => {
+  const limite = req.body.tipo === 'starter' ? 20 : 30;
+  await repo.updateSubscriptionLimit(Number(req.body.id), limite);
+  res.redirect('/admin/assinaturas?msg=' + encodeURIComponent(`Tipo da licença alterado para ${limite >= 30 ? 'Pro' : 'Starter'} (${limite} produtos).`));
 });
 
 router.post('/admin/assinaturas/renovar', requireAuth, async (req, res) => {
@@ -1504,6 +1522,28 @@ async function pageProdutos(req, res) {
   const gallery = galleryHtml(images, tenant.id, base);
   const showAddonsEditor = !!tenant.segment_name && tenant.segment_name !== 'vendas';
 
+  // Limite de produtos do plano (Starter 20 / Pro 30) — painel do cliente
+  let limiteHtml = '';
+  let limiteAtingido = false;
+  let productLimit = null;
+  if (clientMode) {
+    const sub = await repo.getActiveSubscription(tenant.id);
+    productLimit = sub?.product_limit ?? null;
+    const totalProducts = (data.categories || []).reduce((s, c) => s + (c.products || []).length, 0);
+    limiteAtingido = !!productLimit && totalProducts >= productLimit;
+    if (productLimit) {
+      const pct = Math.min(100, Math.round((totalProducts / productLimit) * 100));
+      const cor = limiteAtingido ? '#dc2626' : pct >= 80 ? '#d97706' : '#16a34a';
+      const planoNome = productLimit >= 30 ? 'Pro' : 'Starter';
+      limiteHtml = `<div class="panel" style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;background:#f8fafc">
+        <div style="font-size:13px;white-space:nowrap"><b>🛍 ${totalProducts}/${productLimit} produtos</b> <span class="badge ${planoNome === 'Pro' ? 'info' : 'wait'}">${planoNome}</span>
+        ${limiteAtingido ? '<span class="badge no">limite atingido</span>' : `<span class="badge ${pct >= 80 ? 'wait' : 'ok'}">${productLimit - totalProducts} restante(s)</span>`}</div>
+        <div style="flex:1;min-width:200px;height:10px;background:#e2e8f0;border-radius:6px;overflow:hidden"><div style="width:${pct}%;height:100%;background:${cor};border-radius:6px"></div></div>
+        ${limiteAtingido ? `<a class="btn small" href="/painel/botoes" style="white-space:nowrap">Preciso de mais — falar com suporte</a>` : ''}
+      </div>`;
+    }
+  }
+
   const catsHtml = data.categories.map((cat, ci) => {
     const prods = cat.products.map((p, pi) => {
       const base = clientMode ? '/painel' : '/admin';
@@ -1562,7 +1602,9 @@ async function pageProdutos(req, res) {
     });
     return `<div class="panel"><h2>${esc(cat.emoji || '')} ${esc(cat.name)} <span class="right badge info">${cat.products.length} produto(s)</span></h2>
       ${prods.join('')}
-      <details style="margin-top:8px"><summary style="cursor:pointer;font-size:13px;color:#2563eb;font-weight:600">+ Adicionar novo produto</summary>
+      ${limiteAtingido
+        ? `<p style="font-size:12px;color:#b91c1c;margin-top:8px">🚫 Limite de ${productLimit} produtos do plano ${productLimit >= 30 ? 'Pro' : 'Starter'} atingido. Fale com o suporte para aumentar o limite.</p>`
+        : `<details style="margin-top:8px"><summary style="cursor:pointer;font-size:13px;color:#2563eb;font-weight:600">+ Adicionar novo produto</summary>
       <form method="POST" action="${clientMode ? '/painel' : '/admin'}/produtos/novo" class="grid2" style="margin-top:12px">
         <input type="hidden" name="tenant" value="${tenant.id}">
         <input type="hidden" name="ci" value="${ci}">
@@ -1570,10 +1612,11 @@ async function pageProdutos(req, res) {
           <label><input type="checkbox" name="digital" style="width:auto"> Produto digital</label></div>
         <div><label>RESUMO</label><input type="text" name="short_description"><label>DESCRIÇÃO</label><textarea name="long_description"></textarea></div>
         <div style="grid-column:1/-1"><button class="btn green" type="submit">+ Criar produto</button></div>
-      </form></details></div>`;
+      </form></details>`}</div>`;
   }).join('');
 
   res.send(layout('Produtos', clientMode ? '/painel/produtos' : '/admin/produtos', `${tenantSelector(tenant.id, tenants, clientMode)}${flash}
+    ${limiteHtml}
     <div class="panel" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
       <button class="btn green" onclick="salvarTudo()">💾 Salvar tudo</button>
       <span class="muted" style="font-size:13px">Altere quantos produtos quiser e salve tudo de uma vez (as ações por produto continuam funcionando).</span>
@@ -1648,6 +1691,19 @@ async function postProdutosNovo(req, res) {
   const tenantId = tenantIdFromReq(req, b.tenant || req.query.tenant);
   const base = req.clientMode ? '/painel' : '/admin';
   const data = await catalog.loadTenantCatalog(tenantId);
+
+  // Limite de produtos do plano (Starter 20 / Pro 30) — só no painel do cliente
+  if (req.clientMode) {
+    const sub = await repo.getActiveSubscription(tenantId);
+    const limite = sub?.product_limit ?? null;
+    if (limite) {
+      const total = (data.categories || []).reduce((s, c) => s + (c.products || []).length, 0);
+      if (total >= limite) {
+        return res.redirect(`${base}/produtos?msg=` + encodeURIComponent(`Limite de ${limite} produtos do plano ${limite >= 30 ? 'Pro' : 'Starter'} atingido — fale com o suporte para aumentar.`) + '&type=err');
+      }
+    }
+  }
+
   const cat = data.categories[Number(b.ci)];
   if (!cat) return res.redirect(`${base}/produtos`);
   if (cat.products.some(p => p.id === b.id)) return res.redirect(`${base}/produtos?msg=` + encodeURIComponent('ID já existe.') + '&type=err');
