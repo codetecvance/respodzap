@@ -8,7 +8,10 @@ module.exports = async (req, res) => {
   }
   try {
     const report = await runLicenseCheck();
-    res.json({ ok: true, report });
+    // Rede de segurança: confirma pagamentos pendentes que o webhook não capturou
+    const webhook = require('../src/webhook');
+    const aprovados = await webhook.verificarPagamentosPendentes();
+    res.json({ ok: true, report, pagamentos_aprovados: aprovados });
   } catch (e) {
     console.error('[CRON]', e.message);
     res.status(500).json({ ok: false, error: e.message });

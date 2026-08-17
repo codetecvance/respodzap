@@ -2003,7 +2003,9 @@ async function pagePedidos(req, res) {
   }))).join('');
 
   res.send(layout('Pedidos', clientMode ? '/painel/pedidos' : '/admin/pedidos', `${tenantSelector(tenant.id, tenants, clientMode)}
-    <div class="filters">${statusFilter}<button class="btn amber small" onclick="testarImpressora()">🖨️ Imprimir teste</button></div>
+    <div class="filters">${statusFilter}<button class="btn amber small" onclick="testarImpressora()">🖨️ Imprimir teste</button>
+      <form class="inline-form" method="POST" action="${clientMode ? '/painel' : '/admin'}/pedidos/verificar-pagamentos">${clientMode ? '' : `<input type="hidden" name="tenant" value="${tenant.id}">`}<button class="btn small">🔍 Verificar pagamentos</button></form>
+    </div>
     <div class="panel"><h2>🖨️ Impressora</h2>
       <div class="grid2">
         <div><label>MODO DE IMPRESSÃO</label><select id="impModo" onchange="salvarPrefImp()">
@@ -2056,6 +2058,20 @@ async function postPedidosStatus(req, res) {
 
 router.post('/admin/pedidos/status', requireAuth, postPedidosStatus);
 router.post('/painel/pedidos/status', clientPanelAuth, postPedidosStatus);
+
+// Verificação manual de pagamentos pendentes (confirma pagos que o webhook não capturou)
+async function postVerificarPagamentos(req, res) {
+  const tenantId = tenantIdFromReq(req, req.body.tenant || req.query.tenant);
+  const base = req.clientMode ? '/painel' : '/admin';
+  const webhook = require('./webhook');
+  const aprovados = await webhook.verificarPagamentosPendentes(tenantId);
+  const msg = aprovados > 0
+    ? `${aprovados} pedido(s) pagos confirmados!`
+    : 'Nenhum pagamento pendente para confirmar.';
+  res.redirect(`${base}/pedidos?msg=` + encodeURIComponent(msg));
+}
+router.post('/admin/pedidos/verificar-pagamentos', requireAuth, postVerificarPagamentos);
+router.post('/painel/pedidos/verificar-pagamentos', clientPanelAuth, postVerificarPagamentos);
 
 // ----- LEADS -----
 async function pageLeads(req, res) {

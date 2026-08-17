@@ -570,6 +570,22 @@ async function getOrders(tenantId) {
 /**
  * Pedidos aprovados ainda não impressos (fila da impressora), do mais antigo.
  */
+/**
+ * Pedidos pendentes com cobrança MP registrada (para verificação de pagamento).
+ */
+async function getPendingOrdersWithPayments(tenantId = null) {
+  const params = tenantId ? [tenantId] : [];
+  const r = await query(
+    `SELECT o.id, o.external_id, o.tenant_id, o.total, p.mp_payment_id, p.payment_method
+     FROM orders o JOIN payments p ON p.order_id = o.id
+     WHERE o.status = 'pending' AND p.mp_payment_id IS NOT NULL
+     ${tenantId ? 'AND o.tenant_id = $1' : ''}
+     ORDER BY o.created_at ASC`,
+    params
+  );
+  return r.rows.map(x => ({ ...x, total: num(x.total) }));
+}
+
 async function getOrdersToPrint(tenantId, limit = 5) {
   const r = await query(
     `SELECT * FROM orders WHERE tenant_id = $1 AND status = 'approved' AND printed_at IS NULL
@@ -672,7 +688,7 @@ module.exports = {
   formatAddons, addonsTotal,
   // pedidos
   createOrder, getOrder, getOrderByExternal, getOrderItems, updateOrderStatus, updateOrderObservations, getLeadOrders, getOrders,
-  getOrdersToPrint, markOrderPrinted,
+  getOrdersToPrint, markOrderPrinted, getPendingOrdersWithPayments,
   // pagamentos
   createPayment, getPaymentByMpId, getPaymentByOrderId, updatePaymentStatusByMpId,
   // estatísticas

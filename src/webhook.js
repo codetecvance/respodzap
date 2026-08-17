@@ -153,25 +153,8 @@ router.post('/mercadopago/webhook', async (req, res) => {
 
     if (mpStatus === 'approved') {
       const tenant = await repo.getTenant(order.tenant_id);
-      const lead = await repo.getLead(order.lead_id);
-      if (!lead || !tenant) return;
-      const { sendText } = require('./whatsapp');
-      const catalog = require('./catalog');
-      const resumo = `Pedido #${order.external_id}\nTotal: R$ ${order.total.toFixed(2)}`;
-      await sendText(lead.phone, await catalog.msg(tenant.id, 'payment_confirmed', { resumo }), tenant);
-
-      const items = await repo.getOrderItems(order.id);
-      const itensTxt = items.map(it => `${it.quantity}x ${it.product_name}`).join(', ');
-      const pay = await repo.getPaymentByOrderId(order.id);
-      const metodo = { pix: 'PIX', credit_card: 'Cartão de Crédito', debit_card: 'Cartão de Débito' }[pay?.payment_method] || pay?.payment_method || '—';
-      const { notifyTenant } = require('./notify');
-      await notifyTenant(
-        tenant,
-        '✅ PAGAMENTO RECEBIDO',
-        `Pedido: #${order.external_id}\nCliente: ${lead.full_name || '—'}\nWhatsApp: ${lead.phone}\nItens: ${itensTxt}\nMétodo: ${metodo}\nValor: R$ ${order.total.toFixed(2)}\nStatus: pagamento confirmado`,
-        lead.phone
-      );
-      console.log('[MP-Webhook] Pagamento aprovado para o pedido', order.external_id);
+      if (!tenant) return;
+      await confirmarPagamentoAprovado(tenant, order);
     }
   } catch (e) {
     console.error('[MP-Webhook]', e.message);
@@ -197,6 +180,66 @@ function verificarAssinatura(rawBody, signature) {
   const b = Buffer.from(sig, 'hex');
   if (a.length !== b.length) return false;
   return crypto.timingSafeEqual(a, b);
+}
+
+// ===================================================
+//  CONFIRMAÇÃO DE PAGAMENTO (compartilhada: webhook, cron e botão)
+// ===================================================
+
+/**
+ * Notifica cliente + dono quando um pedido é aprovado.
+ */
+async function confirmarPagamentoAprovado(tenant, order) {
+  const lead = await repo.getLead(order.lead_id);
+  if (!lead) return;
+  const { sendText } = require('./whatsapp');
+  const catalog = require('./catalog');
+  const resumo = `Pedido #${order.external_id}\nTotal: R$ ${Number(order.total || 0).toFixed(2)}`;
+  await sendText(lead.phone, await catalog.msg(tenant.id, 'payment_confirmed', { resumo }), tenant);
+
+  const items = await repo.getOrderItems(order.id);
+  const itensTxt = items.map(it => `${it.quantity}x ${it.product_name}`).join(', ');
+  const pay = await repo.getPaymentByOrderId(order.id);
+  const metodo = { pix: 'PIX', credit_card: 'Cartão de Crédito', debit_card: 'Cartão de Débito' }[pay?.payment_method] || pay?.payment_method || '—';
+  const { notifyTenant } = require('./notify');
+  await notifyTenant(
+    tenant,
+    '✅ PAGAMENTO RECEBIDO',
+    `Pedido: #${order.external_id}\nCliente: ${lead.full_name || '—'}\nWhatsApp: ${lead.phone}\nItens: ${itensTxt}\nMétodo: ${metodo}\nValor: R$ ${Number(order.total || 0).toFixed(2)}\nStatus: pagamento confirmado`,
+    lead.phone
+  );
+  console.log('[MP-Webhook] Pagamento aprovado para o pedido', order.external_id);
+}
+
+/**
+ * Verifica pedidos pendentes no Mercado Pago e confirma os pagos.
+ * Rede de segurança caso o webhook não chegue. Retorna quantos foram aprovados.
+ */
+async function verificarPagamentosPendentes(tenantId = null) {
+  const pendentes = await repo.getPendingOrdersWithPayments(tenantId);
+  let aprovados = 0;
+  for (const row of pendentes) {
+    try {
+      const tenant = await repo.getTenant(row.tenant_id);
+      if (!tenant) continue;
+      const { getTenantMpToken, getPaymentStatus } = require('./payment');
+      const token = await getTenantMpToken(tenant);
+      const st = await getPaymentStatus(row.mp_payment_id, token);
+      if (!st) continue;
+      if (st.status === 'approved') {
+        await repo.updateOrderStatus(row.id, 'approved');
+        await repo.updatePaymentStatusByMpId(row.mp_payment_id, 'approved');
+        await confirmarPagamentoAprovado(tenant, await repo.getOrder(row.id));
+        aprovados++;
+      } else if (st.status === 'rejected' || st.status === 'cancelled') {
+        await repo.updateOrderStatus(row.id, 'failed');
+        await repo.updatePaymentStatusByMpId(row.mp_payment_id, st.status);
+      }
+    } catch (e) {
+      console.error('[VERIF-PAG]', e.message);
+    }
+  }
+  return aprovados;
 }
 
 // ===================================================
@@ -260,3 +303,5 @@ router.get('/mercadopago/desconectar', async (req, res) => {
 });
 
 module.exports = router;
+router.verificarPagamentosPendentes = verificarPagamentosPendentes;
+router.confirmarPagamentoAprovado = confirmarPagamentoAprovado;
