@@ -75,7 +75,59 @@ O Vercel Cron roda `https://respodzap.vercel.app/api/cron` todo dia às 09:00:
 - Neon Free: 100 CU-horas/mês + 0,5 GB
 - Quando crescer para 100+: subir para Vercel Pro (~US$ 20/mês) e/ou Neon Launch — **sem mudar o código**.
 
-## Dicas
+## CI/CD e Branch Protection
+
+### GitHub Actions (automático)
+
+O projeto possui 3 workflows automáticos:
+
+| Workflow | Arquivo | Quando roda |
+|----------|---------|-------------|
+| **CI** | `.github/workflows/ci.yml` | Todo push e PR na main |
+| **Deploy Preview** | `.github/workflows/deploy-preview.yml` | Em PRs para a main |
+| **Deploy Production** | `.github/workflows/deploy-prod.yml` | Push na main |
+
+### Secrets necessários no GitHub
+
+Configure em **Settings → Secrets and variables → Actions**:
+
+| Secret | Como obter |
+|--------|-----------|
+| `VERCEL_TOKEN` | Vercel → Settings → Tokens → Create |
+| `VERCEL_ORG_ID` | Do arquivo `.vercel/project.json` (campo `orgId`) |
+| `VERCEL_PROJECT_ID` | Do arquivo `.vercel/project.json` (campo `projectId`) |
+
+### Branch Protection (recomendado)
+
+Para proteger a branch `main`, configure via GitHub CLI:
+
+```bash
+gh api repos/SEU-USUARIO/respodzap/branches/main/protection \
+  --method PUT \
+  --field required_status_checks='{"strict":true,"contexts":["lint-and-test"]}' \
+  --field enforce_admins=true \
+  --field required_pull_request_reviews='{"required_approving_review_count":1,"dismiss_stale_reviews":true}' \
+  --field restrictions=null
+```
+
+Ou manualmente em **Settings → Branches → Add rule**:
+- Branch name pattern: `main`
+- ☑ Require a pull request before merging
+- ☑ Require approvals: 1
+- ☑ Require status checks to pass (selecione `lint-and-test`)
+- ☑ Do not allow bypassing the above settings
+
+### Migrações do Banco
+
+```bash
+# Verificar status das migrações
+npm run migrate:neon -- --status
+
+# Aplicar migrações pendentes
+npm run migrate:neon
+```
+
+### Dicas
 
 - **Fotos de produtos em produção**: cole URLs completas (ex: Vercel Blob ou o site do cliente) no campo "Imagem" do produto — a cola local não existe no Vercel.
 - **Upload local (dev)**: funciona na sua máquina; em produção use URLs.

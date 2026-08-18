@@ -162,24 +162,9 @@ async function initDb() {
     CREATE INDEX IF NOT EXISTS idx_payments_order ON payments (order_id);
   `);
 
-  // Migrações leves (rodam a cada inicialização)
-  await query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS panel_password TEXT`);
-  await query(`ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS period_days INTEGER`);
-  await query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS segment_id INTEGER REFERENCES segments(id)`);
-  await query(`ALTER TABLE cart_items ADD COLUMN IF NOT EXISTS addons JSONB`);
-  await query(`ALTER TABLE order_items ADD COLUMN IF NOT EXISTS addons JSONB`);
-  await query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS printed_at TIMESTAMPTZ`);
-  await query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS observations TEXT`);
-  await query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS mp_access_token TEXT`);
-  await query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS mp_refresh_token TEXT`);
-  await query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS mp_user_id TEXT`);
-  await query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS mp_token_expires_at TIMESTAMPTZ`);
-  await query(`ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS product_limit INTEGER`);
-  await query(`ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS product_limit INTEGER`);
-  // Correção: last_notified_day guarda marcas de texto (ex: "aviso:3:2026-08-17")
-  await query(`ALTER TABLE subscriptions ALTER COLUMN last_notified_day TYPE TEXT USING last_notified_day::text`);
-  // Backfill: clientes existentes recebem PRO (30 produtos)
-  await query(`UPDATE subscriptions SET product_limit = 30 WHERE product_limit IS NULL`);
+  // Migrações numeradas (arquivos em migrations/)
+  const { runMigrations } = require('../scripts/migrate');
+  await runMigrations();
 }
 
 module.exports = { pool, query, initDb };

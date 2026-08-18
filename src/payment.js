@@ -4,7 +4,7 @@ const repo = require('./repository');
 const catalog = require('./catalog');
 
 const MP_API = 'https://api.mercadopago.com';
-const MP_AUTH = 'https://auth.mercadopago.com.br';
+const _MP_AUTH = 'https://auth.mercadopago.com.br';
 const TOKEN_SOON_MS = 5 * 60 * 1000;
 
 /**
@@ -175,7 +175,7 @@ async function criarCheckoutCartao(tenant, order, lead, tipo) {
   const { data: preference } = await axios.post(
     `${MP_API}/checkout/preferences`,
     payload,
-    { headers: await mpHeadersForTenant(tenant, `pref-${order.external_id}`) }
+    { headers: await mpHeadersForTenant(tenant, `pref-${order.external_id}`) },
   );
 
   await repo.createPayment(tenant.id, order.id, {

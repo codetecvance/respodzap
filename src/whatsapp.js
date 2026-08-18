@@ -47,7 +47,7 @@ async function uploadMediaBuffer(buf, mime, api, hashKey) {
     const { data } = await axios.post(
       `https://graph.facebook.com/${config.graphVersion}/${api.phoneNumberId}/media`,
       form,
-      { headers: { Authorization: `Bearer ${api.accessToken}` } }
+      { headers: { Authorization: `Bearer ${api.accessToken}` } },
     );
     if (data?.id) {
       bufferCache.set(hashKey, { id: data.id, at: Date.now() });
@@ -102,7 +102,7 @@ async function uploadMedia(imageUrl, api) {
     const { data } = await axios.post(
       `https://graph.facebook.com/${config.graphVersion}/${api.phoneNumberId}/media`,
       form,
-      { headers: { Authorization: `Bearer ${api.accessToken}` } }
+      { headers: { Authorization: `Bearer ${api.accessToken}` } },
     );
     if (data?.id) {
       mediaCache.set(imageUrl, { id: data.id, at: Date.now() });
@@ -303,7 +303,7 @@ async function sendCtaButton(to, bodyText, buttonTitle, url, tenant = null) {
 async function markRead(messageId) {
   try {
     await callApi({ messaging_product: 'whatsapp', status: 'read', message_id: messageId }, tenantApi(null));
-  } catch (_) {}
+  } catch (_err) {}
 }
 
 /**

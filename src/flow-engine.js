@@ -2,7 +2,18 @@ const repo = require('./repository');
 const ws = require('./whatsapp');
 const catalog = require('./catalog');
 const payment = require('./payment');
-const config = require('./config');
+const _config = require('./config');
+const {
+  DIAS_PT,
+  _minutos,
+  estaAberto,
+  calcularFrete,
+  precisaBairro,
+  normTxt,
+  temAdicionais,
+  opcaoPreco,
+  formatarOpcoesSelecionadas,
+} = require('./utils');
 
 // ================================================================
 //  ESTADOS DA CONVERSA
@@ -143,7 +154,7 @@ const BANNER_TTL_MS = 60 * 60 * 1000;
 /**
  * Exibe preço formatado ou "Sob consulta".
  */
-async function precoExibicao(tenantId, product) {
+async function _precoExibicao(tenantId, product) {
   if (product.sob_consulta) return 'Sob consulta';
   return catalog.formatPrice(product.price);
 }
@@ -151,31 +162,6 @@ async function precoExibicao(tenantId, product) {
 // ================================================================
 //  HORÁRIO DE FUNCIONAMENTO (ramos de operação — bloqueio de pedidos)
 // ================================================================
-const DIAS_PT = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
-
-function minutos(h) {
-  const [a, b] = String(h || '').split(':').map(Number);
-  if (Number.isNaN(a)) return undefined;
-  return a * 60 + (Number.isNaN(b) ? 0 : b);
-}
-
-/**
- * Verifica se a loja está aberta agora.
- * store.hours: { "0": {open, close}, ... } — chave = dia (0=domingo..6=sábado); ausente = fechado.
- * Sem store.hours → sempre aberto.
- */
-function estaAberto(store) {
-  const hours = store?.hours;
-  if (!hours || typeof hours !== 'object') return { aberto: true };
-  const cfg = hours[String(new Date().getDay())];
-  if (!cfg) return { aberto: false };
-  const min = new Date().getHours() * 60 + new Date().getMinutes();
-  const open = minutos(cfg.open);
-  const close = minutos(cfg.close);
-  if (open === undefined || close === undefined) return { aberto: false };
-  const aberto = open <= close ? (min >= open && min <= close) : (min >= open || min <= close);
-  return { aberto, open: cfg.open, close: cfg.close };
-}
 
 /**
  * Bloqueia pedidos fora do horário (exceto ramo vendas). Retorna true se pode prosseguir.
@@ -202,22 +188,6 @@ async function _checaHorario(tenant, lead) {
 // ================================================================
 //  ADICIONAIS (grupos de opções com preço — restaurante/delivery)
 // ================================================================
-
-function temAdicionais(product) {
-  return Array.isArray(product.adicionais) && product.adicionais.length > 0;
-}
-
-function opcaoPreco(opcao) {
-  const preco = Number(opcao.preco || 0);
-  return preco > 0 ? ` (+R$ ${preco.toFixed(2)})` : '';
-}
-
-function formatarOpcoesSelecionadas(selections) {
-  return (selections || []).map(g => ({
-    grupo: g.grupo,
-    opcoes: (g.opcoes || []).map(o => ({ nome: o.nome, preco: Number(o.preco || 0) })),
-  }));
-}
 
 async function _askAddonGroup(tenant, lead, product, grupoIdx) {
   const grupo = product.adicionais[grupoIdx];
@@ -280,12 +250,6 @@ async function _handleAddonsAnswer(tenant, lead, text) {
   return _finishAddons(tenant, lead, product, state.selections);
 }
 
-function productImageUrl(product) {
-  const image = product.image || '';
-  if (/^https?:\/\//.test(image)) return image;
-  return `${config.webhookUrl || ''}/images/${image || 'placeholder.png'}`;
-}
-
 async function _addToCart(tenant, lead, productId) {
   const product = await catalog.findProduct(tenant.id, productId);
   if (!product) {
@@ -299,35 +263,6 @@ async function _addToCart(tenant, lead, productId) {
     { id: 'CART_SHOW', title: await catalog.getButton(tenant.id, 'cart_show') },
   ], tenant);
   await repo.setFlowState(lead.id, ST.MENU);
-}
-
-/**
- * Calcula frete: produtos digitais (SaaS) não têm frete.
- * Com bairro selecionado, usa a taxa da área de entrega.
- */
-function calcularFrete(items, store, bairro = null) {
-  const allDigital = items.length > 0 && items.every(it => it.digital);
-  if (allDigital) return 0;
-  const sub = items.reduce((s, it) => s + Number(it.unit_price) * it.quantity, 0);
-  if (sub >= (store.delivery_free_full || 9999999)) return 0;
-  if (bairro) {
-    const area = (store.delivery_areas || []).find(a => a.bairro === bairro);
-    if (area) return Number(area.taxa) || 0;
-  }
-  return store.delivery_fee || 0;
-}
-
-/**
- * Deve perguntar o bairro? Sim, quando há áreas de entrega
- * e o carrinho não é 100% digital.
- */
-function precisaBairro(store, items) {
-  const allDigital = items.length > 0 && items.every(it => it.digital);
-  return !allDigital && Array.isArray(store.delivery_areas) && store.delivery_areas.length > 0;
-}
-
-function normTxt(v) {
-  return String(v || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
 }
 
 /**
@@ -354,7 +289,7 @@ async function _askBairro(tenant, lead, answers) {
     rows,
     'Bairro de entrega',
     'Toque no bairro ou digite o nome',
-    tenant
+    tenant,
   );
 }
 
@@ -507,7 +442,7 @@ async function _notifyOrderCreated(tenant, lead, order, answers, bairro, obs) {
     tenant,
     'NOVO PEDIDO',
     `Pedido: #${order.external_id}\nCliente: ${lead.full_name || '—'}\nItens: ${itensTxt}\n${bairro ? `Bairro: ${bairro}\n` : ''}Entrega: R$ ${Number(order.delivery_fee || 0).toFixed(2)}\nTotal: R$ ${Number(order.total || 0).toFixed(2)}\nStatus: aguardando pagamento${obs ? `\n📝 Observações: ${obs}` : ''}${surveyLines ? '\nRespostas:\n' + surveyLines : ''}`,
-    lead.phone
+    lead.phone,
   );
 }
 
@@ -679,7 +614,7 @@ async function _handleSobConsulta(tenant, lead, text) {
     tenant,
     'INTERESSE SOB CONSULTA',
     `Produto: ${product?.name || survey.quote || '—'}\nNome: ${name}\nWhatsApp: ${lead.phone}`,
-    lead.phone
+    lead.phone,
   );
 
   await repo.setFlowState(lead.id, ST.MENU);
@@ -732,7 +667,7 @@ async function sendPlanList(tenant, lead, product) {
     rows,
     'Planos disponíveis',
     'Toque no plano desejado',
-    tenant
+    tenant,
   );
 }
 
@@ -839,7 +774,7 @@ async function processIncoming(tenant, phone, text, payload, messageId, numberId
     if (payload.startsWith('PLANS_')) { const pid = payload.slice(6); const prod = await catalog.findProduct(tenant.id, pid); if (prod?.plans?.length) return sendPlanList(tenant, lead, prod); return _addToCart(tenant, lead, pid); }
     if (payload.startsWith('PLAN_'))  { const parts = payload.split('_'); const pid = parts.slice(1, -1).join('_'); const planId = parts[parts.length - 1]; return showPlanDetail(tenant, lead, pid, planId); }
     if (payload.startsWith('PROD_'))  { const pid = payload.slice(5); await showProductDetail(tenant, lead, pid); return; }
-    if (payload.startsWith('DETAIL_')){ const pid = payload.slice(7); await showProductDetail(tenant, lead, pid); return; }
+    if (payload.startsWith('DETAIL_')) { const pid = payload.slice(7); await showProductDetail(tenant, lead, pid); return; }
     if (payload === 'CART_SHOW')      return _cart(tenant, lead);
     if (payload.startsWith('BAIRRO_')) return _handleBairro(tenant, lead, '', payload);
     if (payload === 'CART_BUY')       { if (!(await _checaHorario(tenant, lead))) return; await repo.setFlowState(lead.id, ST.CHECKOUT_NAME); return ws.sendText(phone, await catalog.msg(tenant.id, 'checkout_ask_name'), tenant); }
