@@ -14,7 +14,7 @@ function estaAberto(store) {
   const hours = store?.hours;
   if (!hours || typeof hours !== 'object') return { aberto: true };
   const cfg = hours[String(new Date().getDay())];
-  if (!cfg) return { aberto: false };
+  if (!cfg) return { aberto: true };
   const min = new Date().getHours() * 60 + new Date().getMinutes();
   const open = minutos(cfg.open);
   const close = minutos(cfg.close);
