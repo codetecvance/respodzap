@@ -10,12 +10,56 @@ function minutos(h) {
   return a * 60 + (Number.isNaN(b) ? 0 : b);
 }
 
+function getCurrentTimeInTimezone(timezone) {
+  try {
+    const now = new Date();
+    const formatter = new Intl.DateTimeFormat('pt-BR', {
+      timeZone: timezone,
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+      weekday: 'short',
+    });
+    const parts = formatter.formatToParts(now);
+    let hour = 0, minute = 0, weekday = 0;
+    for (const part of parts) {
+      if (part.type === 'hour') hour = parseInt(part.value, 10);
+      else if (part.type === 'minute') minute = parseInt(part.value, 10);
+      else if (part.type === 'weekday') {
+        const weekdayMap = {
+          dom: 0, seg: 1, ter: 2, qua: 3, qui: 4, sex: 5, sáb: 6, sábado: 6,
+          'dom.': 0, 'seg.': 1, 'ter.': 2, 'qua.': 3, 'qui.': 4, 'sex.': 5, 'sáb.': 6,
+          mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6, sun: 0,
+        };
+        weekday = weekdayMap[part.value.toLowerCase()] ?? 0;
+      }
+    }
+    // Se weekday não foi mapeado (0 mas não é domingo), usa fallback UTC
+    const nowUtc = new Date();
+    if (weekday === 0 && nowUtc.getUTCDay() !== 0) {
+      weekday = nowUtc.getUTCDay();
+    }
+    return { hour, minute, weekday };
+  } catch (_err) {
+    // Fallback para UTC se timezone inválido
+    const now = new Date();
+    return {
+      hour: now.getUTCHours(),
+      minute: now.getUTCMinutes(),
+      weekday: now.getUTCDay(),
+    };
+  }
+}
+
 function estaAberto(store) {
   const hours = store?.hours;
   if (!hours || typeof hours !== 'object') return { aberto: true };
-  const cfg = hours[String(new Date().getDay())];
+  const timezone = store?.timezone || 'America/Sao_Paulo';
+  const { weekday } = getCurrentTimeInTimezone(timezone);
+  const cfg = hours[String(weekday)];
   if (!cfg) return { aberto: true };
-  const min = new Date().getHours() * 60 + new Date().getMinutes();
+  const { hour, minute } = getCurrentTimeInTimezone(timezone);
+  const min = hour * 60 + minute;
   const open = minutos(cfg.open);
   const close = minutos(cfg.close);
   if (open === undefined || close === undefined) return { aberto: false };

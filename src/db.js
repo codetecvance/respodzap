@@ -26,6 +26,7 @@ async function initDb() {
       notify_phone    TEXT,
       notify_email    TEXT,
       status          TEXT NOT NULL DEFAULT 'ativo',
+      timezone        TEXT NOT NULL DEFAULT 'America/Sao_Paulo',
       created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at      TIMESTAMPTZ
     );

@@ -2601,9 +2601,26 @@ async function pageConfig(req, res) {
         <div><label>CIDADE</label><input type="text" name="company[address][city]" value="${esc(addr.city || '')}"></div>
       </div></div>
       ${showAreasEditor ? `<div class="panel"><h2>🕒 Horário de funcionamento <small style="font-weight:400;color:#94a3b8">— o bot bloqueia pedidos fora do horário</small></h2>
+        <div class="grid2" style="margin-bottom:10px">
+          <div><label>FUSO HORÁRIO (timezone)</label>
+            <select name="store[timezone]" style="width:100%">
+              <option value="America/Sao_Paulo" ${tenant.timezone === 'America/Sao_Paulo' ? 'selected' : ''}>🇧🇷 Brasil (UTC-3) — America/Sao_Paulo</option>
+              <option value="America/Manaus" ${tenant.timezone === 'America/Manaus' ? 'selected' : ''}>🇧🇷 Brasil (UTC-4) — America/Manaus</option>
+              <option value="America/Fortaleza" ${tenant.timezone === 'America/Fortaleza' ? 'selected' : ''}>🇧🇷 Brasil (UTC-3) — America/Fortaleza</option>
+              <option value="America/Recife" ${tenant.timezone === 'America/Recife' ? 'selected' : ''}>🇧🇷 Brasil (UTC-3) — America/Recife</option>
+              <option value="America/Rio_Branco" ${tenant.timezone === 'America/Rio_Branco' ? 'selected' : ''}>🇧🇷 Brasil (UTC-5) — America/Rio_Branco</option>
+              <option value="UTC" ${tenant.timezone === 'UTC' ? 'selected' : ''}>🌐 UTC</option>
+              <option value="America/New_York" ${tenant.timezone === 'America/New_York' ? 'selected' : ''}>🇺🇸 EUA Leste (UTC-5/UTC-4) — America/New_York</option>
+              <option value="America/Los_Angeles" ${tenant.timezone === 'America/Los_Angeles' ? 'selected' : ''}>🇺🇸 EUA Oeste (UTC-8/UTC-7) — America/Los_Angeles</option>
+              <option value="Europe/Lisbon" ${tenant.timezone === 'Europe/Lisbon' ? 'selected' : ''}>🇵🇹 Portugal (UTC/UTC+1) — Europe/Lisbon</option>
+              <option value="Europe/Madrid" ${tenant.timezone === 'Europe/Madrid' ? 'selected' : ''}>🇪🇸 Espanha (UTC+1/UTC+2) — Europe/Madrid</option>
+            </select>
+          </div>
+        </div>
         <table><thead><tr><th>Dia</th><th>Fechado</th><th>Abre</th><th>Fecha</th><th></th></tr></thead>
         <tbody>${hoursRows}</tbody></table>
         <p style="font-size:12px;color:#64748b;margin-top:8px">Dia marcado como <b>Fechado</b> bloqueia pedidos o dia inteiro. Cliente fora do horário recebe aviso e não consegue comprar/finalizar.</p>
+        <p style="font-size:11px;color:#94a3b8;margin-top:6px"><b>Importante:</b> Os horários devem ser informados no <b>fuso horário selecionado acima</b>. O servidor converte automaticamente. Ex: 20:00–04:00 no fuso "Brasil (UTC-3)" funciona corretamente à noite.</p>
       </div>` : ''}
       <div class="panel"><h2>💳 Pagamentos (Mercado Pago)</h2>
         ${mpUser ? `
@@ -2728,6 +2745,11 @@ async function postConfigSalvar(req, res) {
       }
     }
     data.store.hours = Object.keys(hours).length ? hours : undefined;
+  }
+
+  // Timezone do tenant (fuso horário para horários de funcionamento)
+  if (s.timezone && /^[\w\/]+$/.test(s.timezone)) {
+    data.store.timezone = s.timezone;
   }
 
   // Imagem do menu

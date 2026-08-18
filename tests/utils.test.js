@@ -52,7 +52,7 @@ describe('estaAberto', () => {
   });
 
   test('com hours configurados, retorna aberto ou fechado com horário', () => {
-    const store = { hours: { [String(new Date().getDay())]: { open: '00:00', close: '23:59' } } };
+    const store = { hours: { [String(new Date().getDay())]: { open: '00:00', close: '23:59' } }, timezone: 'UTC' };
     const result = estaAberto(store);
     expect(result.aberto).toBe(true);
     expect(result.open).toBe('00:00');
@@ -61,7 +61,7 @@ describe('estaAberto', () => {
 
   test('horário que cruza meia-noite - retorna resultado com open/close', () => {
     const day = new Date().getDay();
-    const store = { hours: { [String(day)]: { open: '22:00', close: '04:00' } } };
+    const store = { hours: { [String(day)]: { open: '22:00', close: '04:00' } }, timezone: 'UTC' };
     const result = estaAberto(store);
     expect(typeof result.aberto).toBe('boolean');
     expect(result.open).toBe('22:00');
@@ -71,7 +71,7 @@ describe('estaAberto', () => {
   test('retorna open e close no resultado quando aberto', () => {
     // Usa horário que com certeza está aberto (00:00 - 23:59)
     const day = new Date().getDay();
-    const store = { hours: { [String(day)]: { open: '00:00', close: '23:59' } } };
+    const store = { hours: { [String(day)]: { open: '00:00', close: '23:59' } }, timezone: 'UTC' };
     const result = estaAberto(store);
     expect(result.open).toBe('00:00');
     expect(result.close).toBe('23:59');
