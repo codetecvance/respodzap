@@ -43,21 +43,12 @@ describe('estaAberto', () => {
     expect(estaAberto({ hours: 'string' })).toEqual({ aberto: true });
   });
 
-  test('dia sem configuração retorna fechado', () => {
-    // Força um dia que não existe no objeto hours
-    // Usamos um store com apenas dia '1' (segunda) e testamos que
-    // se o dia atual não for '1', retorna fechado
+  test('dia sem configuração retorna aberto (não bloqueia se hours existe mas dia não configurado)', () => {
+    // Store com apenas dia '1' (segunda) - se hoje não é segunda, deve retornar ABERTO
+    // (não bloquear o funcionamento só porque o dia não foi explicitamente configurado)
     const store = { hours: { '1': { open: '09:00', close: '18:00' } } };
     const result = estaAberto(store);
-    // Se hoje não é segunda, deve retornar { aberto: false }
-    // Se hoje é segunda, deve retornar aberto/false dependendo do horário
-    const todayIsMonday = new Date().getDay() === 1;
-    if (todayIsMonday) {
-      // Testa se está dentro ou fora do horário
-      expect(typeof result.aberto).toBe('boolean');
-    } else {
-      expect(result).toEqual({ aberto: false });
-    }
+    expect(result.aberto).toBe(true);
   });
 
   test('com hours configurados, retorna aberto ou fechado com horário', () => {
