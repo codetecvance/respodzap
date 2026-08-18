@@ -22,8 +22,8 @@ const storage = multer.diskStorage({
   },
 });
 const upload = process.env.BLOB_READ_WRITE_TOKEN
-  ? multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } })
-  : multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
+  ? multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 * 1024 * 1024 } })
+  : multer({ storage, limits: { fileSize: 15 * 1024 * 1024 } });
 
 // ======================================================
 //  UPLOAD DE IMAGENS (Vercel Blob em produção; disco local em dev)
@@ -2658,7 +2658,7 @@ async function pageConfig(req, res) {
       }
       function addArea(){
         const el = document.getElementById('areasList');
-        if (el) el.insertAdjacentHTML('beforeend', areaLinhaHtml());
+        if (el) { el.insertAdjacentHTML('beforeend', areaLinhaHtml()); reindexAreas(); }
       }
       function removeArea(btn){ btn.closest('.area-linha').remove(); }
       function reindexAreas(){
