@@ -413,11 +413,11 @@ async function addMessage(tenantId, phone, direction, message, type = null) {
   const lead = await getOrCreateLead(tenantId, phone);
   await query(
     'INSERT INTO conversations (tenant_id, lead_id, direction, message, message_type) VALUES ($1,$2,$3,$4,$5)',
-    [tenantId, lead.id, direction, String(message || '').slice(0, 4000), type],
+    [tenantId, lead.id, direction, String(message || '').slice(0, 8000), type],
   );
 }
 
-async function getConversationsByLead(leadId, limit = 40) {
+async function getConversationsByLead(leadId, limit = 100) {
   const r = await query(
     'SELECT direction, message, created_at FROM conversations WHERE lead_id = $1 ORDER BY id DESC LIMIT $2',
     [leadId, limit],
@@ -593,7 +593,7 @@ async function getPendingOrdersWithPayments(tenantId = null) {
   return r.rows.map(x => ({ ...x, total: num(x.total) }));
 }
 
-async function getOrdersToPrint(tenantId, limit = 5) {
+async function getOrdersToPrint(tenantId, limit = 30) {
   const r = await query(
     `SELECT * FROM orders WHERE tenant_id = $1 AND status = 'approved' AND printed_at IS NULL
      ORDER BY created_at ASC LIMIT $2`,

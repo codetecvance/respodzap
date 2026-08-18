@@ -419,7 +419,7 @@ async function _handleObservations(tenant, lead, text) {
   if (!order) return _menu(tenant, lead);
 
   const t = String(text || '').trim();
-  const obs = (!t || /^(nenhuma|nao|não|sem obs|sem observacao|sem observação|-|x)$/i.test(t)) ? '' : t.slice(0, 500);
+  const obs = (!t || /^(nenhuma|nao|não|sem obs|sem observacao|sem observação|-|x)$/i.test(t)) ? '' : t.slice(0, 1000);
   if (obs) await repo.updateOrderObservations(order.id, obs);
 
   const answers = survey.answers || {};

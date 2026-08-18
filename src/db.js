@@ -4,7 +4,7 @@ const config = require('./config');
 const pool = new Pool({
   connectionString: config.databaseUrl,
   ssl: config.nodeEnv === 'production' ? { rejectUnauthorized: false } : undefined,
-  max: 5,
+  max: 10,
   idleTimeoutMillis: 15000,
   connectionTimeoutMillis: 10000,
 });
