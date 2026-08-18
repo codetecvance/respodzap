@@ -2650,15 +2650,17 @@ async function pageConfig(req, res) {
       <p style="font-size:12px;color:#64748b;margin-top:8px">Atualiza conforme você muda as cores/acima. Salve para aplicar no bot (em até 15s).</p>
     </div>
     <script>
-      function areaLinhaHtml(){
+      function areaLinhaHtml(idx){
         return '<div class="area-linha" style="display:flex;gap:8px;margin-bottom:6px;align-items:center">' +
-          '<input type="text" name="store[delivery_areas][0][bairro]" placeholder="Bairro (ex: Centro)" style="flex:1">' +
-          '<div style="display:flex;align-items:center;gap:4px;width:130px;flex-shrink:0"><span style="font-size:12px;color:#64748b">R$</span><input type="text" name="store[delivery_areas][0][taxa]" placeholder="0,00"></div>' +
+          '<input type="text" name="store[delivery_areas][' + idx + '][bairro]" placeholder="Bairro (ex: Centro)" style="flex:1">' +
+          '<div style="display:flex;align-items:center;gap:4px;width:130px;flex-shrink:0"><span style="font-size:12px;color:#64748b">R$</span><input type="text" name="store[delivery_areas][' + idx + '][taxa]" placeholder="0,00"></div>' +
           '<button type="button" class="btn red small" onclick="removeArea(this)">✕</button></div>';
       }
       function addArea(){
         const el = document.getElementById('areasList');
-        if (el) { el.insertAdjacentHTML('beforeend', areaLinhaHtml()); reindexAreas(); }
+        if (!el) return;
+        const idx = el.querySelectorAll('.area-linha').length;
+        el.insertAdjacentHTML('beforeend', areaLinhaHtml(idx));
       }
       function removeArea(btn){ btn.closest('.area-linha').remove(); }
       function reindexAreas(){
