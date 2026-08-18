@@ -26,7 +26,7 @@ app.use((req, res, next) => {
       const idx = part.indexOf('=');
       if (idx > -1) req.cookies[part.slice(0, idx).trim()] = decodeURIComponent(part.slice(idx + 1).trim());
     }
-  } catch (_) {
+  } catch (_err) {
     req.cookies = {};
   }
   next();

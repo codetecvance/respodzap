@@ -12,7 +12,7 @@ function logWebhook(entry) {
   try {
     const logPath = path.join(__dirname, '..', 'data', 'webhook.log');
     fs.appendFileSync(logPath, `[${new Date().toISOString()}] ${JSON.stringify(entry)}\n`);
-  } catch (_) {}
+  } catch (_err) {}
 }
 
 // =================================================
@@ -86,7 +86,7 @@ router.post('/mercadopago/webhook', async (req, res) => {
     const { getPaymentStatus, getPaymentFull, getTenantMpToken } = require('./payment');
 
     // Descobre o pedido/pagamento registrado para usar o token da conta correta
-    let paymentRecord = await repo.getPaymentByMpId(paymentId);
+    const paymentRecord = await repo.getPaymentByMpId(paymentId);
     let order = null;
     if (paymentRecord) order = await repo.getOrder(paymentRecord.order_id);
 
@@ -206,7 +206,7 @@ async function confirmarPagamentoAprovado(tenant, order) {
     tenant,
     '✅ PAGAMENTO RECEBIDO',
     `Pedido: #${order.external_id}\nCliente: ${lead.full_name || '—'}\nWhatsApp: ${lead.phone}\nItens: ${itensTxt}\nMétodo: ${metodo}\nValor: R$ ${Number(order.total || 0).toFixed(2)}\nStatus: pagamento confirmado`,
-    lead.phone
+    lead.phone,
   );
   console.log('[MP-Webhook] Pagamento aprovado para o pedido', order.external_id);
 }

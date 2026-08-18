@@ -10,7 +10,14 @@
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",
     "migrate": "node scripts/migrate-local.js",
-    "leads": "node -e \"require('dotenv').config(); require('./src/db').initDb().then(()=>require('./src/repository').listLeads(1)).then(l=>console.table(l))\""
+    "migrate:neon": "node scripts/migrate.js",
+    "leads": "node -e \"require('dotenv').config(); require('./src/db').initDb().then(()=>require('./src/repository').listLeads(1)).then(l=>console.table(l))\"",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
+    "format": "prettier --write src/",
+    "test": "jest",
+    "test:coverage": "jest --coverage",
+    "test:watch": "jest --watch"
   },
   "keywords": [
     "whatsapp",
@@ -36,5 +43,11 @@
     "pg": "^8.23.0",
     "sharp": "^0.34.4",
     "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.8.1",
+    "jest": "^30.4.2",
+    "prettier": "^3.9.6"
   }
 }

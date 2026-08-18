@@ -11,7 +11,7 @@ async function runLicenseCheck() {
   const subs = await repo.getSubscriptions();
   const now = Date.now();
   const todayKey = new Date().toISOString().slice(0, 10);
-  let report = [];
+  const report = [];
 
   for (const sub of subs) {
     if (sub.status !== 'ativa') continue;
@@ -50,7 +50,7 @@ async function runLicenseCheck() {
               tenant,
               '🔔 RENOVAÇÃO DE ASSINATURA',
               `Sua assinatura vence em ${daysLeft} dia(s).\n\nPague com o PIX abaixo para renovar automaticamente:\n\n${pix.pix_copy_paste}\n\nValor: R$ ${pix.total.toFixed(2)}`,
-              tenant.notify_phone
+              tenant.notify_phone,
             );
           }
           await repo.renewSubscriptionMark(sub.id, `pix:${todayKey}`);

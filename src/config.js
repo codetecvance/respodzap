@@ -23,7 +23,7 @@ const config = {
     pass: process.env.SMTP_PASS || process.env.GMAIL_PASSWORD || '',
   },
   notifyEmail: process.env.NOTIFY_EMAIL || '',
-  nodeEnv: process.env.NODE_ENV || 'development'
+  nodeEnv: process.env.NODE_ENV || 'development',
 };
 
 const warnings = [];

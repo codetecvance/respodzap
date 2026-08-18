@@ -1,5 +1,5 @@
 const { query } = require('./db');
-const { v4: uuidv4 } = require('uuid');
+const { v4: _uuidv4 } = require('uuid');
 
 // ============================================================
 //  UTILITÁRIOS
@@ -29,7 +29,7 @@ function verifyPassword(password, stored) {
   return crypto.timingSafeEqual(Buffer.from(hash, 'hex'), Buffer.from(candidate, 'hex'));
 }
 
-function today() {
+function _today() {
   return new Date().toISOString();
 }
 
@@ -45,14 +45,14 @@ async function addTenantImage(tenantId, url) {
   await query(
     `INSERT INTO tenant_images (tenant_id, url, name) VALUES ($1, $2, $3)
      ON CONFLICT DO NOTHING`,
-    [tenantId, url, name]
+    [tenantId, url, name],
   );
 }
 
 async function listTenantImagesDb(tenantId) {
   const r = await query(
     'SELECT url, name FROM tenant_images WHERE tenant_id = $1 ORDER BY id DESC',
-    [tenantId]
+    [tenantId],
   );
   return r.rows;
 }
@@ -67,7 +67,7 @@ async function deleteTenantImageDb(tenantId, url) {
 async function createSegment(name, emoji, template) {
   const r = await query(
     'INSERT INTO segments (name, emoji, template_json) VALUES ($1,$2,$3) RETURNING *',
-    [name, emoji, JSON.stringify(template)]
+    [name, emoji, JSON.stringify(template)],
   );
   return r.rows[0];
 }
@@ -85,7 +85,7 @@ async function getSegment(id) {
 async function updateSegment(id, name, emoji, template) {
   await query(
     'UPDATE segments SET name = $2, emoji = $3, template_json = $4 WHERE id = $1',
-    [id, name, emoji, template ? JSON.stringify(template) : undefined]
+    [id, name, emoji, template ? JSON.stringify(template) : undefined],
   );
 }
 
@@ -101,7 +101,7 @@ async function countTenantsBySegment(segmentId) {
 async function getTenantSegment(tenantId) {
   const r = await query(
     'SELECT s.id, s.name, s.emoji FROM tenants t JOIN segments s ON s.id = t.segment_id WHERE t.id = $1',
-    [tenantId]
+    [tenantId],
   );
   return r.rows[0] || null;
 }
@@ -144,14 +144,14 @@ async function createTenant(data) {
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
     [data.name, data.contact_name || null, data.contact_phone || null, data.phone_number_id || null,
      data.access_token || null, data.waba_id || null, data.notify_phone || null, data.notify_email || null,
-     data.status || 'ativo', data.panel_password || null, data.segment_id || null]
+     data.status || 'ativo', data.panel_password || null, data.segment_id || null],
   );
   return r.rows[0];
 }
 
 async function getTenants() {
   const r = await query(
-    'SELECT t.*, s.name AS segment_name, s.emoji AS segment_emoji FROM tenants t LEFT JOIN segments s ON s.id = t.segment_id ORDER BY t.id'
+    'SELECT t.*, s.name AS segment_name, s.emoji AS segment_emoji FROM tenants t LEFT JOIN segments s ON s.id = t.segment_id ORDER BY t.id',
   );
   return r.rows;
 }
@@ -159,7 +159,7 @@ async function getTenants() {
 async function getTenant(id) {
   const r = await query(
     'SELECT t.*, s.name AS segment_name, s.emoji AS segment_emoji FROM tenants t LEFT JOIN segments s ON s.id = t.segment_id WHERE t.id = $1',
-    [id]
+    [id],
   );
   return r.rows[0] || null;
 }
@@ -167,7 +167,7 @@ async function getTenant(id) {
 async function getTenantByNumberId(phoneNumberId) {
   const r = await query(
     'SELECT t.*, s.name AS segment_name, s.emoji AS segment_emoji FROM tenants t LEFT JOIN segments s ON s.id = t.segment_id WHERE t.phone_number_id = $1',
-    [String(phoneNumberId)]
+    [String(phoneNumberId)],
   );
   return r.rows[0] || null;
 }
@@ -225,7 +225,7 @@ async function getPlans() {
 async function createPlan(name, price, periodDays) {
   const r = await query(
     'INSERT INTO subscription_plans (name, price, period_days) VALUES ($1,$2,$3) RETURNING *',
-    [name, price, periodDays]
+    [name, price, periodDays],
   );
   return r.rows[0];
 }
@@ -237,7 +237,7 @@ async function deletePlan(id) {
 async function updatePlan(id, name, price, periodDays) {
   await query(
     'UPDATE subscription_plans SET name = $2, price = $3, period_days = $4 WHERE id = $1',
-    [id, name, price, periodDays]
+    [id, name, price, periodDays],
   );
 }
 
@@ -255,7 +255,7 @@ async function getSubscriptions() {
      FROM subscriptions s
      JOIN tenants t ON t.id = s.tenant_id
      LEFT JOIN subscription_plans p ON p.id = s.plan_id
-     ORDER BY s.expires_at`
+     ORDER BY s.expires_at`,
   );
   return r.rows.map(s => ({ ...s, price: num(s.price) }));
 }
@@ -265,7 +265,7 @@ async function getSubscriptionsByTenant(tenantId) {
     `SELECT s.*, p.name AS plan_name FROM subscriptions s
      LEFT JOIN subscription_plans p ON p.id = s.plan_id
      WHERE s.tenant_id = $1 ORDER BY s.created_at DESC`,
-    [tenantId]
+    [tenantId],
   );
   return r.rows.map(s => ({ ...s, price: num(s.price) }));
 }
@@ -273,7 +273,7 @@ async function getSubscriptionsByTenant(tenantId) {
 async function getActiveSubscription(tenantId) {
   const r = await query(
     `SELECT * FROM subscriptions WHERE tenant_id = $1 AND status = 'ativa' ORDER BY expires_at DESC NULLS LAST LIMIT 1`,
-    [tenantId]
+    [tenantId],
   );
   return r.rows[0] ? { ...r.rows[0], price: num(r.rows[0].price) } : null;
 }
@@ -282,7 +282,7 @@ async function createSubscription(tenantId, planId, price, periodDays, productLi
   const r = await query(
     `INSERT INTO subscriptions (tenant_id, plan_id, price, period_days, status, expires_at, product_limit)
      VALUES ($1,$2,$3,$4,'ativa', NOW() + make_interval(days => $4), $5) RETURNING *`,
-    [tenantId, planId, price, periodDays, productLimit]
+    [tenantId, planId, price, periodDays, productLimit],
   );
   return r.rows[0];
 }
@@ -300,7 +300,7 @@ async function renewSubscription(id, days) {
      SET expires_at = GREATEST(COALESCE(expires_at, NOW()), NOW()) + ($2 || ' days')::interval,
          status = 'ativa', last_notified_day = NULL, updated_at = NOW()
      WHERE id = $1 RETURNING *`,
-    [id, days]
+    [id, days],
   );
   return r.rows[0];
 }
@@ -323,7 +323,7 @@ async function getExpiringSubscriptions(days) {
      FROM subscriptions s JOIN tenants t ON t.id = s.tenant_id
      WHERE s.status = 'ativa' AND s.expires_at <= NOW() + ($1 || ' days')::interval
      ORDER BY s.expires_at`,
-    [days]
+    [days],
   );
   return r.rows.map(s => ({ ...s, price: num(s.price) }));
 }
@@ -341,7 +341,7 @@ async function saveTenantCatalog(tenantId, catalog) {
     `INSERT INTO tenant_catalogs (tenant_id, catalog_json, updated_at)
      VALUES ($1, $2, NOW())
      ON CONFLICT (tenant_id) DO UPDATE SET catalog_json = EXCLUDED.catalog_json, updated_at = NOW()`,
-    [tenantId, JSON.stringify(catalog)]
+    [tenantId, JSON.stringify(catalog)],
   );
 }
 
@@ -387,7 +387,7 @@ async function updateLeadStatus(leadId, status) {
 async function listLeads(tenantId) {
   const r = await query(
     'SELECT * FROM leads WHERE tenant_id = $1 ORDER BY created_at DESC',
-    [tenantId]
+    [tenantId],
   );
   return r.rows;
 }
@@ -413,14 +413,14 @@ async function addMessage(tenantId, phone, direction, message, type = null) {
   const lead = await getOrCreateLead(tenantId, phone);
   await query(
     'INSERT INTO conversations (tenant_id, lead_id, direction, message, message_type) VALUES ($1,$2,$3,$4,$5)',
-    [tenantId, lead.id, direction, String(message || '').slice(0, 4000), type]
+    [tenantId, lead.id, direction, String(message || '').slice(0, 4000), type],
   );
 }
 
 async function getConversationsByLead(leadId, limit = 40) {
   const r = await query(
     'SELECT direction, message, created_at FROM conversations WHERE lead_id = $1 ORDER BY id DESC LIMIT $2',
-    [leadId, limit]
+    [leadId, limit],
   );
   return r.rows.reverse();
 }
@@ -476,7 +476,7 @@ async function addToCart(tenantId, leadId, product, addons = null) {
   } else {
     await query(
       'INSERT INTO cart_items (tenant_id, lead_id, product_id, product_name, unit_price, quantity, total_price, image, addons) VALUES ($1,$2,$3,$4,$5,1,$6,$7,$8)',
-      [tenantId, leadId, product.id, product.name, unitPrice, unitPrice, product.image || null, addons ? JSON.stringify(addons) : null]
+      [tenantId, leadId, product.id, product.name, unitPrice, unitPrice, product.image || null, addons ? JSON.stringify(addons) : null],
     );
   }
 }
@@ -514,7 +514,7 @@ async function createOrder(tenantId, leadId, cartItems, subtotal, discount, deli
   const r = await query(
     `INSERT INTO orders (tenant_id, external_id, lead_id, subtotal, discount, delivery_fee, total, status)
      VALUES ($1,$2,$3,$4,$5,$6,$7,'pending') RETURNING id`,
-    [tenantId, externalId, leadId, subtotal, discount, deliveryFee, total]
+    [tenantId, externalId, leadId, subtotal, discount, deliveryFee, total],
   );
   const orderId = r.rows[0].id;
 
@@ -523,7 +523,7 @@ async function createOrder(tenantId, leadId, cartItems, subtotal, discount, deli
       `INSERT INTO order_items (tenant_id, order_id, product_id, product_name, unit_price, quantity, total_price, product_image, addons)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
       [tenantId, orderId, item.product_id, item.product_name, item.unit_price, item.quantity,
-       num(item.unit_price) * item.quantity, item.image || null, item.addons ? JSON.stringify(item.addons) : null]
+       num(item.unit_price) * item.quantity, item.image || null, item.addons ? JSON.stringify(item.addons) : null],
     );
   }
   return getOrder(orderId);
@@ -564,7 +564,7 @@ async function updateOrderObservations(orderId, observations) {
 async function getLeadOrders(tenantId, leadId) {
   const r = await query(
     'SELECT * FROM orders WHERE tenant_id = $1 AND lead_id = $2 ORDER BY created_at DESC',
-    [tenantId, leadId]
+    [tenantId, leadId],
   );
   return r.rows.map(o => ({ ...o, total: num(o.total) }));
 }
@@ -588,7 +588,7 @@ async function getPendingOrdersWithPayments(tenantId = null) {
      WHERE o.status = 'pending' AND p.mp_payment_id IS NOT NULL
      ${tenantId ? 'AND o.tenant_id = $1' : ''}
      ORDER BY o.created_at ASC`,
-    params
+    params,
   );
   return r.rows.map(x => ({ ...x, total: num(x.total) }));
 }
@@ -597,7 +597,7 @@ async function getOrdersToPrint(tenantId, limit = 5) {
   const r = await query(
     `SELECT * FROM orders WHERE tenant_id = $1 AND status = 'approved' AND printed_at IS NULL
      ORDER BY created_at ASC LIMIT $2`,
-    [tenantId, limit]
+    [tenantId, limit],
   );
   return r.rows.map(o => ({ ...o, subtotal: num(o.subtotal), delivery_fee: num(o.delivery_fee), total: num(o.total) }));
 }
@@ -622,7 +622,7 @@ async function deleteOrder(orderId) {
 async function deletePendingOrdersOlderThan(days) {
   const r = await query(
     `SELECT id FROM orders WHERE status = 'pending' AND created_at < NOW() - ($1 || ' days')::interval`,
-    [days]
+    [days],
   );
   for (const row of r.rows) await deleteOrder(row.id);
   return r.rows.length;
@@ -650,7 +650,7 @@ async function createPayment(tenantId, orderId, paymentData) {
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id`,
     [tenantId, orderId, paymentData.mp_payment_id || null, paymentData.mp_preference_id || null,
      paymentData.payment_method || 'pix', paymentData.status || 'pending', paymentData.total || 0,
-     paymentData.pix_qr_base64 || null, paymentData.pix_copy_paste || null]
+     paymentData.pix_qr_base64 || null, paymentData.pix_copy_paste || null],
   );
   return r.rows[0].id;
 }
@@ -678,7 +678,7 @@ async function getOrdersByDay(tenantId, days = 14) {
      FROM orders
      WHERE tenant_id = $1 AND created_at >= NOW() - ($2 || ' days')::interval
      GROUP BY dia ORDER BY dia`,
-    [tenantId, days]
+    [tenantId, days],
   );
   return r.rows.map(d => ({ ...d, qtd: Number(d.qtd), total: num(d.total) }));
 }
@@ -689,7 +689,7 @@ async function getPaymentsByMethod(tenantId) {
      FROM payments p JOIN orders o ON o.id = p.order_id
      WHERE o.tenant_id = $1 AND o.status = 'approved' AND p.payment_method IS NOT NULL
      GROUP BY metodo ORDER BY qtd DESC`,
-    [tenantId]
+    [tenantId],
   );
   return r.rows.map(m => ({ ...m, qtd: Number(m.qtd) }));
 }
@@ -699,12 +699,14 @@ async function getTopProducts(tenantId, limit = 5) {
     `SELECT product_name AS nome, SUM(quantity) AS qtd, SUM(total_price) AS total
      FROM order_items WHERE tenant_id = $1
      GROUP BY product_name ORDER BY qtd DESC LIMIT $2`,
-    [tenantId, limit]
+    [tenantId, limit],
   );
   return r.rows.map(p => ({ ...p, qtd: Number(p.qtd), total: num(p.total) }));
 }
 
 module.exports = {
+  // utilitários internos (exportados para testes)
+  normalizePhone, num, addonsKey, parseAddons,
   // tenants
   createTenant, getTenants, getTenant, getTenantByNumberId, getTenantByPanelLogin, updateTenant, deleteTenant,
   hashPassword, verifyPassword, normalizePhoneBr,

@@ -35,7 +35,7 @@ async function orderStats(tenantId, days) {
        FROM payments p JOIN orders o ON o.id = p.order_id
        WHERE o.tenant_id = $1 AND o.status = 'approved' AND o.created_at >= ` + r1.sql + `
        GROUP BY p.payment_method ORDER BY total DESC`,
-      [tenantId, ...r1.args]
+      [tenantId, ...r1.args],
     ),
   ]);
   const totalReceita = num(receita.rows[0].t);
@@ -62,7 +62,7 @@ async function ordersByDay(tenantId, days) {
      FROM orders
      WHERE tenant_id = $1 AND created_at >= ` + r.sql + `
      GROUP BY dia ORDER BY dia`,
-    [tenantId, ...r.args]
+    [tenantId, ...r.args],
   );
   return res.rows.map(d => ({ dia: d.dia, qtd: Number(d.qtd), receita: num(d.receita) }));
 }
@@ -79,7 +79,7 @@ async function topProducts(tenantId, days, limit = 10) {
      FROM order_items oi JOIN orders o ON o.id = oi.order_id
      WHERE o.tenant_id = $1 AND o.status = 'approved' AND o.created_at >= ` + r.sql + `
      GROUP BY oi.product_name ORDER BY receita DESC LIMIT $${args.length}`,
-    args
+    args,
   );
   return res.rows.map(x => ({ ...x, qtd: Number(x.qtd), receita: num(x.receita) }));
 }
@@ -94,7 +94,7 @@ async function leadStats(tenantId, days) {
     query(
       `SELECT COUNT(DISTINCT o.lead_id) AS c FROM orders o
        WHERE o.tenant_id = $1 AND o.status = 'approved' AND o.created_at >= ` + r.sql,
-      [tenantId, ...r.args]
+      [tenantId, ...r.args],
     ),
     query('SELECT COUNT(*) AS c FROM leads WHERE tenant_id = $1', [tenantId]),
   ]);
@@ -120,7 +120,7 @@ async function topLeads(tenantId, days, limit = 5) {
      FROM orders o LEFT JOIN leads l ON l.id = o.lead_id
      WHERE o.tenant_id = $1 AND o.status = 'approved' AND o.created_at >= ` + r.sql + `
      GROUP BY nome ORDER BY gasto DESC LIMIT $${args.length}`,
-    args
+    args,
   );
   return res.rows.map(x => ({ ...x, qtd_pedidos: Number(x.qtd_pedidos), gasto: num(x.gasto) }));
 }
@@ -140,7 +140,7 @@ async function revenueBySegment(days) {
      LEFT JOIN segments s ON s.id = t.segment_id
      LEFT JOIN orders o ON o.tenant_id = t.id AND o.created_at >= ` + r.sql + `
      GROUP BY s.name, s.emoji ORDER BY receita DESC`,
-    r.args
+    r.args,
   );
   return res.rows.map(x => ({ ...x, clientes: Number(x.clientes), pedidos: Number(x.pedidos), receita: num(x.receita) }));
 }

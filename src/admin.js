@@ -39,7 +39,7 @@ async function saveUploadedImage(tenantId, file) {
       token,
       addRandomSuffix: true,
     });
-    try { if (file.path) require('fs').unlinkSync(file.path); } catch (_) {}
+    try { if (file.path) require('fs').unlinkSync(file.path); } catch (_err) {}
     return result.url;
   }
   // Local: move para a subpasta do tenant (isolamento por cliente)
@@ -229,7 +229,7 @@ async function resolveTenant(req, res) {
 async function tenantFromReq(req, res) {
   const id = Number(req.query.tenant || req.cookies?.rpz_tenant);
   const tenants = await repo.getTenants();
-  let tenant = tenants.find(t => t.id === id) || tenants[0] || null;
+  const tenant = tenants.find(t => t.id === id) || tenants[0] || null;
   if (tenant) res.setHeader('Set-Cookie', `rpz_tenant=${tenant.id}; Path=/; Max-Age=2592000`);
   return { tenant, tenants };
 }
@@ -237,7 +237,7 @@ async function tenantFromReq(req, res) {
 function tenantSelector(activeTenantId, tenants, clientMode) {
   if (clientMode) return '';
   const options = tenants.map(t =>
-    `<option value="${t.id}" ${t.id === activeTenantId ? 'selected' : ''}>${esc(t.name)}${t.status !== 'ativo' ? ' (inativo)' : ''}</option>`
+    `<option value="${t.id}" ${t.id === activeTenantId ? 'selected' : ''}>${esc(t.name)}${t.status !== 'ativo' ? ' (inativo)' : ''}</option>`,
   ).join('');
   return `<div class="panel tenant-bar">
     <label style="margin:0;display:flex;align-items:center;gap:10px">🎛 <b>Cliente (tenant):</b>
@@ -259,7 +259,7 @@ function tenantIdFromReq(req, fallback) {
 // ======================================================
 //  LAYOUT
 // ======================================================
-function layout(title, active, content, tenants = [], activeTenantId = null, clientMode = false) {
+function layout(title, active, content, _tenants = [], activeTenantId = null, clientMode = false) {
   const items = clientMode ? [
     ['/painel', '📊 Dashboard'],
     ['/painel/relatorios', '📈 Relatórios'],
@@ -754,7 +754,7 @@ router.get('/painel/api/conversacoes', clientPanelAuth, async (req, res) => {
 // ======================================================
 //  IMPRESSORA DE PEDIDOS (painel do cliente — ramos de operação)
 // ======================================================
-function ehRamoOperacao(tenant) {
+function _ehRamoOperacao(tenant) {
   return !!tenant?.segment_name && tenant.segment_name !== 'vendas';
 }
 
@@ -1097,7 +1097,7 @@ async function pageRelatorios(req, res) {
   const metodoLabel = m => ({ pix: '💠 PIX', credit_card: '💳 Crédito', debit_card: '💳 Débito', 'n/a': '—' }[m] || m);
   const maxMetodo = Math.max(1, ...stats.por_metodo.map(p => p.total));
   const metodoRows = stats.por_metodo.map(p =>
-    `<div class="mini-row"><span style="width:130px">${metodoLabel(p.metodo)}</span><div class="mini-bar" style="width:${Math.round((p.total / maxMetodo) * 100)}%"></div><b>${money(p.total)}</b> <span class="muted">(${p.qtd}x)</span></div>`
+    `<div class="mini-row"><span style="width:130px">${metodoLabel(p.metodo)}</span><div class="mini-bar" style="width:${Math.round((p.total / maxMetodo) * 100)}%"></div><b>${money(p.total)}</b> <span class="muted">(${p.qtd}x)</span></div>`,
   ).join('') || '<div class="muted">Sem pagamentos aprovados no período.</div>';
 
   const maxLead = Math.max(1, ...topLeadsList.map(l => l.gasto));
@@ -2095,7 +2095,7 @@ router.get('/admin/pedidos', requireAuth, pagePedidos);
 router.get('/painel/pedidos', clientPanelAuth, pagePedidos);
 
 async function postPedidosStatus(req, res) {
-  const tenantId = tenantIdFromReq(req, req.query.tenant);
+  const _tenantId = tenantIdFromReq(req, req.query.tenant);
   const base = req.clientMode ? '/painel' : '/admin';
   const orderId = Number(req.body.id);
   const status = String(req.body.status);
@@ -2179,7 +2179,7 @@ router.get('/admin/leads', requireAuth, pageLeads);
 router.get('/painel/leads', clientPanelAuth, pageLeads);
 
 async function postLeadsStatus(req, res) {
-  const tenantId = tenantIdFromReq(req, req.query.tenant);
+  const _tenantId = tenantIdFromReq(req, req.query.tenant);
   const base = req.clientMode ? '/painel' : '/admin';
   await repo.updateLeadStatus(Number(req.body.id), String(req.body.status));
   res.redirect(`${base}/leads`);
