@@ -120,6 +120,7 @@ async function seedSegments() {
     { name: 'delivery', emoji: '🛵', file: 'catalog-template-delivery.json' },
     { name: 'padaria', emoji: '🥐', file: 'catalog-template-padaria.json' },
     { name: 'estetica', emoji: '💆‍♀️', file: 'catalog-template-estetica.json' },
+    { name: 'baterias', emoji: '🔋', file: 'catalog-template-baterias.json' },
   ];
   for (const t of templates) {
     const exists = await query('SELECT id FROM segments WHERE name = $1', [t.name]);

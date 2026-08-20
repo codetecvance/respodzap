@@ -1,0 +1,492 @@
+{
+  "company": {
+    "name": "baterias",
+    "display_name": "Loja de Baterias",
+    "phone": "",
+    "email": "",
+    "instagram": "",
+    "website": "",
+    "logo_url": "",
+    "address": {
+      "street": "",
+      "neighborhood": "",
+      "city": "",
+      "state": "",
+      "zip": ""
+    },
+    "business_hours": "Seg a Sáb: 8h às 18h · Dom: 8h às 12h"
+  },
+  "categories": [
+    {
+      "id": "baterias-carros",
+      "name": "Baterias Carros",
+      "emoji": "🚗",
+      "description": "Baterias para automóveis de passeio",
+      "products": [
+        {
+          "id": "bat-60ah",
+          "name": "Bateria 60Ah",
+          "short_description": "Carros populares (Gol, Onix, HB20, Argo, etc.)",
+          "long_description": "Bateria 12V 60Ah selada. Compatível: Gol, Onix, HB20, Argo, Polo, Saveiro, Voyage, etc. Garantia 24 meses.",
+          "price": 0,
+          "image": "placeholder.png",
+          "unit": "unidade",
+          "available": true,
+          "digital": false,
+          "adicionais": [
+            {
+              "grupo": "Instalação",
+              "unico": true,
+              "opcoes": [
+                { "nome": "Na loja (grátis)", "preco": 0 },
+                { "nome": "SOS no local (+R$ 50)", "preco": 0 }
+              ]
+            },
+            {
+              "grupo": "Garantia",
+              "unico": true,
+              "opcoes": [
+                { "nome": "24 meses (padrão)", "preco": 0 },
+                { "nome": "36 meses", "preco": 0 }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "bat-70ah",
+          "name": "Bateria 70Ah",
+          "short_description": "SUVs e sedãs médios (Corolla, Compass, T-Cross, Creta)",
+          "long_description": "Bateria 12V 70Ah. Compatível: Corolla, Compass, T-Cross, Creta, HR-V, Kicks, etc. Garantia 24 meses.",
+          "price": 0,
+          "image": "placeholder.png",
+          "unit": "unidade",
+          "available": true,
+          "digital": false,
+          "adicionais": [
+            {
+              "grupo": "Instalação",
+              "unico": true,
+              "opcoes": [
+                { "nome": "Na loja (grátis)", "preco": 0 },
+                { "nome": "SOS no local (+R$ 50)", "preco": 0 }
+              ]
+            },
+            {
+              "grupo": "Garantia",
+              "unico": true,
+              "opcoes": [
+                { "nome": "24 meses (padrão)", "preco": 0 },
+                { "nome": "36 meses", "preco": 0 }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "bat-80ah",
+          "name": "Bateria 80Ah",
+          "short_description": "Pickups e SUVs grandes (Hilux, S10, Ranger, Frontier)",
+          "long_description": "Bateria 12V 80Ah. Compatível: Hilux, S10, Ranger, Frontier, SW4, etc. Garantia 24 meses.",
+          "price": 0,
+          "image": "placeholder.png",
+          "unit": "unidade",
+          "available": true,
+          "digital": false,
+          "adicionais": [
+            {
+              "grupo": "Instalação",
+              "unico": true,
+              "opcoes": [
+                { "nome": "Na loja (grátis)", "preco": 0 },
+                { "nome": "SOS no local (+R$ 50)", "preco": 0 }
+              ]
+            },
+            {
+              "grupo": "Garantia",
+              "unico": true,
+              "opcoes": [
+                { "nome": "24 meses (padrão)", "preco": 0 },
+                { "nome": "36 meses", "preco": 0 }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "bat-100ah",
+          "name": "Bateria 100Ah",
+          "short_description": "Caminhonetes grandes e ônibus (Amarok, SW4, caminhões leves)",
+          "long_description": "Bateria 12V 100Ah. Compatível: Amarok, SW4, caminhões leves. Garantia 18 meses.",
+          "price": 0,
+          "image": "placeholder.png",
+          "unit": "unidade",
+          "available": true,
+          "digital": false,
+          "adicionais": [
+            {
+              "grupo": "Instalação",
+              "unico": true,
+              "opcoes": [
+                { "nome": "Na loja (grátis)", "preco": 0 },
+                { "nome": "SOS no local (+R$ 50)", "preco": 0 }
+              ]
+            },
+            {
+              "grupo": "Garantia",
+              "unico": true,
+              "opcoes": [
+                { "nome": "18 meses (padrão)", "preco": 0 },
+                { "nome": "24 meses", "preco": 0 }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "bat-45ah",
+          "name": "Bateria 45Ah",
+          "short_description": "Carros compactos (Mobi, Kwid, Up, Ka antigo)",
+          "long_description": "Bateria 12V 45Ah. Compatível: Mobi, Kwid, Up, Ka antigo. Garantia 24 meses.",
+          "price": 0,
+          "image": "placeholder.png",
+          "unit": "unidade",
+          "available": true,
+          "digital": false,
+          "adicionais": [
+            {
+              "grupo": "Instalação",
+              "unico": true,
+              "opcoes": [
+                { "nome": "Na loja (grátis)", "preco": 0 },
+                { "nome": "SOS no local (+R$ 50)", "preco": 0 }
+              ]
+            },
+            {
+              "grupo": "Garantia",
+              "unico": true,
+              "opcoes": [
+                { "nome": "24 meses (padrão)", "preco": 0 },
+                { "nome": "36 meses", "preco": 0 }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "baterias-motos",
+      "name": "Baterias Motos",
+      "emoji": "🏍️",
+      "description": "Baterias para motocicletas",
+      "products": [
+        {
+          "id": "bat-moto-7ah",
+          "name": "Bateria Moto 7Ah",
+          "short_description": "Motos 125-160cc (CG 160, Bros, Factor)",
+          "long_description": "Bateria 12V 7Ah selada. Compatível: CG 160, Bros 160, Factor 150, NXR 160, etc.",
+          "price": 0,
+          "image": "placeholder.png",
+          "unit": "unidade",
+          "available": true,
+          "digital": false,
+          "adicionais": [
+            {
+              "grupo": "Instalação",
+              "unico": true,
+              "opcoes": [
+                { "nome": "Na loja (grátis)", "preco": 0 },
+                { "nome": "SOS no local (+R$ 50)", "preco": 0 }
+              ]
+            },
+            {
+              "grupo": "Garantia",
+              "unico": true,
+              "opcoes": [
+                { "nome": "12 meses (padrão)", "preco": 0 },
+                { "nome": "24 meses", "preco": 0 }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "bat-moto-9ah",
+          "name": "Bateria Moto 9Ah",
+          "short_description": "Motos 250-300cc (CB 300, XRE 300, MT-03)",
+          "long_description": "Bateria 12V 9Ah. Compatível: CB 300R, XRE 300, MT-03, Dominar 250, etc.",
+          "price": 0,
+          "image": "placeholder.png",
+          "unit": "unidade",
+          "available": true,
+          "digital": false,
+          "adicionais": [
+            {
+              "grupo": "Instalação",
+              "unico": true,
+              "opcoes": [
+                { "nome": "Na loja (grátis)", "preco": 0 },
+                { "nome": "SOS no local (+R$ 50)", "preco": 0 }
+              ]
+            },
+            {
+              "grupo": "Garantia",
+              "unico": true,
+              "opcoes": [
+                { "nome": "12 meses (padrão)", "preco": 0 },
+                { "nome": "24 meses", "preco": 0 }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "bat-moto-12ah",
+          "name": "Bateria Moto 12Ah",
+          "short_description": "Motos grandes (NC 750, Africa Twin, Gold Wing)",
+          "long_description": "Bateria 12V 12Ah. Compatível: NC 750X, Africa Twin, Gold Wing, etc.",
+          "price": 0,
+          "image": "placeholder.png",
+          "unit": "unidade",
+          "available": true,
+          "digital": false,
+          "adicionais": [
+            {
+              "grupo": "Instalação",
+              "unico": true,
+              "opcoes": [
+                { "nome": "Na loja (grátis)", "preco": 0 },
+                { "nome": "SOS no local (+R$ 50)", "preco": 0 }
+              ]
+            },
+            {
+              "grupo": "Garantia",
+              "unico": true,
+              "opcoes": [
+                { "nome": "12 meses (padrão)", "preco": 0 },
+                { "nome": "24 meses", "preco": 0 }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "baterias-caminhoes",
+      "name": "Baterias Caminhões",
+      "emoji": "🚛",
+      "description": "Baterias para caminhões e utilitários",
+      "products": [
+        {
+          "id": "bat-caminhao-150ah",
+          "name": "Bateria Caminhão 150Ah",
+          "short_description": "Caminhões médios e ônibus",
+          "long_description": "Bateria 12V 150Ah. Caminhões médios, ônibus urbanos. Garantia 12 meses.",
+          "price": 0,
+          "image": "placeholder.png",
+          "unit": "unidade",
+          "available": true,
+          "digital": false,
+          "adicionais": [
+            {
+              "grupo": "Instalação",
+              "unico": true,
+              "opcoes": [
+                { "nome": "Na loja (grátis)", "preco": 0 },
+                { "nome": "SOS no local (+R$ 80)", "preco": 0 }
+              ]
+            },
+            {
+              "grupo": "Garantia",
+              "unico": true,
+              "opcoes": [
+                { "nome": "12 meses (padrão)", "preco": 0 },
+                { "nome": "18 meses", "preco": 0 }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "bat-caminhao-200ah",
+          "name": "Bateria Caminhão 200Ah",
+          "short_description": "Caminhões pesados e carretas",
+          "long_description": "Bateria 12V 200Ah. Carretas, caminhões pesados, máquinas agrícolas. Garantia 12 meses.",
+          "price": 0,
+          "image": "placeholder.png",
+          "unit": "unidade",
+          "available": true,
+          "digital": false,
+          "adicionais": [
+            {
+              "grupo": "Instalação",
+              "unico": true,
+              "opcoes": [
+                { "nome": "Na loja (grátis)", "preco": 0 },
+                { "nome": "SOS no local (+R$ 100)", "preco": 0 }
+              ]
+            },
+            {
+              "grupo": "Garantia",
+              "unico": true,
+              "opcoes": [
+                { "nome": "12 meses (padrão)", "preco": 0 },
+                { "nome": "18 meses", "preco": 0 }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "servicos",
+      "name": "Serviços",
+      "emoji": "🔧",
+      "description": "Recarga, socorro e diagnósticos",
+      "products": [
+        {
+          "id": "recarga-bateria",
+          "name": "Recarga de Bateria",
+          "short_description": "Teste de carga + recarga lenta + verificação alternador",
+          "long_description": "Teste de carga completo + recarga lenta controlada + verificação do alternador e partida a frio. Duração ~2h. Inclui laudo técnico.",
+          "price": 0,
+          "image": "placeholder.png",
+          "unit": "serviço",
+          "available": true,
+          "digital": true,
+          "adicionais": [
+            {
+              "grupo": "Local",
+              "unico": true,
+              "opcoes": [
+                { "nome": "Na loja (grátis)", "preco": 0 },
+                { "nome": "SOS no local (+R$ 60)", "preco": 0 }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "sos-chupeta",
+          "name": "SOS Chupeta (Partida Emergencial)",
+          "short_description": "Chupeta emergencial 24h - vamos até você",
+          "long_description": "Atendimento emergencial 24h com cabo de chupeta profissional. Chegamos em até 40min. Inclui teste de bateria e alternador.",
+          "price": 0,
+          "image": "placeholder.png",
+          "unit": "serviço",
+          "available": true,
+          "digital": true,
+          "adicionais": [
+            {
+              "grupo": "Cobertura",
+              "unico": true,
+              "opcoes": [
+                { "nome": "Até 20km (grátis)", "preco": 0 },
+                { "nome": "20-50km (+R$ 30)", "preco": 0 },
+                { "nome": "50km+ (sob consulta)", "preco": 0 }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "diagnostico-eletrico",
+          "name": "Diagnóstico Elétrico Completo",
+          "short_description": "Varredura completa + teste bateria/alternador/partida",
+          "long_description": "Scanner automotivo + teste de bateria (CCA) + teste alternador (carga/regulador) + verificação partida a frio + relatório impresso.",
+          "price": 0,
+          "image": "placeholder.png",
+          "unit": "serviço",
+          "available": true,
+          "digital": true,
+          "adicionais": [
+            {
+              "grupo": "Local",
+              "unico": true,
+              "opcoes": [
+                { "nome": "Na loja (grátis)", "preco": 0 },
+                { "nome": "SOS no local (+R$ 80)", "preco": 0 }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "troca-bateria",
+          "name": "Troca de Bateria (Instalação)",
+          "short_description": "Troca completa com teste e descarte ecológico",
+          "long_description": "Remoção bateria velha + instalação nova + teste carga/alternador + descarte ecológico certificado + nota fiscal + garantia.",
+          "price": 0,
+          "image": "placeholder.png",
+          "unit": "serviço",
+          "available": true,
+          "digital": true,
+          "adicionais": [
+            {
+              "grupo": "Local",
+              "unico": true,
+              "opcoes": [
+                { "nome": "Na loja (grátis com compra)", "preco": 0 },
+                { "nome": "SOS no local", "preco": 0 }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "store": {
+    "currency": "BRL",
+    "currency_symbol": "R$",
+    "min_order": 50,
+    "delivery_free_full": 300,
+    "delivery_fee": 15,
+    "pix_discount_percent": 5,
+    "installments_max": 6,
+    "payment_methods": [
+      { "type": "pix", "label": "PIX (5% desconto)", "discount_percent": 5 },
+      { "type": "credit_card", "label": "Cartão Crédito (até 6x sem juros)" },
+      { "type": "debit_card", "label": "Cartão Débito" }
+    ],
+    "menu_image": {
+      "enabled": true,
+      "header_bg": "#1e3a8a",
+      "price_color": "#3b82f6",
+      "show_price": true,
+      "show_numbers": true,
+      "footer_text": "SOS Baterias 24h • Instalação Grátis"
+    },
+    "delivery_areas": []
+  },
+  "questionnaires": {
+    "checkout": {
+      "label": "Dados da entrega e veículo",
+      "questions": [
+        {
+          "key": "endereco",
+          "field": "delivery_address",
+          "question": "Endereço completo (rua, número, bairro, cidade)",
+          "optional": false
+        },
+        {
+          "key": "veiculo_marca",
+          "field": "vehicle_brand",
+          "question": "Marca do veículo",
+          "optional": false
+        },
+        {
+          "key": "veiculo_modelo",
+          "field": "vehicle_model",
+          "question": "Modelo e ano (ex: Gol 2019, HB20 2022)",
+          "optional": false
+        }
+      ]
+    }
+  },
+  "messages": {
+    "welcome": "Olá, {nome}! 🔋 Bem-vindo à {empresa}!\n\nEscolha uma opção:",
+    "store_closed": "🔋 Fechados agora — {horario}.\nSOS Emergencial 24h: toque em *Atendente*.",
+    "product_detail": "🔋 *{nome}*\n\n{descricao}\n\n💰 R$ {preco}",
+    "ask_support_name": "Informe seu nome:",
+    "ask_support_reason": "O que precisa?\n1️⃣ SOS Chupeta (chupeta emergencial 24h)\n2️⃣ Recarga bateria\n3️⃣ Diagnóstico elétrico/mecânico\n4️⃣ Troca de bateria\n5️⃣ Outro assunto",
+    "support_escalation": "🆘 *SOS ATIVADO!* Nossa equipe de emergência vai te chamar em instantes.",
+    "out_of_area": "😔 Seu bairro não tem entrega. Retire na loja ou solicite *SOS Bateria* (instalação no local)."
+  },
+  "buttons": {
+    "menu_shop": "🛒 Baterias",
+    "menu_services": "🔧 Serviços",
+    "menu_sos": "🆘 SOS Chupeta",
+    "menu_support": "📞 Atendente",
+    "menu_track": "📦 Meus Pedidos"
+  }
+}
