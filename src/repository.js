@@ -106,27 +106,23 @@ async function getTenantSegment(tenantId) {
   return r.rows[0] || null;
 }
 
-const fs = require('fs');
-const path = require('path');
-
 /**
- * Garante os segmentos base (vendas, restaurante, delivery) com seus templates.
+ * Garante os segmentos base com seus templates.
  * Idempotente — roda na inicialização.
  */
 async function seedSegments() {
   const templates = [
-    { name: 'vendas', emoji: '🛍️', file: 'catalog-template.json' },
-    { name: 'restaurante', emoji: '🍽️', file: 'catalog-template-restaurante.json' },
-    { name: 'delivery', emoji: '🛵', file: 'catalog-template-delivery.json' },
-    { name: 'padaria', emoji: '🥐', file: 'catalog-template-padaria.json' },
-    { name: 'estetica', emoji: '💆‍♀️', file: 'catalog-template-estetica.json' },
-    { name: 'baterias', emoji: '🔋', file: 'catalog-template-baterias.json' },
+    { name: 'vendas', emoji: '🛍️', tpl: () => require('./catalog-template.json') },
+    { name: 'restaurante', emoji: '🍽️', tpl: () => require('./catalog-template-restaurante.json') },
+    { name: 'delivery', emoji: '🛵', tpl: () => require('./catalog-template-delivery.json') },
+    { name: 'padaria', emoji: '🥐', tpl: () => require('./catalog-template-padaria.json') },
+    { name: 'estetica', emoji: '💆‍♀️', tpl: () => require('./catalog-template-estetica.json') },
+    { name: 'baterias', emoji: '🔋', tpl: () => require('./catalog-template-baterias.json') },
   ];
   for (const t of templates) {
     const exists = await query('SELECT id FROM segments WHERE name = $1', [t.name]);
     if (exists.rows[0]) continue;
-    const template = JSON.parse(fs.readFileSync(path.join(__dirname, t.file), 'utf-8'));
-    await createSegment(t.name, t.emoji, template);
+    await createSegment(t.name, t.emoji, t.tpl());
     console.log('[SEED] segmento criado:', t.name);
   }
   // Backfill: tenants existentes sem ramo → segmento "vendas"

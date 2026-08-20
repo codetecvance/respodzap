@@ -158,7 +158,7 @@ async function getButtons(tenantId) {
 let _vehicleDB = null;
 let _vehicleDBLoaded = false;
 
-const VEHICLE_DB_PATH = path.join(__dirname, 'carros-baterias.json');
+const _VEHICLE_DB_RAW = require('./carros-baterias.json');
 
 /**
  * Carrega a base de dados de veículos (cache 1h).
@@ -166,8 +166,7 @@ const VEHICLE_DB_PATH = path.join(__dirname, 'carros-baterias.json');
 async function loadVehicleDatabase() {
   if (_vehicleDBLoaded) return _vehicleDB;
   try {
-    const file = fs.readFileSync(VEHICLE_DB_PATH, 'utf-8');
-    _vehicleDB = JSON.parse(file);
+    _vehicleDB = _VEHICLE_DB_RAW;
     _vehicleDBLoaded = true;
     return _vehicleDB;
   } catch (e) {
