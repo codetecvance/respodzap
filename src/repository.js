@@ -121,7 +121,10 @@ async function seedSegments() {
   ];
   for (const t of templates) {
     const exists = await query('SELECT id FROM segments WHERE name = $1', [t.name]);
-    if (exists.rows[0]) continue;
+    if (exists.rows[0]) {
+      await query('UPDATE segments SET template_json = $1 WHERE id = $2', [JSON.stringify(t.tpl()), exists.rows[0].id]);
+      continue;
+    }
     await createSegment(t.name, t.emoji, t.tpl());
     console.log('[SEED] segmento criado:', t.name);
   }
