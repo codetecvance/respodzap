@@ -27,146 +27,56 @@
           "id": "bat-60ah",
           "name": "Bateria 60Ah",
           "short_description": "Carros populares (Gol, Onix, HB20, Argo, etc.)",
-          "long_description": "Bateria 12V 60Ah selada. Compatível: Gol, Onix, HB20, Argo, Polo, Saveiro, Voyage, etc. Garantia 24 meses.",
+          "long_description": "Bateria 12V 60Ah selada. Compatível: Gol, Onix, HB20, Argo, Polo, Saveiro, Voyage, etc.",
           "price": 0,
           "image": "placeholder.png",
           "unit": "unidade",
           "available": true,
-          "digital": false,
-          "adicionais": [
-            {
-              "grupo": "Instalação",
-              "unico": true,
-              "opcoes": [
-                { "nome": "Na loja", "preco": 0 },
-                { "nome": "SOS no local (+R$ 50)", "preco": 0 }
-              ]
-            },
-            {
-              "grupo": "Garantia",
-              "unico": true,
-              "opcoes": [
-                { "nome": "24 meses (padrão)", "preco": 0 },
-                { "nome": "36 meses", "preco": 0 }
-              ]
-            }
-          ]
+          "digital": false
         },
         {
           "id": "bat-70ah",
           "name": "Bateria 70Ah",
           "short_description": "SUVs e sedãs médios (Corolla, Compass, T-Cross, Creta)",
-          "long_description": "Bateria 12V 70Ah. Compatível: Corolla, Compass, T-Cross, Creta, HR-V, Kicks, etc. Garantia 24 meses.",
+          "long_description": "Bateria 12V 70Ah. Compatível: Corolla, Compass, T-Cross, Creta, HR-V, Kicks, etc.",
           "price": 0,
           "image": "placeholder.png",
           "unit": "unidade",
           "available": true,
-          "digital": false,
-          "adicionais": [
-            {
-              "grupo": "Instalação",
-              "unico": true,
-              "opcoes": [
-                { "nome": "Na loja", "preco": 0 },
-                { "nome": "SOS no local (+R$ 50)", "preco": 0 }
-              ]
-            },
-            {
-              "grupo": "Garantia",
-              "unico": true,
-              "opcoes": [
-                { "nome": "24 meses (padrão)", "preco": 0 },
-                { "nome": "36 meses", "preco": 0 }
-              ]
-            }
-          ]
+          "digital": false
         },
         {
           "id": "bat-80ah",
           "name": "Bateria 80Ah",
           "short_description": "Pickups e SUVs grandes (Hilux, S10, Ranger, Frontier)",
-          "long_description": "Bateria 12V 80Ah. Compatível: Hilux, S10, Ranger, Frontier, SW4, etc. Garantia 24 meses.",
+          "long_description": "Bateria 12V 80Ah. Compatível: Hilux, S10, Ranger, Frontier, SW4, etc.",
           "price": 0,
           "image": "placeholder.png",
           "unit": "unidade",
           "available": true,
-          "digital": false,
-          "adicionais": [
-            {
-              "grupo": "Instalação",
-              "unico": true,
-              "opcoes": [
-                { "nome": "Na loja", "preco": 0 },
-                { "nome": "SOS no local (+R$ 50)", "preco": 0 }
-              ]
-            },
-            {
-              "grupo": "Garantia",
-              "unico": true,
-              "opcoes": [
-                { "nome": "24 meses (padrão)", "preco": 0 },
-                { "nome": "36 meses", "preco": 0 }
-              ]
-            }
-          ]
+          "digital": false
         },
         {
           "id": "bat-100ah",
           "name": "Bateria 100Ah",
           "short_description": "Caminhonetes grandes e ônibus (Amarok, SW4, caminhões leves)",
-          "long_description": "Bateria 12V 100Ah. Compatível: Amarok, SW4, caminhões leves. Garantia 18 meses.",
+          "long_description": "Bateria 12V 100Ah. Compatível: Amarok, SW4, caminhões leves.",
           "price": 0,
           "image": "placeholder.png",
           "unit": "unidade",
           "available": true,
-          "digital": false,
-          "adicionais": [
-            {
-              "grupo": "Instalação",
-              "unico": true,
-              "opcoes": [
-                { "nome": "Na loja", "preco": 0 },
-                { "nome": "SOS no local (+R$ 50)", "preco": 0 }
-              ]
-            },
-            {
-              "grupo": "Garantia",
-              "unico": true,
-              "opcoes": [
-                { "nome": "18 meses (padrão)", "preco": 0 },
-                { "nome": "24 meses", "preco": 0 }
-              ]
-            }
-          ]
+          "digital": false
         },
         {
           "id": "bat-45ah",
           "name": "Bateria 45Ah",
           "short_description": "Carros compactos (Mobi, Kwid, Up, Ka antigo)",
-          "long_description": "Bateria 12V 45Ah. Compatível: Mobi, Kwid, Up, Ka antigo. Garantia 24 meses.",
+          "long_description": "Bateria 12V 45Ah. Compatível: Mobi, Kwid, Up, Ka antigo.",
           "price": 0,
           "image": "placeholder.png",
           "unit": "unidade",
           "available": true,
-          "digital": false,
-          "adicionais": [
-            {
-              "grupo": "Instalação",
-              "unico": true,
-              "opcoes": [
-                { "nome": "Na loja", "preco": 0 },
-                { "nome": "SOS no local (+R$ 50)", "preco": 0 }
-              ]
-            },
-            {
-              "grupo": "Garantia",
-              "unico": true,
-              "opcoes": [
-                { "nome": "24 meses (padrão)", "preco": 0 },
-                { "nome": "36 meses", "preco": 0 }
-              ]
-            }
-          ]
+          "digital": false
         }
       ]
     },
@@ -185,25 +95,7 @@
           "image": "placeholder.png",
           "unit": "unidade",
           "available": true,
-          "digital": false,
-          "adicionais": [
-            {
-              "grupo": "Instalação",
-              "unico": true,
-              "opcoes": [
-                { "nome": "Na loja", "preco": 0 },
-                { "nome": "SOS no local (+R$ 50)", "preco": 0 }
-              ]
-            },
-            {
-              "grupo": "Garantia",
-              "unico": true,
-              "opcoes": [
-                { "nome": "12 meses (padrão)", "preco": 0 },
-                { "nome": "24 meses", "preco": 0 }
-              ]
-            }
-          ]
+          "digital": false
         },
         {
           "id": "bat-moto-9ah",
@@ -214,25 +106,7 @@
           "image": "placeholder.png",
           "unit": "unidade",
           "available": true,
-          "digital": false,
-          "adicionais": [
-            {
-              "grupo": "Instalação",
-              "unico": true,
-              "opcoes": [
-                { "nome": "Na loja", "preco": 0 },
-                { "nome": "SOS no local (+R$ 50)", "preco": 0 }
-              ]
-            },
-            {
-              "grupo": "Garantia",
-              "unico": true,
-              "opcoes": [
-                { "nome": "12 meses (padrão)", "preco": 0 },
-                { "nome": "24 meses", "preco": 0 }
-              ]
-            }
-          ]
+          "digital": false
         },
         {
           "id": "bat-moto-12ah",
@@ -243,25 +117,7 @@
           "image": "placeholder.png",
           "unit": "unidade",
           "available": true,
-          "digital": false,
-          "adicionais": [
-            {
-              "grupo": "Instalação",
-              "unico": true,
-              "opcoes": [
-                { "nome": "Na loja", "preco": 0 },
-                { "nome": "SOS no local (+R$ 50)", "preco": 0 }
-              ]
-            },
-            {
-              "grupo": "Garantia",
-              "unico": true,
-              "opcoes": [
-                { "nome": "12 meses (padrão)", "preco": 0 },
-                { "nome": "24 meses", "preco": 0 }
-              ]
-            }
-          ]
+          "digital": false
         }
       ]
     },
@@ -275,59 +131,23 @@
           "id": "bat-caminhao-150ah",
           "name": "Bateria Caminhão 150Ah",
           "short_description": "Caminhões médios e ônibus",
-          "long_description": "Bateria 12V 150Ah. Caminhões médios, ônibus urbanos. Garantia 12 meses.",
+          "long_description": "Bateria 12V 150Ah. Caminhões médios, ônibus urbanos.",
           "price": 0,
           "image": "placeholder.png",
           "unit": "unidade",
           "available": true,
-          "digital": false,
-          "adicionais": [
-            {
-              "grupo": "Instalação",
-              "unico": true,
-              "opcoes": [
-                { "nome": "Na loja", "preco": 0 },
-                { "nome": "SOS no local (+R$ 80)", "preco": 0 }
-              ]
-            },
-            {
-              "grupo": "Garantia",
-              "unico": true,
-              "opcoes": [
-                { "nome": "12 meses (padrão)", "preco": 0 },
-                { "nome": "18 meses", "preco": 0 }
-              ]
-            }
-          ]
+          "digital": false
         },
         {
           "id": "bat-caminhao-200ah",
           "name": "Bateria Caminhão 200Ah",
           "short_description": "Caminhões pesados e carretas",
-          "long_description": "Bateria 12V 200Ah. Carretas, caminhões pesados, máquinas agrícolas. Garantia 12 meses.",
+          "long_description": "Bateria 12V 200Ah. Carretas, caminhões pesados, máquinas agrícolas.",
           "price": 0,
           "image": "placeholder.png",
           "unit": "unidade",
           "available": true,
-          "digital": false,
-          "adicionais": [
-            {
-              "grupo": "Instalação",
-              "unico": true,
-              "opcoes": [
-                { "nome": "Na loja", "preco": 0 },
-                { "nome": "SOS no local (+R$ 100)", "preco": 0 }
-              ]
-            },
-            {
-              "grupo": "Garantia",
-              "unico": true,
-              "opcoes": [
-                { "nome": "12 meses (padrão)", "preco": 0 },
-                { "nome": "18 meses", "preco": 0 }
-              ]
-            }
-          ]
+          "digital": false
         }
       ]
     },
@@ -346,17 +166,7 @@
           "image": "placeholder.png",
           "unit": "serviço",
           "available": true,
-          "digital": true,
-          "adicionais": [
-            {
-              "grupo": "Local",
-              "unico": true,
-              "opcoes": [
-                { "nome": "Na loja", "preco": 0 },
-                { "nome": "SOS no local (+R$ 60)", "preco": 0 }
-              ]
-            }
-          ]
+          "digital": true
         },
         {
           "id": "sos-chupeta",
@@ -367,18 +177,7 @@
           "image": "placeholder.png",
           "unit": "serviço",
           "available": true,
-          "digital": true,
-          "adicionais": [
-            {
-              "grupo": "Cobertura",
-              "unico": true,
-              "opcoes": [
-                { "nome": "Até 20km", "preco": 0 },
-                { "nome": "20-50km (+R$ 30)", "preco": 0 },
-                { "nome": "50km+ (sob consulta)", "preco": 0 }
-              ]
-            }
-          ]
+          "digital": true
         },
         {
           "id": "diagnostico-eletrico",
@@ -389,38 +188,18 @@
           "image": "placeholder.png",
           "unit": "serviço",
           "available": true,
-          "digital": true,
-          "adicionais": [
-            {
-              "grupo": "Local",
-              "unico": true,
-              "opcoes": [
-                { "nome": "Na loja", "preco": 0 },
-                { "nome": "SOS no local (+R$ 80)", "preco": 0 }
-              ]
-            }
-          ]
+          "digital": true
         },
         {
           "id": "troca-bateria",
           "name": "Troca de Bateria (Instalação)",
           "short_description": "Troca completa com teste e descarte ecológico",
-          "long_description": "Remoção bateria velha + instalação nova + teste carga/alternador + descarte ecológico certificado + nota fiscal + garantia.",
+          "long_description": "Remoção bateria velha + instalação nova + teste carga/alternador + descarte ecológico certificado + nota fiscal",
           "price": 0,
           "image": "placeholder.png",
           "unit": "serviço",
           "available": true,
-          "digital": true,
-          "adicionais": [
-            {
-              "grupo": "Local",
-              "unico": true,
-              "opcoes": [
-                { "nome": "Na loja", "preco": 0 },
-                { "nome": "SOS no local", "preco": 0 }
-              ]
-            }
-          ]
+          "digital": true
         }
       ]
     }
@@ -434,9 +213,19 @@
     "pix_discount_percent": 0,
     "installments_max": 6,
     "payment_methods": [
-      { "type": "pix", "label": "PIX", "discount_percent": 0 },
-      { "type": "credit_card", "label": "Cartão Crédito (até 6x sem juros)" },
-      { "type": "debit_card", "label": "Cartão Débito" }
+      {
+        "type": "pix",
+        "label": "PIX",
+        "discount_percent": 0
+      },
+      {
+        "type": "credit_card",
+        "label": "Cartão Crédito (até 6x sem juros)"
+      },
+      {
+        "type": "debit_card",
+        "label": "Cartão Débito"
+      }
     ],
     "menu_image": {
       "enabled": true,
