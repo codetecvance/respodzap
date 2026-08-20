@@ -3,266 +3,263 @@
     {
       "marca": "Volkswagen",
       "modelos": [
-        { "modelo": "Gol", "anos": "2010-2023", "bateria": "60Ah" },
-        { "modelo": "Golf", "anos": "2010-2023", "bateria": "60Ah" },
-        { "modelo": "Polo", "anos": "2018-2023", "bateria": "60Ah" },
-        { "modelo": "Saveiro", "anos": "2010-2023", "bateria": "60Ah" },
-        { "modelo": "Voyage", "anos": "2010-2023", "bateria": "60Ah" },
-        { "modelo": "Fox", "anos": "2010-2021", "bateria": "60Ah" },
-        { "modelo": "Virtus", "anos": "2018-2023", "bateria": "60Ah" },
-        { "modelo": "Nivus", "anos": "2020-2023", "bateria": "60Ah" },
-        { "modelo": "T-Cross", "anos": "2019-2023", "bateria": "70Ah" },
-        { "modelo": "Amarok", "anos": "2010-2023", "bateria": "100Ah" },
-        { "modelo": "Up", "anos": "2014-2021", "bateria": "45Ah" },
-        { "modelo": "Jetta", "anos": "2012-2023", "bateria": "70Ah" },
-        { "modelo": "Passat", "anos": "2010-2023", "bateria": "70Ah" },
-        { "modelo": "Tiguan", "anos": "2017-2023", "bateria": "70Ah" },
-        { "modelo": "Taos", "anos": "2021-2023", "bateria": "70Ah" }
+        { "modelo": "Gol", "anos": "2010-2023", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Golf", "anos": "2010-2023", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Polo", "anos": "2018-2023", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção) ou EFB (Start-Stop)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Saveiro", "anos": "2010-2023", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Voyage", "anos": "2010-2023", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Fox", "anos": "2010-2021", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Virtus", "anos": "2018-2023", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção) ou EFB (Start-Stop)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Nivus", "anos": "2020-2023", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção) ou EFB (Start-Stop)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "T-Cross", "anos": "2019-2023", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção) ou EFB (Start-Stop)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Amarok", "anos": "2010-2023", "bateria": { "capacidade": "90Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "306 x 172 x 230 mm" } },
+        { "modelo": "Up", "anos": "2014-2021", "bateria": { "capacidade": "45Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "207 x 175 x 175 mm" } },
+        { "modelo": "Jetta", "anos": "2012-2023", "bateria": { "capacidade": "70Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "278 x 175 x 190 mm" } },
+        { "modelo": "Passat", "anos": "2010-2023", "bateria": { "capacidade": "70Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "278 x 175 x 190 mm" } },
+        { "modelo": "Tiguan", "anos": "2017-2023", "bateria": { "capacidade": "70Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "278 x 175 x 190 mm" } },
+        { "modelo": "Taos", "anos": "2021-2023", "bateria": { "capacidade": "70Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção) ou EFB (Start-Stop)", "medidas": "278 x 175 x 190 mm" } }
       ]
     },
     {
       "marca": "Chevrolet",
       "modelos": [
-        { "modelo": "Onix", "anos": "2013-2023", "bateria": "60Ah" },
-        { "modelo": "Onix Plus", "anos": "2019-2023", "bateria": "60Ah" },
-        { "modelo": "Prisma", "anos": "2013-2020", "bateria": "60Ah" },
-        { "modelo": "Cruze", "anos": "2012-2023", "bateria": "70Ah" },
-        { "modelo": "Tracker", "anos": "2013-2023", "bateria": "70Ah" },
-        { "modelo": "S10", "anos": "2012-2023", "bateria": "80Ah" },
-        { "modelo": "Spin", "anos": "2012-2023", "bateria": "60Ah" },
-        { "modelo": "Montana", "anos": "2010-2023", "bateria": "60Ah" },
-        { "modelo": "Cobalt", "anos": "2012-2020", "bateria": "60Ah" },
-        { "modelo": "Camaro", "anos": "2010-2023", "bateria": "80Ah" },
-        { "modelo": "Equinox", "anos": "2017-2023", "bateria": "70Ah" },
-        { "modelo": "Trailblazer", "anos": "2012-2023", "bateria": "80Ah" }
+        { "modelo": "Onix", "anos": "2013-2023", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção) ou EFB (Start-Stop)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Onix Plus", "anos": "2019-2023", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção) ou EFB (Start-Stop)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Prisma", "anos": "2013-2020", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Cruze", "anos": "2012-2023", "bateria": { "capacidade": "70Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "278 x 175 x 190 mm" } },
+        { "modelo": "Tracker", "anos": "2013-2023", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção) ou EFB (Start-Stop)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "S10", "anos": "2012-2023", "bateria": { "capacidade": "80Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "315 x 175 x 175 mm" } },
+        { "modelo": "Spin", "anos": "2012-2023", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Montana", "anos": "2010-2023", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Cobalt", "anos": "2012-2020", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Camaro", "anos": "2010-2023", "bateria": { "capacidade": "80Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "AGM (Start-Stop)", "medidas": "315 x 175 x 190 mm" } },
+        { "modelo": "Equinox", "anos": "2017-2023", "bateria": { "capacidade": "70Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "278 x 175 x 190 mm" } },
+        { "modelo": "Trailblazer", "anos": "2012-2023", "bateria": { "capacidade": "80Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "315 x 175 x 175 mm" } }
       ]
     },
     {
       "marca": "Fiat",
       "modelos": [
-        { "modelo": "Argo", "anos": "2017-2023", "bateria": "60Ah" },
-        { "modelo": "Cronos", "anos": "2018-2023", "bateria": "60Ah" },
-        { "modelo": "Mobi", "anos": "2016-2023", "bateria": "45Ah" },
-        { "modelo": "Uno", "anos": "2010-2021", "bateria": "45Ah" },
-        { "modelo": "Palio", "anos": "2010-2017", "bateria": "60Ah" },
-        { "modelo": "Siena", "anos": "2010-2017", "bateria": "60Ah" },
-        { "modelo": "Strada", "anos": "2010-2023", "bateria": "60Ah" },
-        { "modelo": "Toro", "anos": "2016-2023", "bateria": "70Ah" },
-        { "modelo": "Pulse", "anos": "2021-2023", "bateria": "60Ah" },
-        { "modelo": "Fastback", "anos": "2022-2023", "bateria": "60Ah" },
-        { "modelo": "Grand Siena", "anos": "2012-2021", "bateria": "60Ah" },
-        { "modelo": "Palio Weekend", "anos": "2010-2016", "bateria": "60Ah" },
-        { "modelo": "Doblò", "anos": "2010-2021", "bateria": "60Ah" },
-        { "modelo": "Fiorino", "anos": "2010-2023", "bateria": "60Ah" },
-        { "modelo": "Linea", "anos": "2010-2016", "bateria": "60Ah" }
+        { "modelo": "Argo", "anos": "2017-2023", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Cronos", "anos": "2018-2023", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Mobi", "anos": "2016-2023", "bateria": { "capacidade": "45Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "207 x 175 x 175 mm" } },
+        { "modelo": "Uno", "anos": "2010-2021", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção) ou EFB (Start-Stop)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Palio", "anos": "2010-2017", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Siena", "anos": "2010-2017", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Strada", "anos": "2010-2023", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Toro", "anos": "2016-2023", "bateria": { "capacidade": "70Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção) ou EFB (Start-Stop)", "medidas": "278 x 175 x 190 mm" } },
+        { "modelo": "Pulse", "anos": "2021-2023", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção) ou EFB (Start-Stop)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Fastback", "anos": "2022-2023", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção) ou EFB (Start-Stop)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Grand Siena", "anos": "2012-2021", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Palio Weekend", "anos": "2010-2016", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Doblò", "anos": "2010-2021", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Fiorino", "anos": "2010-2023", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Linea", "anos": "2010-2016", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } }
       ]
     },
     {
       "marca": "Hyundai",
       "modelos": [
-        { "modelo": "HB20", "anos": "2013-2023", "bateria": "60Ah" },
-        { "modelo": "HB20S", "anos": "2013-2023", "bateria": "60Ah" },
-        { "modelo": "Creta", "anos": "2017-2023", "bateria": "60Ah" },
-        { "modelo": "HB20X", "anos": "2013-2023", "bateria": "60Ah" },
-        { "modelo": "Tucson", "anos": "2016-2023", "bateria": "70Ah" },
-        { "modelo": "Santa Fe", "anos": "2013-2023", "bateria": "80Ah" },
-        { "modelo": "i30", "anos": "2012-2020", "bateria": "60Ah" },
-        { "modelo": "Elantra", "anos": "2012-2023", "bateria": "60Ah" },
-        { "modelo": "Veloster", "anos": "2012-2018", "bateria": "60Ah" }
+        { "modelo": "HB20", "anos": "2013-2023", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "HB20S", "anos": "2013-2023", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Creta", "anos": "2017-2023", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "HB20X", "anos": "2013-2023", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Tucson", "anos": "2016-2023", "bateria": { "capacidade": "70Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "278 x 175 x 190 mm" } },
+        { "modelo": "Santa Fe", "anos": "2013-2023", "bateria": { "capacidade": "80Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "315 x 175 x 175 mm" } },
+        { "modelo": "i30", "anos": "2012-2020", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Elantra", "anos": "2012-2023", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Veloster", "anos": "2012-2018", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } }
       ]
     },
     {
       "marca": "Ford",
       "modelos": [
-        { "modelo": "Ka", "anos": "2014-2021", "bateria": "60Ah" },
-        { "modelo": "Ka+", "anos": "2017-2021", "bateria": "60Ah" },
-        { "modelo": "EcoSport", "anos": "2013-2022", "bateria": "60Ah" },
-        { "modelo": "Ranger", "anos": "2012-2023", "bateria": "80Ah" },
-        { "modelo": "Focus", "anos": "2010-2019", "bateria": "60Ah" },
-        { "modelo": "Fiesta", "anos": "2010-2019", "bateria": "60Ah" },
-        { "modelo": "Fusion", "anos": "2013-2020", "bateria": "70Ah" },
-        { "modelo": "Edge", "anos": "2015-2020", "bateria": "80Ah" },
-        { "modelo": "Bronco Sport", "anos": "2021-2023", "bateria": "70Ah" },
-        { "modelo": "Maverick", "anos": "2022-2023", "bateria": "80Ah" },
-        { "modelo": "Territory", "anos": "2021-2023", "bateria": "70Ah" }
+        { "modelo": "Ka", "anos": "2014-2021", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Ka+", "anos": "2017-2021", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "EcoSport", "anos": "2013-2022", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Ranger", "anos": "2012-2023", "bateria": { "capacidade": "80Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "315 x 175 x 175 mm" } },
+        { "modelo": "Focus", "anos": "2010-2019", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Fiesta", "anos": "2010-2019", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Fusion", "anos": "2013-2020", "bateria": { "capacidade": "70Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "278 x 175 x 190 mm" } },
+        { "modelo": "Edge", "anos": "2015-2020", "bateria": { "capacidade": "80Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "315 x 175 x 175 mm" } },
+        { "modelo": "Bronco Sport", "anos": "2021-2023", "bateria": { "capacidade": "70Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção) ou EFB (Start-Stop)", "medidas": "278 x 175 x 190 mm" } },
+        { "modelo": "Maverick", "anos": "2022-2023", "bateria": { "capacidade": "80Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "315 x 175 x 175 mm" } },
+        { "modelo": "Territory", "anos": "2021-2023", "bateria": { "capacidade": "70Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "278 x 175 x 190 mm" } }
       ]
     },
     {
       "marca": "Renault",
       "modelos": [
-        { "modelo": "Kwid", "anos": "2017-2023", "bateria": "45Ah" },
-        { "modelo": "Sandero", "anos": "2014-2022", "bateria": "60Ah" },
-        { "modelo": "Logan", "anos": "2014-2022", "bateria": "60Ah" },
-        { "modelo": "Duster", "anos": "2012-2022", "bateria": "60Ah" },
-        { "modelo": "Oroch", "anos": "2015-2023", "bateria": "60Ah" },
-        { "modelo": "Captur", "anos": "2017-2022", "bateria": "60Ah" },
-        { "modelo": "Stepway", "anos": "2014-2022", "bateria": "60Ah" },
-        { "modelo": "Clio", "anos": "2010-2016", "bateria": "60Ah" },
-        { "modelo": "Fluence", "anos": "2011-2018", "bateria": "60Ah" },
-        { "modelo": "Kangoo", "anos": "2010-2023", "bateria": "60Ah" },
-        { "modelo": "Master", "anos": "2010-2023", "bateria": "100Ah" }
+        { "modelo": "Kwid", "anos": "2017-2023", "bateria": { "capacidade": "45Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "207 x 175 x 175 mm" } },
+        { "modelo": "Sandero", "anos": "2014-2022", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Logan", "anos": "2014-2022", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Duster", "anos": "2012-2022", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Oroch", "anos": "2015-2023", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Captur", "anos": "2017-2022", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Stepway", "anos": "2014-2022", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Clio", "anos": "2010-2016", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Fluence", "anos": "2011-2018", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Kangoo", "anos": "2010-2023", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Master", "anos": "2010-2023", "bateria": { "capacidade": "100Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "330 x 172 x 230 mm" } }
       ]
     },
     {
       "marca": "Honda",
       "modelos": [
-        { "modelo": "Fit", "anos": "2013-2023", "bateria": "55Ah" },
-        { "modelo": "City", "anos": "2013-2023", "bateria": "55Ah" },
-        { "modelo": "HR-V", "anos": "2015-2023", "bateria": "60Ah" },
-        { "modelo": "WR-V", "anos": "2017-2023", "bateria": "55Ah" },
-        { "modelo": "Civic", "anos": "2012-2023", "bateria": "60Ah" },
-        { "modelo": "HR-V 2023+", "anos": "2023-2023", "bateria": "60Ah" },
-        { "modelo": "HR-V 2024+", "anos": "2024-2024", "bateria": "60Ah" },
-        { "modelo": "CR-V", "anos": "2012-2023", "bateria": "60Ah" },
-        { "modelo": "Accord", "anos": "2012-2023", "bateria": "60Ah" },
-        { "modelo": "HR-V 2015-2022", "anos": "2015-2022", "bateria": "60Ah" }
+        { "modelo": "Fit", "anos": "2013-2023", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "City", "anos": "2013-2023", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "HR-V", "anos": "2015-2023", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "WR-V", "anos": "2017-2023", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Civic", "anos": "2012-2023", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "CR-V", "anos": "2012-2023", "bateria": { "capacidade": "70Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "278 x 175 x 190 mm" } },
+        { "modelo": "Accord", "anos": "2012-2023", "bateria": { "capacidade": "70Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "278 x 175 x 190 mm" } }
       ]
     },
     {
       "marca": "Toyota",
       "modelos": [
-        { "modelo": "Corolla", "anos": "2012-2023", "bateria": "60Ah" },
-        { "modelo": "Yaris", "anos": "2018-2023", "bateria": "55Ah" },
-        { "modelo": "Etios", "anos": "2013-2021", "bateria": "55Ah" },
-        { "modelo": "Hilux", "anos": "2012-2023", "bateria": "80Ah" },
-        { "modelo": "SW4", "anos": "2012-2023", "bateria": "100Ah" },
-        { "modelo": "Etios Sedan", "anos": "2013-2021", "bateria": "55Ah" },
-        { "modelo": "Yaris Sedan", "anos": "2018-2023", "bateria": "55Ah" },
-        { "modelo": "Corolla Cross", "anos": "2021-2023", "bateria": "60Ah" },
-        { "modelo": "Yaris Cross", "anos": "2021-2023", "bateria": "55Ah" },
-        { "modelo": "Hilux Cabine Simples", "anos": "2012-2023", "bateria": "80Ah" },
-        { "modelo": "Hilux Cabine Dupla", "anos": "2012-2023", "bateria": "80Ah" }
+        { "modelo": "Corolla", "anos": "2012-2023", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Yaris", "anos": "2018-2023", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Etios", "anos": "2013-2021", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Hilux", "anos": "2012-2023", "bateria": { "capacidade": "90Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "306 x 172 x 230 mm" } },
+        { "modelo": "SW4", "anos": "2012-2023", "bateria": { "capacidade": "90Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "306 x 172 x 230 mm" } },
+        { "modelo": "Etios Sedan", "anos": "2013-2021", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Yaris Sedan", "anos": "2018-2023", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Corolla Cross", "anos": "2021-2023", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Yaris Cross", "anos": "2021-2023", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Hilux Cabine Simples", "anos": "2012-2023", "bateria": { "capacidade": "90Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "306 x 172 x 230 mm" } },
+        { "modelo": "Hilux Cabine Dupla", "anos": "2012-2023", "bateria": { "capacidade": "90Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "306 x 172 x 230 mm" } }
       ]
     },
     {
       "marca": "Jeep",
       "modelos": [
-        { "modelo": "Renegade", "anos": "2015-2023", "bateria": "70Ah" },
-        { "modelo": "Compass", "anos": "2016-2023", "bateria": "70Ah" },
-        { "modelo": "Commander", "anos": "2022-2023", "bateria": "80Ah" },
-        { "modelo": "Wrangler", "anos": "2018-2023", "bateria": "80Ah" },
-        { "modelo": "Gladiator", "anos": "2021-2023", "bateria": "80Ah" }
+        { "modelo": "Renegade", "anos": "2015-2023", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção) ou EFB (Start-Stop)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Compass", "anos": "2016-2023", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção) ou EFB (Start-Stop)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Commander", "anos": "2022-2023", "bateria": { "capacidade": "70Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção) ou EFB (Start-Stop)", "medidas": "278 x 175 x 190 mm" } },
+        { "modelo": "Wrangler", "anos": "2018-2023", "bateria": { "capacidade": "80Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "AGM (Start-Stop)", "medidas": "315 x 175 x 190 mm" } },
+        { "modelo": "Gladiator", "anos": "2021-2023", "bateria": { "capacidade": "80Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "AGM (Start-Stop)", "medidas": "315 x 175 x 190 mm" } }
       ]
     },
     {
       "marca": "Nissan",
       "modelos": [
-        { "modelo": "Kicks", "anos": "2017-2023", "bateria": "60Ah" },
-        { "modelo": "Versa", "anos": "2013-2023", "bateria": "55Ah" },
-        { "modelo": "Frontier", "anos": "2012-2023", "bateria": "80Ah" },
-        { "modelo": "March", "anos": "2014-2020", "bateria": "55Ah" },
-        { "modelo": "Sentra", "anos": "2013-2020", "bateria": "60Ah" },
-        { "modelo": "Xterra", "anos": "2010-2015", "bateria": "80Ah" }
+        { "modelo": "Kicks", "anos": "2017-2023", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Versa", "anos": "2013-2023", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Frontier", "anos": "2012-2023", "bateria": { "capacidade": "80Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "315 x 175 x 175 mm" } },
+        { "modelo": "March", "anos": "2014-2020", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Sentra", "anos": "2013-2020", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Xterra", "anos": "2010-2015", "bateria": { "capacidade": "80Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "315 x 175 x 175 mm" } }
       ]
     },
     {
       "marca": "Citroën",
       "modelos": [
-        { "modelo": "C3", "anos": "2013-2023", "bateria": "60Ah" },
-        { "modelo": "Aircross", "anos": "2010-2020", "bateria": "60Ah" },
-        { "modelo": "C4 Cactus", "anos": "2018-2023", "bateria": "60Ah" },
-        { "modelo": "C4 Lounge", "anos": "2013-2020", "bateria": "60Ah" },
-        { "modelo": "Jumpy", "anos": "2012-2023", "bateria": "80Ah" },
-        { "modelo": "Berlingo", "anos": "2012-2023", "bateria": "60Ah" }
+        { "modelo": "C3", "anos": "2013-2023", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Aircross", "anos": "2010-2020", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "C4 Cactus", "anos": "2018-2023", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "C4 Lounge", "anos": "2013-2020", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Jumpy", "anos": "2012-2023", "bateria": { "capacidade": "80Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "315 x 175 x 175 mm" } },
+        { "modelo": "Berlingo", "anos": "2012-2023", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } }
       ]
     },
     {
       "marca": "Peugeot",
       "modelos": [
-        { "modelo": "208", "anos": "2013-2023", "bateria": "60Ah" },
-        { "modelo": "2008", "anos": "2015-2023", "bateria": "60Ah" },
-        { "modelo": "3008", "anos": "2017-2023", "bateria": "70Ah" },
-        { "modelo": "5008", "anos": "2018-2023", "bateria": "70Ah" },
-        { "modelo": "Partner", "anos": "2012-2023", "bateria": "60Ah" },
-        { "modelo": "Expert", "anos": "2012-2023", "bateria": "80Ah" },
-        { "modelo": "206", "anos": "2010-2013", "bateria": "60Ah" },
-        { "modelo": "207", "anos": "2010-2015", "bateria": "60Ah" }
+        { "modelo": "208", "anos": "2013-2023", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "2008", "anos": "2015-2023", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "3008", "anos": "2017-2023", "bateria": { "capacidade": "70Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "278 x 175 x 190 mm" } },
+        { "modelo": "5008", "anos": "2018-2023", "bateria": { "capacidade": "70Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "278 x 175 x 190 mm" } },
+        { "modelo": "Partner", "anos": "2012-2023", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Expert", "anos": "2012-2023", "bateria": { "capacidade": "80Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "315 x 175 x 175 mm" } },
+        { "modelo": "206", "anos": "2010-2013", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "207", "anos": "2010-2015", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } }
       ]
     },
     {
       "marca": "Mitsubishi",
       "modelos": [
-        { "modelo": "L200", "anos": "2012-2023", "bateria": "80Ah" },
-        { "modelo": "Pajero Sport", "anos": "2016-2023", "bateria": "80Ah" },
-        { "modelo": "Eclipse Cross", "anos": "2018-2023", "bateria": "60Ah" },
-        { "modelo": "ASX", "anos": "2012-2022", "bateria": "60Ah" },
-        { "modelo": "Outlander", "anos": "2013-2022", "bateria": "60Ah" },
-        { "modelo": "Pajero Full", "anos": "2012-2021", "bateria": "100Ah" }
+        { "modelo": "L200", "anos": "2012-2023", "bateria": { "capacidade": "90Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "306 x 172 x 230 mm" } },
+        { "modelo": "Pajero Sport", "anos": "2016-2023", "bateria": { "capacidade": "90Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "306 x 172 x 230 mm" } },
+        { "modelo": "Eclipse Cross", "anos": "2018-2023", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "ASX", "anos": "2012-2022", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Outlander", "anos": "2013-2022", "bateria": { "capacidade": "70Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "278 x 175 x 190 mm" } },
+        { "modelo": "Pajero Full", "anos": "2012-2021", "bateria": { "capacidade": "100Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "330 x 172 x 230 mm" } }
       ]
     },
     {
       "marca": "BMW",
       "modelos": [
-        { "modelo": "320i", "anos": "2012-2023", "bateria": "70Ah" },
-        { "modelo": "X1", "anos": "2016-2023", "bateria": "70Ah" },
-        { "modelo": "X3", "anos": "2013-2023", "bateria": "80Ah" },
-        { "modelo": "X5", "anos": "2014-2023", "bateria": "80Ah" },
-        { "modelo": "X6", "anos": "2015-2023", "bateria": "80Ah" },
-        { "modelo": "328i", "anos": "2012-2019", "bateria": "70Ah" },
-        { "modelo": "118i", "anos": "2013-2019", "bateria": "60Ah" }
+        { "modelo": "320i", "anos": "2012-2023", "bateria": { "capacidade": "70Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "AGM (Start-Stop)", "medidas": "315 x 175 x 190 mm" } },
+        { "modelo": "X1", "anos": "2016-2023", "bateria": { "capacidade": "70Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "AGM (Start-Stop)", "medidas": "315 x 175 x 190 mm" } },
+        { "modelo": "X3", "anos": "2013-2023", "bateria": { "capacidade": "80Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "AGM (Start-Stop)", "medidas": "315 x 175 x 190 mm" } },
+        { "modelo": "X5", "anos": "2014-2023", "bateria": { "capacidade": "80Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "AGM (Start-Stop)", "medidas": "315 x 175 x 190 mm" } },
+        { "modelo": "X6", "anos": "2015-2023", "bateria": { "capacidade": "80Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "AGM (Start-Stop)", "medidas": "315 x 175 x 190 mm" } },
+        { "modelo": "328i", "anos": "2012-2019", "bateria": { "capacidade": "70Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "AGM (Start-Stop)", "medidas": "315 x 175 x 190 mm" } },
+        { "modelo": "118i", "anos": "2013-2019", "bateria": { "capacidade": "70Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "AGM (Start-Stop)", "medidas": "315 x 175 x 190 mm" } }
       ]
     },
     {
       "marca": "Mercedes-Benz",
       "modelos": [
-        { "modelo": "Classe A", "anos": "2013-2023", "bateria": "70Ah" },
-        { "modelo": "Classe C", "anos": "2012-2023", "bateria": "70Ah" },
-        { "modelo": "GLA", "anos": "2014-2023", "bateria": "70Ah" },
-        { "modelo": "GLB", "anos": "2020-2023", "bateria": "70Ah" },
-        { "modelo": "GLC", "anos": "2016-2023", "bateria": "80Ah" },
-        { "modelo": "GLE", "anos": "2016-2023", "bateria": "80Ah" },
-        { "modelo": "Sprinter", "anos": "2010-2023", "bateria": "100Ah" }
+        { "modelo": "Classe A", "anos": "2013-2023", "bateria": { "capacidade": "70Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "AGM (Start-Stop)", "medidas": "315 x 175 x 190 mm" } },
+        { "modelo": "Classe C", "anos": "2012-2023", "bateria": { "capacidade": "70Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "AGM (Start-Stop)", "medidas": "315 x 175 x 190 mm" } },
+        { "modelo": "GLA", "anos": "2014-2023", "bateria": { "capacidade": "70Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "AGM (Start-Stop)", "medidas": "315 x 175 x 190 mm" } },
+        { "modelo": "GLB", "anos": "2020-2023", "bateria": { "capacidade": "70Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "AGM (Start-Stop)", "medidas": "315 x 175 x 190 mm" } },
+        { "modelo": "GLC", "anos": "2016-2023", "bateria": { "capacidade": "80Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "AGM (Start-Stop)", "medidas": "315 x 175 x 190 mm" } },
+        { "modelo": "GLE", "anos": "2016-2023", "bateria": { "capacidade": "80Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "AGM (Start-Stop)", "medidas": "315 x 175 x 190 mm" } },
+        { "modelo": "Sprinter", "anos": "2010-2023", "bateria": { "capacidade": "100Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "330 x 172 x 230 mm" } }
       ]
     },
     {
       "marca": "Audi",
       "modelos": [
-        { "modelo": "A3", "anos": "2013-2023", "bateria": "60Ah" },
-        { "modelo": "A4", "anos": "2012-2023", "bateria": "70Ah" },
-        { "modelo": "Q3", "anos": "2014-2023", "bateria": "60Ah" },
-        { "modelo": "Q5", "anos": "2013-2023", "bateria": "70Ah" },
-        { "modelo": "Q7", "anos": "2013-2023", "bateria": "80Ah" },
-        { "modelo": "Q8", "anos": "2019-2023", "bateria": "80Ah" }
+        { "modelo": "A3", "anos": "2013-2023", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "AGM (Start-Stop)", "medidas": "315 x 175 x 190 mm" } },
+        { "modelo": "A4", "anos": "2012-2023", "bateria": { "capacidade": "70Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "AGM (Start-Stop)", "medidas": "315 x 175 x 190 mm" } },
+        { "modelo": "Q3", "anos": "2014-2023", "bateria": { "capacidade": "70Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "AGM (Start-Stop)", "medidas": "315 x 175 x 190 mm" } },
+        { "modelo": "Q5", "anos": "2013-2023", "bateria": { "capacidade": "70Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "AGM (Start-Stop)", "medidas": "315 x 175 x 190 mm" } },
+        { "modelo": "Q7", "anos": "2013-2023", "bateria": { "capacidade": "80Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "AGM (Start-Stop)", "medidas": "315 x 175 x 190 mm" } },
+        { "modelo": "Q8", "anos": "2019-2023", "bateria": { "capacidade": "80Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "AGM (Start-Stop)", "medidas": "315 x 175 x 190 mm" } }
       ]
     },
     {
       "marca": "Kia",
       "modelos": [
-        { "modelo": "Sportage", "anos": "2016-2023", "bateria": "70Ah" },
-        { "modelo": "Cerato", "anos": "2013-2020", "bateria": "60Ah" },
-        { "modelo": "K3", "anos": "2019-2023", "bateria": "60Ah" },
-        { "modelo": "Seltos", "anos": "2020-2023", "bateria": "60Ah" },
-        { "modelo": "Soul", "anos": "2014-2020", "bateria": "60Ah" },
-        { "modelo": "Stonic", "anos": "2020-2023", "bateria": "60Ah" },
-        { "modelo": "Sorento", "anos": "2016-2023", "bateria": "70Ah" },
-        { "modelo": "Carnival", "anos": "2015-2023", "bateria": "80Ah" },
-        { "modelo": "Bongo", "anos": "2010-2023", "bateria": "80Ah" }
+        { "modelo": "Sportage", "anos": "2016-2023", "bateria": { "capacidade": "70Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "278 x 175 x 190 mm" } },
+        { "modelo": "Cerato", "anos": "2013-2020", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "K3", "anos": "2019-2023", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Seltos", "anos": "2020-2023", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Soul", "anos": "2014-2020", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Stonic", "anos": "2020-2023", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Sorento", "anos": "2016-2023", "bateria": { "capacidade": "70Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "278 x 175 x 190 mm" } },
+        { "modelo": "Carnival", "anos": "2015-2023", "bateria": { "capacidade": "80Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "315 x 175 x 175 mm" } },
+        { "modelo": "Bongo", "anos": "2010-2023", "bateria": { "capacidade": "80Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "315 x 175 x 175 mm" } }
       ]
     },
     {
       "marca": "Chery",
       "modelos": [
-        { "modelo": "Tiggo 5X", "anos": "2019-2023", "bateria": "60Ah" },
-        { "modelo": "Tiggo 7", "anos": "2019-2023", "bateria": "60Ah" },
-        { "modelo": "Tiggo 8", "anos": "2019-2023", "bateria": "70Ah" },
-        { "modelo": "Arrizo 5", "anos": "2019-2023", "bateria": "60Ah" },
-        { "modelo": "Tiggo 2", "anos": "2019-2023", "bateria": "45Ah" }
+        { "modelo": "Tiggo 5X", "anos": "2019-2023", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Tiggo 7", "anos": "2019-2023", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Tiggo 8", "anos": "2019-2023", "bateria": { "capacidade": "70Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "278 x 175 x 190 mm" } },
+        { "modelo": "Arrizo 5", "anos": "2019-2023", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "Tiggo 2", "anos": "2019-2023", "bateria": { "capacidade": "45Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "207 x 175 x 175 mm" } }
       ]
     },
     {
       "marca": "JAC",
       "modelos": [
-        { "modelo": "T40", "anos": "2016-2023", "bateria": "60Ah" },
-        { "modelo": "T50", "anos": "2016-2023", "bateria": "60Ah" },
-        { "modelo": "T60", "anos": "2018-2023", "bateria": "70Ah" },
-        { "modelo": "E-JS1", "anos": "2020-2023", "bateria": "60Ah" },
-        { "modelo": "E-JS4", "anos": "2020-2023", "bateria": "60Ah" }
+        { "modelo": "T40", "anos": "2016-2023", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "T50", "anos": "2016-2023", "bateria": { "capacidade": "60Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "246 x 175 x 190 mm" } },
+        { "modelo": "T60", "anos": "2018-2023", "bateria": { "capacidade": "70Ah", "tensao": "12V", "polaridade": "PD (polo positivo à direita)", "tecnologia": "Convencional (livre de manutenção)", "medidas": "278 x 175 x 190 mm" } },
+        { "modelo": "E-JS1", "anos": "2020-2023", "bateria": { "capacidade": "Consultar" } },
+        { "modelo": "E-JS4", "anos": "2020-2023", "bateria": { "capacidade": "Consultar" } }
       ]
     },
     {
       "marca": "Outros",
       "modelos": [
-        { "modelo": "Outro veículo", "anos": "Qualquer", "bateria": "Consultar" }
+        { "modelo": "Outro veículo", "anos": "Qualquer", "bateria": { "capacidade": "Consultar" } }
       ]
     }
   ]

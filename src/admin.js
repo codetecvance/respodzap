@@ -1607,7 +1607,7 @@ async function pageProdutos(req, res) {
   let limiteHtml = '';
   let limiteAtingido = false;
   let productLimit = null;
-  if (clientMode) {
+  if (clientMode && tenant.segment_name !== 'baterias') {
     const sub = await repo.getActiveSubscription(tenant.id);
     productLimit = sub?.product_limit ?? null;
     const totalProducts = (data.categories || []).reduce((s, c) => s + (c.products || []).length, 0);
@@ -1777,7 +1777,8 @@ async function postProdutosNovo(req, res) {
   const data = await catalog.loadTenantCatalog(tenantId);
 
   // Limite de produtos do plano (Starter 20 / Pro 30) — só no painel do cliente
-  if (req.clientMode) {
+  const segInfo = await repo.getTenantSegment(tenantId);
+  if (req.clientMode && segInfo?.name !== 'baterias') {
     const sub = await repo.getActiveSubscription(tenantId);
     const limite = sub?.product_limit ?? null;
     if (limite) {
@@ -2576,6 +2577,7 @@ async function pageConfig(req, res) {
   const mi = s.menu_image || {};
   const base = clientMode ? '/painel' : '/admin';
   const showAreasEditor = !!tenant.segment_name && tenant.segment_name !== 'vendas';
+  const isBaterias = tenant.segment_name === 'baterias';
   const areas = Array.isArray(s.delivery_areas) ? s.delivery_areas : [];
   const mpUser = tenant.mp_user_id || '';
   const firstCat = (data.categories || []).find(cat => (cat.products || []).some(p => p.available)) || data.categories?.[0];
@@ -2606,11 +2608,13 @@ async function pageConfig(req, res) {
   res.send(layout('Configurações', clientMode ? '/painel/config' : '/admin/config', `${tenantSelector(tenant.id, tenants, clientMode)}
     <form method="POST" action="${base}/config/salvar" onsubmit="reindexAreas()"><input type="hidden" name="tenant" value="${tenant.id}">
       <div class="panel"><h2>🏪 Loja</h2><div class="grid3">
+        ${isBaterias ? '' : `
         <div><label>FRETE (R$)</label><input type="text" name="store[delivery_fee]" value="${s.delivery_fee ?? 0}"></div>
-        <div><label>FRETE GRÁTIS ACIMA (R$)</label><input type="text" name="store[delivery_free_full]" value="${s.delivery_free_full ?? 0}"></div>
+        <div><label>FRETE GRÁTIS ACIMA (R$)</label><input type="text" name="store[delivery_free_full]" value="${s.delivery_free_full ?? 0}"></div>`}
         <div><label>DESCONTO PIX (%)</label><input type="text" name="store[pix_discount_percent]" value="${s.pix_discount_percent ?? 0}"></div>
       </div>
-      ${showAreasEditor ? `<div style="margin-top:10px;border-top:1px dashed #e2e8f0;padding-top:12px">
+      ${isBaterias ? `<p style="font-size:12px;color:#64748b;margin-top:8px">📍 Atendemos toda Florianópolis e Grande Florianópolis — sem taxa de frete fixa (deslocamento conforme a região).</p>` : ''}
+      ${showAreasEditor && !isBaterias ? `<div style="margin-top:10px;border-top:1px dashed #e2e8f0;padding-top:12px">
         <h3 style="font-size:13px;margin-bottom:6px">🛵 ÁREAS DE ENTREGA <small style="font-weight:400;color:#94a3b8">— o bot pergunta o bairro no checkout e cobra a taxa de cada um</small></h3>
         <div id="areasList">${areasEditorHtml(areas)}</div>
         <button type="button" class="btn gray small" style="margin-top:6px" onclick="addArea()">+ Adicionar bairro</button>

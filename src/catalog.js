@@ -166,12 +166,12 @@ async function loadVehicleDatabase() {
 
 /**
  * Busca a bateria recomendada para um veículo.
- * @returns {Object} { bateria, encontrado, marca, modelo, aviso }
+ * @returns {Object} { encontrado, marca, modelo, capacidade, tensao, polaridade, tecnologia, medidas, aviso }
  */
 function findBatteryForVehicle(brand, model, year) {
   const db = _VEHICLE_DB_RAW || { marcas: [] };
   const marca = db.marcas?.find(m => m.marca.toLowerCase() === brand.toLowerCase());
-  if (!marca) return { bateria: 'Consultar', encontrado: false };
+  if (!marca) return { encontrado: false, bateria: 'Consultar' };
 
   // Busca exata por modelo
   let modelo = marca.modelos?.find(m => m.modelo.toLowerCase() === model.toLowerCase());
@@ -182,22 +182,34 @@ function findBatteryForVehicle(brand, model, year) {
       m.modelo.toLowerCase().includes(model.toLowerCase()),
     );
   }
-  if (!modelo) return { bateria: 'Consultar', encontrado: false, marca: marca.marca };
+  if (!modelo) return { encontrado: false, bateria: 'Consultar', marca: marca.marca };
+
+  const bat = modelo.bateria;
+  const spec = bat && typeof bat === 'object' ? bat : { capacidade: bat };
+  if (!spec.capacidade || spec.capacidade === 'Consultar') {
+    return { encontrado: false, bateria: 'Consultar', marca: marca.marca, modelo: modelo.modelo };
+  }
+
+  const result = {
+    encontrado: true,
+    marca: marca.marca,
+    modelo: modelo.modelo,
+    capacidade: spec.capacidade,
+    tensao: spec.tensao || '12V',
+    polaridade: spec.polaridade || 'PD (polo positivo à direita)',
+    tecnologia: spec.tecnologia || 'Convencional (livre de manutenção)',
+    medidas: spec.medidas || '',
+  };
 
   // Valida ano se fornecido
-  if (year && typeof modelo.anos === 'string') {
+  if (year && typeof modelo.anos === 'string' && modelo.anos !== 'Qualquer') {
     const [ini, fim] = modelo.anos.split('-').map(Number);
     if (year < ini || year > fim) {
-      return {
-        bateria: modelo.bateria + ' (ano fora da faixa ' + modelo.anos + ')',
-        encontrado: true,
-        marca: marca.marca,
-        modelo: modelo.modelo,
-        aviso: 'Ano fora da faixa recomendada',
-      };
+      result.aviso = `Ano fora da faixa ${modelo.anos}`;
     }
   }
-  return { bateria: modelo.bateria, encontrado: true, marca: marca.marca, modelo: modelo.modelo };
+
+  return result;
 }
 
 module.exports = {

@@ -678,8 +678,22 @@ async function _showBatteryForVehicle(tenant, lead, brand, modelName, year) {
   const result = catalog.findBatteryForVehicle(brand, modelName, year);
   const extraInfo = year ? ` (${year})` : '';
   if (result.encontrado) {
+    const survey = (await repo.getSurvey(lead.id)) || {};
+    survey.vehicleBrand = result.marca;
+    survey.vehicleModel = result.modelo;
+    survey.vehicleYear = year || null;
+    survey.batterySpec = result;
+    await repo.setSurvey(lead.id, survey);
     await repo.setFlowState(lead.id, ST.BATTERY_SUGGESTION);
-    return ws.sendText(lead.phone, await catalog.msg(tenant.id, 'battery_found', { marca: result.marca, modelo: `${result.modelo}${extraInfo}`, bateria: result.bateria }), tenant);
+    return ws.sendText(lead.phone, await catalog.msg(tenant.id, 'battery_found', {
+      marca: result.marca,
+      modelo: `${result.modelo}${extraInfo}`,
+      capacidade: result.capacidade,
+      tensao: result.tensao,
+      polaridade: result.polaridade,
+      tecnologia: result.tecnologia,
+      medidas: result.medidas,
+    }), tenant);
   }
   await ws.sendText(lead.phone, await catalog.msg(tenant.id, 'vehicle_not_found'), tenant);
   const { notifyTenant } = require('./notify');
@@ -692,13 +706,13 @@ async function _handleBatterySuggestion(tenant, lead, text) {
   const answer = (text || '').trim();
   if (answer === '1') {
     const survey = (await repo.getSurvey(lead.id)) || {};
-    const brand = survey.vehicleBrand || '';
-    const modelText = survey.vehicleModel || '';
-    const yearMatch = modelText.match(/(\d{4})/);
-    const year = yearMatch ? parseInt(yearMatch[1], 10) : null;
-    const modelName = modelText.replace(/\d{4}/g, '').trim();
-    const result = catalog.findBatteryForVehicle(brand, modelName, year);
-    await ws.sendText(lead.phone, `🔋 *${result.bateria}*\n\nVeículo: ${brand} ${modelText}${year ? ` (${year})` : ''}\n\n📞 Entre em contato para mais detalhes ou faça seu pedido!`, tenant);
+    const spec = survey.batterySpec;
+    if (spec) {
+      const detalhes = `🔋 *${spec.capacidade}* — ${spec.marca} ${spec.modelo}\n\n• Tensão: ${spec.tensao}\n• Polaridade: ${spec.polaridade}\n• Tecnologia: ${spec.tecnologia}${spec.medidas ? `\n• Medidas: ${spec.medidas}` : ''}\n\n🏷️ Marcas populares: Moura, 1bat, Zetta\n\n📞 Fale conosco para consultar preço e disponibilidade!`;
+      await ws.sendText(lead.phone, detalhes, tenant);
+      await repo.setFlowState(lead.id, ST.MENU);
+      return _menu(tenant, lead);
+    }
     await repo.setFlowState(lead.id, ST.MENU);
     return _menu(tenant, lead);
   }

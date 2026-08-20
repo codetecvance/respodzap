@@ -478,7 +478,7 @@
     "store_closed": "🔋 Fechados agora — {horario}.\nSOS Emergencial 24h: toque em *Atendente*.",
     "ask_brand": "Ótimo! Me diga a marca do carro (ex: FIAT, VOLKSWAGEN, CHEVROLET).",
     "ask_model": "🚗 *{marca}*\n\n{modelos}\n\nDigite o modelo e ano do seu veículo:",
-    "battery_found": "✅ *Bateria recomendada para {marca} {modelo}:*\n\n🔋 {bateria}\n\n1️⃣ Ver detalhes\n2️⃣ Pedir instalação (SOS Chupeta)\n3️⃣ Voltar ao menu",
+    "battery_found": "✅ *Bateria recomendada para {marca} {modelo}:*\n\n🔋 {capacidade} · {polaridade}\n\n• Capacidade: {capacidade}\n• Tensão: {tensao}\n• Polaridade: {polaridade}\n• Tecnologia: {tecnologia}\n• Medidas: {medidas}\n\n1️⃣ Ver detalhes\n2️⃣ Pedir instalação (SOS Chupeta)\n3️⃣ Voltar ao menu",
     "vehicle_not_found": "No momento não temos essa bateria em nosso cadastro.\n\nNossa equipe entrará em contato para te ajudar! 😊",
     "ask_sos_address": "Qual seu endereço completo?\n(rua, número, bairro, cidade)",
     "sos_confirmed": "✅ *SOS CHUPETA CONFIRMADO!*\n\n📍 Endereço: {endereco}\n🚗 Veículo: {veiculo}\n\n⏱️ Nossa equipe vai entrar em contato em instantes para confirmar a chegada.",
