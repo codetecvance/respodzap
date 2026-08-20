@@ -226,15 +226,15 @@
     "currency": "BRL",
     "currency_symbol": "R$",
     "min_order": 10,
-    "delivery_free_full": 100,
+    "delivery_free_full": 0,
     "delivery_fee": 7,
-    "pix_discount_percent": 5,
+    "pix_discount_percent": 0,
     "installments_max": 1,
     "payment_methods": [
       {
         "type": "pix",
-        "label": "PIX (5% desconto)",
-        "discount_percent": 5
+        "label": "PIX",
+        "discount_percent": 0
       },
       {
         "type": "credit_card",
@@ -330,7 +330,7 @@
     "add_more": "➕ Adicionar mais itens",
     "confirm_order": "✅ Confirmar pedido",
     "cancel": "❌ Cancelar",
-    "pay_pix": "PIX (5% off)",
+    "pay_pix": "PIX",
     "pay_credit": "Cartão Crédito",
     "pay_debit": "Cartão Débito",
     "list_button": "Ver opções"

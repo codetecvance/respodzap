@@ -745,7 +745,21 @@ async function processIncoming(tenant, phone, text, payload, messageId, numberId
     if (payload === 'PAY_PIX') return _processPayment(tenant, lead, 'pix');
     if (payload === 'PAY_CREDIT') return _processPayment(tenant, lead, 'credit');
     if (payload === 'PAY_DEBIT') return _processPayment(tenant, lead, 'debit');
-    if (payload.startsWith('QUOTE_')) { const pid = payload.slice(6); const prod = await catalog.findProduct(tenant.id, pid); if (prod?.sob_consulta) { const s = (await repo.getSurvey(lead.id)) || {}; s.quote = pid; await repo.setSurvey(lead.id, s); await repo.setFlowState(lead.id, ST.SOB_CONSULTA_NAME); return ws.sendText(phone, 'Ótimo! Qual é o seu nome?', tenant);   }
+    if (payload.startsWith('QUOTE_')) { const pid = payload.slice(6); const prod = await catalog.findProduct(tenant.id, pid); if (prod?.sob_consulta) { const s = (await repo.getSurvey(lead.id)) || {}; s.quote = pid; await repo.setSurvey(lead.id, s); await repo.setFlowState(lead.id, ST.SOB_CONSULTA_NAME); return ws.sendText(phone, 'Ótimo! Qual é o seu nome?', tenant); } return _menu(tenant, lead); }
+  }
+  const state = lead.flow_state;
+  if (state === ST.ADDONS) return _handleAddonsAnswer(tenant, lead, text);
+  if (state === ST.CHECKOUT_BAIRRO) return _handleBairro(tenant, lead, text, null);
+  if (state === ST.CHECKOUT_OBS) return _handleObservations(tenant, lead, text);
+  if (state === ST.CHECKOUT_NAME) return _checkout(tenant, lead, 'name', text);
+  if (state === ST.SURVEY) return _handleSurveyAnswer(tenant, lead, text);
+  if (state === ST.SOB_CONSULTA_NAME) return _handleSobConsulta(tenant, lead, text);
+  if (state === ST.SUPPORT_NAME) return _support(tenant, lead, 'name', text);
+  if (state === ST.SUPPORT_REASON) return _support(tenant, lead, 'reason', text);
+  if (state === ST.VEHICLE_BRAND) return _handleVehicleBrand(tenant, lead, text);
+  if (state === ST.VEHICLE_MODEL) return _handleVehicleModel(tenant, lead, text);
+  if (state === ST.BATTERY_SUGGESTION) return _handleBatterySuggestion(tenant, lead, text);
+  if (state === ST.SOS_CHUPETA) return _handleSOSChupeta(tenant, lead, text);
   if (state === ST.MENU && tenant.segment_name === 'baterias' && /^\d$/.test((text || '').trim())) {
     const opt = text.trim();
     if (opt === '1') {
@@ -761,23 +775,6 @@ async function processIncoming(tenant, phone, text, payload, messageId, numberId
       return ws.sendText(lead.phone, await catalog.msg(tenant.id, 'ask_sos_address'), tenant);
     }
   }
-  return _menu(tenant, lead);
-}
-    return _menu(tenant, lead);
-  }
-  const state = lead.flow_state;
-  if (state === ST.ADDONS) return _handleAddonsAnswer(tenant, lead, text);
-  if (state === ST.CHECKOUT_BAIRRO) return _handleBairro(tenant, lead, text, null);
-  if (state === ST.CHECKOUT_OBS) return _handleObservations(tenant, lead, text);
-  if (state === ST.CHECKOUT_NAME) return _checkout(tenant, lead, 'name', text);
-  if (state === ST.SURVEY) return _handleSurveyAnswer(tenant, lead, text);
-  if (state === ST.SOB_CONSULTA_NAME) return _handleSobConsulta(tenant, lead, text);
-  if (state === ST.SUPPORT_NAME) return _support(tenant, lead, 'name', text);
-  if (state === ST.SUPPORT_REASON) return _support(tenant, lead, 'reason', text);
-  if (state === ST.VEHICLE_BRAND) return _handleVehicleBrand(tenant, lead, text);
-  if (state === ST.VEHICLE_MODEL) return _handleVehicleModel(tenant, lead, text);
-  if (state === ST.BATTERY_SUGGESTION) return _handleBatterySuggestion(tenant, lead, text);
-  if (state === ST.SOS_CHUPETA) return _handleSOSChupeta(tenant, lead, text);
   if (state === ST.CATEGORIES && /^\d{1,2}$/.test((text || '').trim())) {
     const cats = await catalog.getCategories(tenant.id);
     const cat = cats[parseInt(text.trim(), 10) - 1];

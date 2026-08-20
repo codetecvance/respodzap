@@ -83,10 +83,13 @@ async function getSegment(id) {
 }
 
 async function updateSegment(id, name, emoji, template) {
-  await query(
-    'UPDATE segments SET name = $2, emoji = $3, template_json = $4 WHERE id = $1',
-    [id, name, emoji, template ? JSON.stringify(template) : undefined],
-  );
+  const sets = [];
+  const params = [id];
+  if (name !== undefined) { params.push(name); sets.push(`name = $${params.length}`); }
+  if (emoji !== undefined) { params.push(emoji); sets.push(`emoji = $${params.length}`); }
+  if (template !== undefined) { params.push(JSON.stringify(template)); sets.push(`template_json = $${params.length}`); }
+  if (!sets.length) return;
+  await query(`UPDATE segments SET ${sets.join(', ')} WHERE id = $1`, params);
 }
 
 async function deleteSegment(id) {
@@ -121,11 +124,7 @@ async function seedSegments() {
   ];
   for (const t of templates) {
     const exists = await query('SELECT id FROM segments WHERE name = $1', [t.name]);
-    if (exists.rows[0]) {
-      await query('UPDATE segments SET template_json = $1 WHERE id = $2', [JSON.stringify(t.tpl()), exists.rows[0].id]);
-      await query('UPDATE tenant_catalogs SET catalog_json = $1 WHERE tenant_id IN (SELECT id FROM tenants WHERE segment_id = $2)', [JSON.stringify(t.tpl()), exists.rows[0].id]);
-      continue;
-    }
+    if (exists.rows[0]) continue;
     await createSegment(t.name, t.emoji, t.tpl());
     console.log('[SEED] segmento criado:', t.name);
   }
@@ -363,7 +362,10 @@ async function getOrCreateLead(tenantId, phone) {
   const normalized = normalizePhone(phone);
   let r = await query('SELECT * FROM leads WHERE tenant_id = $1 AND phone = $2', [tenantId, normalized]);
   if (!r.rows[0]) {
-    r = await query('INSERT INTO leads (tenant_id, phone) VALUES ($1,$2) RETURNING *', [tenantId, normalized]);
+    r = await query('INSERT INTO leads (tenant_id, phone) VALUES ($1,$2) ON CONFLICT (tenant_id, phone) DO NOTHING RETURNING *', [tenantId, normalized]);
+  }
+  if (!r.rows[0]) {
+    r = await query('SELECT * FROM leads WHERE tenant_id = $1 AND phone = $2', [tenantId, normalized]);
   }
   return r.rows[0];
 }
@@ -670,6 +672,10 @@ async function updatePaymentStatusByMpId(mpPaymentId, status) {
   await query(`UPDATE payments SET status = $2, updated_at = NOW() WHERE mp_payment_id = $1`, [String(mpPaymentId), status]);
 }
 
+async function updatePaymentStatusByOrderId(orderId, status) {
+  await query(`UPDATE payments SET status = $2, updated_at = NOW() WHERE order_id = $1`, [orderId, status]);
+}
+
 // ============================================================
 //  ESTATÍSTICAS
 // ============================================================
@@ -734,7 +740,7 @@ module.exports = {
   createOrder, getOrder, getOrderByExternal, getOrderItems, updateOrderStatus, updateOrderTotals, updateOrderObservations, getLeadOrders, getOrders,
   getOrdersToPrint, markOrderPrinted, getPendingOrdersWithPayments, deleteOrder, deletePendingOrdersOlderThan, deleteLeadCompleto,
   // pagamentos
-  createPayment, getPaymentByMpId, getPaymentByOrderId, updatePaymentStatusByMpId,
+  createPayment, getPaymentByMpId, getPaymentByOrderId, updatePaymentStatusByMpId, updatePaymentStatusByOrderId,
   // estatísticas
   getOrdersByDay, getPaymentsByMethod, getTopProducts,
 };

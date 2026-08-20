@@ -55,10 +55,9 @@ function estaAberto(store) {
   const hours = store?.hours;
   if (!hours || typeof hours !== 'object') return { aberto: true };
   const timezone = store?.timezone || 'America/Sao_Paulo';
-  const { weekday } = getCurrentTimeInTimezone(timezone);
+  const { hour, minute, weekday } = getCurrentTimeInTimezone(timezone);
   const cfg = hours[String(weekday)];
   if (!cfg) return { aberto: true };
-  const { hour, minute } = getCurrentTimeInTimezone(timezone);
   const min = hour * 60 + minute;
   const open = minutos(cfg.open);
   const close = minutos(cfg.close);
@@ -76,7 +75,7 @@ function calcularFrete(items, store, bairro = null) {
     const area = (store.delivery_areas || []).find((a) => a.bairro === bairro);
     if (area) return Number(area.taxa) || 0;
   }
-  return store.delivery_fee || 0;
+  return Number(store.delivery_fee) || 0;
 }
 
 function precisaBairro(store, items) {

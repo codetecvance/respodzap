@@ -14,7 +14,7 @@
       "state": "",
       "zip": ""
     },
-    "business_hours": "Seg a Sáb: 8h às 18h · Dom: 8h às 12h"
+    "business_hours": "24h"
   },
   "categories": [
     {
@@ -429,12 +429,12 @@
     "currency": "BRL",
     "currency_symbol": "R$",
     "min_order": 50,
-    "delivery_free_full": 300,
+    "delivery_free_full": 0,
     "delivery_fee": 15,
-    "pix_discount_percent": 5,
+    "pix_discount_percent": 0,
     "installments_max": 6,
     "payment_methods": [
-      { "type": "pix", "label": "PIX (5% desconto)", "discount_percent": 5 },
+      { "type": "pix", "label": "PIX", "discount_percent": 0 },
       { "type": "credit_card", "label": "Cartão Crédito (até 6x sem juros)" },
       { "type": "debit_card", "label": "Cartão Débito" }
     ],

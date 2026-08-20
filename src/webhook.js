@@ -85,24 +85,40 @@ router.post('/mercadopago/webhook', async (req, res) => {
 
     const { getPaymentStatus, getPaymentFull, getTenantMpToken } = require('./payment');
 
-    // Descobre o pedido/pagamento registrado para usar o token da conta correta
+    // 1. Tenta casar pelo mp_payment_id (PIX/cobranças diretas já gravam o id)
     const paymentRecord = await repo.getPaymentByMpId(paymentId);
     let order = null;
-    if (paymentRecord) order = await repo.getOrder(paymentRecord.order_id);
-
-    // Renovação de licença usa a conta GLOBAL do SaaS (token padrão)
+    let tenant = null;
     let mpToken = null;
-    if (order) {
-      const tenant = await repo.getTenant(order.tenant_id);
-      if (tenant) mpToken = await getTenantMpToken(tenant);
+    if (paymentRecord) {
+      order = await repo.getOrder(paymentRecord.order_id);
+      if (order) {
+        tenant = await repo.getTenant(order.tenant_id);
+        if (tenant) mpToken = await getTenantMpToken(tenant);
+      }
     }
 
+    // 2. Busca o pagamento completo (external_reference) com o token correto.
+    //    Cartão grava só mp_preference_id (sem mp_payment_id), então percorre os
+    //    tenants até achar a conta dona do pagamento (fallback: token global).
+    let full = null;
+    if (mpToken) full = await getPaymentFull(paymentId, mpToken);
+    if (!full) full = await getPaymentFull(paymentId, null);
+    if (!full) {
+      for (const t of await repo.getTenants()) {
+        const tk = await getTenantMpToken(t);
+        if (!tk) continue;
+        const f = await getPaymentFull(paymentId, tk);
+        if (f) { full = f; tenant = t; mpToken = tk; break; }
+      }
+    }
+    if (!full) return;
+
+    const extRef = full.external_reference || '';
     const status = await getPaymentStatus(paymentId, mpToken);
     if (!status) return;
 
     // --- RENOVAÇÃO DE LICENÇA (external_reference = sub-{id}) ---
-    const full = await getPaymentFull(paymentId, null);
-    const extRef = full?.external_reference || '';
     if (extRef.startsWith('sub-')) {
       const subId = Number(extRef.slice(4));
       const subs = await repo.getSubscriptions();
@@ -112,9 +128,9 @@ router.post('/mercadopago/webhook', async (req, res) => {
         await repo.renewSubscription(subId, days);
         const { notifyAdmin, notifyTenant } = require('./notify');
         await notifyAdmin('LICENÇA RENOVADA', `Cliente: ${sub.tenant_name}\nPlano: ${sub.plan_name || '—'}\nValor: R$ ${sub.price}\nRenovado por ${days} dias via PIX.`);
-        const tenant = await repo.getTenant(sub.tenant_id);
-        if (tenant) {
-          await notifyTenant(tenant, '✅ PAGAMENTO RECEBIDO', `Sua assinatura foi renovada com sucesso por mais ${days} dias. Obrigado!`);
+        const subTenant = await repo.getTenant(sub.tenant_id);
+        if (subTenant) {
+          await notifyTenant(subTenant, '✅ PAGAMENTO RECEBIDO', `Sua assinatura foi renovada com sucesso por mais ${days} dias. Obrigado!`);
         }
         console.log('[MP-Webhook] Licença renovada:', subId);
       }
@@ -123,14 +139,12 @@ router.post('/mercadopago/webhook', async (req, res) => {
 
     // --- PEDIDO NORMAL ---
     if (!order && extRef) {
-      const allTenants = await repo.getTenants();
-      for (const t of allTenants) {
+      for (const t of await repo.getTenants()) {
         order = await repo.getOrderByExternal(t.id, extRef);
         if (order) break;
       }
-      // Token da conta do dono do pedido (se encontrado agora)
       if (order) {
-        const tenant = await repo.getTenant(order.tenant_id);
+        tenant = await repo.getTenant(order.tenant_id);
         if (tenant) mpToken = await getTenantMpToken(tenant);
       }
     }
@@ -140,7 +154,11 @@ router.post('/mercadopago/webhook', async (req, res) => {
     }
 
     const mpStatus = status.status;
-    if (paymentRecord) await repo.updatePaymentStatusByMpId(paymentId, mpStatus);
+    if (paymentRecord) {
+      await repo.updatePaymentStatusByMpId(paymentId, mpStatus);
+    } else {
+      await repo.updatePaymentStatusByOrderId(order.id, mpStatus);
+    }
 
     if (mpStatus === 'approved') {
       await repo.updateOrderStatus(order.id, 'approved');
@@ -152,9 +170,9 @@ router.post('/mercadopago/webhook', async (req, res) => {
     }
 
     if (mpStatus === 'approved') {
-      const tenant = await repo.getTenant(order.tenant_id);
-      if (!tenant) return;
-      await confirmarPagamentoAprovado(tenant, order);
+      const t = await repo.getTenant(order.tenant_id);
+      if (!t) return;
+      await confirmarPagamentoAprovado(t, order);
     }
   } catch (e) {
     console.error('[MP-Webhook]', e.message);

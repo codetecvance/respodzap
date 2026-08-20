@@ -155,24 +155,13 @@ async function getButtons(tenantId) {
 // ============================================================
 //  BASE DE DADOS DE VEÍCULOS (marcas/modelos/baterias)
 // ============================================================
-let _vehicleDB = null;
-let _vehicleDBLoaded = false;
-
 const _VEHICLE_DB_RAW = require('./carros-baterias.json');
 
 /**
- * Carrega a base de dados de veículos (cache 1h).
+ * Carrega a base de dados de veículos (carregada via require na inicialização).
  */
 async function loadVehicleDatabase() {
-  if (_vehicleDBLoaded) return _vehicleDB;
-  try {
-    _vehicleDB = _VEHICLE_DB_RAW;
-    _vehicleDBLoaded = true;
-    return _vehicleDB;
-  } catch (e) {
-    console.error('[VEHICLE_DB] Erro ao carregar:', e.message);
-    return { marcas: [] };
-  }
+  return _VEHICLE_DB_RAW;
 }
 
 /**
@@ -180,7 +169,7 @@ async function loadVehicleDatabase() {
  * @returns {Object} { bateria, encontrado, marca, modelo, aviso }
  */
 function findBatteryForVehicle(brand, model, year) {
-  const db = _vehicleDB || { marcas: [] };
+  const db = _VEHICLE_DB_RAW || { marcas: [] };
   const marca = db.marcas?.find(m => m.marca.toLowerCase() === brand.toLowerCase());
   if (!marca) return { bateria: 'Consultar', encontrado: false };
 
@@ -196,7 +185,7 @@ function findBatteryForVehicle(brand, model, year) {
   if (!modelo) return { bateria: 'Consultar', encontrado: false, marca: marca.marca };
 
   // Valida ano se fornecido
-  if (year) {
+  if (year && typeof modelo.anos === 'string') {
     const [ini, fim] = modelo.anos.split('-').map(Number);
     if (year < ini || year > fim) {
       return {
