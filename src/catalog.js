@@ -103,6 +103,7 @@ const SEGMENT_THEMES = {
   delivery:     { headerBg: '#b45309', priceColor: '#b91c1c', sidebar: ['#431407', '#b45309'], active: '#d97706', name: 'Delivery' },
   padaria:      { headerBg: '#92400e', priceColor: '#a16207', sidebar: ['#451a03', '#92400e'], active: '#b45309', name: 'Padaria & Confeitaria' },
   estetica:     { headerBg: '#9d174d', priceColor: '#db2777', sidebar: ['#500724', '#9d174d'], active: '#db2777', name: 'Beleza & Estética' },
+  baterias:     { headerBg: '#1e3a8a', priceColor: '#3b82f6', sidebar: ['#1e3a8a', '#1e40af'], active: '#3b82f6', name: 'Baterias' },
 };
 
 function segmentTheme(segmentName) {
@@ -151,8 +152,69 @@ async function getButtons(tenantId) {
   return { ...DEFAULT_BUTTONS, ...(data.buttons || {}) };
 }
 
+// ============================================================
+//  BASE DE DADOS DE VEÍCULOS (marcas/modelos/baterias)
+// ============================================================
+let _vehicleDB = null;
+let _vehicleDBLoaded = false;
+
+const VEHICLE_DB_PATH = path.join(__dirname, 'carros-baterias.json');
+
+/**
+ * Carrega a base de dados de veículos (cache 1h).
+ */
+async function loadVehicleDatabase() {
+  if (_vehicleDBLoaded) return _vehicleDB;
+  try {
+    const file = fs.readFileSync(VEHICLE_DB_PATH, 'utf-8');
+    _vehicleDB = JSON.parse(file);
+    _vehicleDBLoaded = true;
+    return _vehicleDB;
+  } catch (e) {
+    console.error('[VEHICLE_DB] Erro ao carregar:', e.message);
+    return { marcas: [] };
+  }
+}
+
+/**
+ * Busca a bateria recomendada para um veículo.
+ * @returns {Object} { bateria, encontrado, marca, modelo, aviso }
+ */
+function findBatteryForVehicle(brand, model, year) {
+  const db = _vehicleDB || { marcas: [] };
+  const marca = db.marcas?.find(m => m.marca.toLowerCase() === brand.toLowerCase());
+  if (!marca) return { bateria: 'Consultar', encontrado: false };
+
+  // Busca exata por modelo
+  let modelo = marca.modelos?.find(m => m.modelo.toLowerCase() === model.toLowerCase());
+  if (!modelo) {
+    // Busca parcial (contém)
+    modelo = marca.modelos?.find(m =>
+      model.toLowerCase().includes(m.modelo.toLowerCase()) ||
+      m.modelo.toLowerCase().includes(model.toLowerCase()),
+    );
+  }
+  if (!modelo) return { bateria: 'Consultar', encontrado: false, marca: marca.marca };
+
+  // Valida ano se fornecido
+  if (year) {
+    const [ini, fim] = modelo.anos.split('-').map(Number);
+    if (year < ini || year > fim) {
+      return {
+        bateria: modelo.bateria + ' (ano fora da faixa ' + modelo.anos + ')',
+        encontrado: true,
+        marca: marca.marca,
+        modelo: modelo.modelo,
+        aviso: 'Ano fora da faixa recomendada',
+      };
+    }
+  }
+  return { bateria: modelo.bateria, encontrado: true, marca: marca.marca, modelo: modelo.modelo };
+}
+
 module.exports = {
   loadTenantCatalog, saveTenantCatalog, getCompanyInfo, getCategories,
   getProductsByCategory, findProduct, getStoreConfig, getMessages,
   getQuestionnaire, msg, formatPrice, segmentTheme, getButton, getButtons, DEFAULT_BUTTONS,
+  loadVehicleDatabase, findBatteryForVehicle,
 };
