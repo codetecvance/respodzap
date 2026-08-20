@@ -36,6 +36,7 @@ const ST = {
   ADDONS: 'ADDONS',
   VEHICLE_BRAND: 'VEHICLE_BRAND',
   VEHICLE_MODEL: 'VEHICLE_MODEL',
+  VEHICLE_YEAR: 'VEHICLE_YEAR',
   BATTERY_SUGGESTION: 'BATTERY_SUGGESTION',
   SOS_CHUPETA: 'SOS_CHUPETA',
 };
@@ -613,9 +614,10 @@ async function _handleVehicleBrand(tenant, lead, text) {
   }
   const survey = (await repo.getSurvey(lead.id)) || {};
   survey.vehicleBrand = match.marca;
+  survey.vehicleModels = match.modelos?.slice(0, 20) || [];
   await repo.setSurvey(lead.id, survey);
   await repo.setFlowState(lead.id, ST.VEHICLE_MODEL);
-  const modelos = match.modelos?.slice(0, 20).map((m, i) => `${i + 1}. ${m.modelo} (${m.anos})`).join('\n');
+  const modelos = survey.vehicleModels.map((m, i) => `${i + 1}. ${m.modelo} (${m.anos})`).join('\n');
   return ws.sendText(lead.phone, await catalog.msg(tenant.id, 'ask_model', { marca: match.marca, modelos: modelos || 'Nenhum modelo encontrado.' }), tenant);
 }
 
@@ -637,12 +639,43 @@ async function _handleVehicleModel(tenant, lead, text) {
   if (!modelText) return ws.sendText(lead.phone, 'Por favor, digite o modelo e ano do seu veículo:', tenant);
   const survey = (await repo.getSurvey(lead.id)) || {};
   const brand = survey.vehicleBrand || '';
+
+  // Seleção numérica pela lista (ex: "4") — ou "4 2015"
+  const numMatch = modelText.match(/^(\d{1,2})\b/);
+  if (numMatch) {
+    const models = survey.vehicleModels || [];
+    const model = models[parseInt(numMatch[1], 10) - 1];
+    if (!model) return ws.sendText(lead.phone, `Número inválido. Escolha de 1 a ${models.length}.`, tenant);
+    survey.vehicleModel = model.modelo;
+    await repo.setSurvey(lead.id, survey);
+    const yearInText = modelText.match(/\d{4}/);
+    if (yearInText) {
+      return _showBatteryForVehicle(tenant, lead, brand, model.modelo, parseInt(yearInText[0], 10));
+    }
+    await repo.setFlowState(lead.id, ST.VEHICLE_YEAR);
+    return ws.sendText(lead.phone, `Qual o ano do seu *${model.modelo}*? (ex: 2015)`, tenant);
+  }
+
   const yearMatch = modelText.match(/(\d{4})/);
   const year = yearMatch ? parseInt(yearMatch[1], 10) : null;
   const modelName = modelText.replace(/\d{4}/g, '').trim();
-  const result = catalog.findBatteryForVehicle(brand, modelName, year);
-  survey.vehicleModel = modelText;
+  survey.vehicleModel = modelName;
   await repo.setSurvey(lead.id, survey);
+  return _showBatteryForVehicle(tenant, lead, brand, modelName, year);
+}
+
+async function _handleVehicleYear(tenant, lead, text) {
+  const yearText = (text || '').trim();
+  const yearMatch = yearText.match(/\d{4}/);
+  const survey = (await repo.getSurvey(lead.id)) || {};
+  const brand = survey.vehicleBrand || '';
+  const modelName = survey.vehicleModel || '';
+  if (!yearMatch) return ws.sendText(lead.phone, `Por favor, informe o ano do seu *${modelName}* (ex: 2015):`, tenant);
+  return _showBatteryForVehicle(tenant, lead, brand, modelName, parseInt(yearMatch[0], 10));
+}
+
+async function _showBatteryForVehicle(tenant, lead, brand, modelName, year) {
+  const result = catalog.findBatteryForVehicle(brand, modelName, year);
   const extraInfo = year ? ` (${year})` : '';
   if (result.encontrado) {
     await repo.setFlowState(lead.id, ST.BATTERY_SUGGESTION);
@@ -650,7 +683,7 @@ async function _handleVehicleModel(tenant, lead, text) {
   }
   await ws.sendText(lead.phone, await catalog.msg(tenant.id, 'vehicle_not_found'), tenant);
   const { notifyTenant } = require('./notify');
-  await notifyTenant(tenant, 'CONSULTA BATERIA', `Cliente: ${lead.full_name || lead.phone}\nWhatsApp: ${lead.phone}\nVeículo: ${brand} ${modelText}`, lead.phone);
+  await notifyTenant(tenant, 'CONSULTA BATERIA', `Cliente: ${lead.full_name || lead.phone}\nWhatsApp: ${lead.phone}\nVeículo: ${brand} ${modelName}${extraInfo}`, lead.phone);
   await repo.setFlowState(lead.id, ST.MENU);
   return _menu(tenant, lead);
 }
@@ -758,6 +791,7 @@ async function processIncoming(tenant, phone, text, payload, messageId, numberId
   if (state === ST.SUPPORT_REASON) return _support(tenant, lead, 'reason', text);
   if (state === ST.VEHICLE_BRAND) return _handleVehicleBrand(tenant, lead, text);
   if (state === ST.VEHICLE_MODEL) return _handleVehicleModel(tenant, lead, text);
+  if (state === ST.VEHICLE_YEAR) return _handleVehicleYear(tenant, lead, text);
   if (state === ST.BATTERY_SUGGESTION) return _handleBatterySuggestion(tenant, lead, text);
   if (state === ST.SOS_CHUPETA) return _handleSOSChupeta(tenant, lead, text);
   if (state === ST.MENU && tenant.segment_name === 'baterias' && /^\d$/.test((text || '').trim())) {

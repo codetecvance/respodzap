@@ -1230,6 +1230,7 @@ router.get('/admin/clientes/editar', requireAuth, async (req, res) => {
         <option value="inativo" ${tenant.status === 'inativo' ? 'selected' : ''}>Inativo</option>
       </select></div>
       <div style="grid-column:1/-1;display:flex;gap:8px"><button class="btn" type="submit">💾 Salvar</button>
+      <button class="btn amber" type="submit" formaction="/admin/clientes/restaurar-template" formnovalidate onclick="return confirm('Restaurar o catálogo deste cliente para o template padrão do ramo? As personalizações atuais serão substituídas.');">♻️ Restaurar template padrão</button>
       <button class="btn red" type="submit" formaction="/admin/clientes/excluir" formnovalidate>🗑 Excluir</button></div>
       <p style="grid-column:1/-1;font-size:12px;color:#64748b">Trocar o ramo não substitui o catálogo já personalizado do cliente — apenas o selo/identidade.</p>
     </form>`));
@@ -1251,6 +1252,17 @@ router.post('/admin/clientes/salvar', requireAuth, async (req, res) => {
 router.post('/admin/clientes/excluir', requireAuth, async (req, res) => {
   await repo.deleteTenant(Number(req.body.id));
   res.redirect('/admin/clientes?msg=' + encodeURIComponent('Cliente excluído.'));
+});
+
+router.post('/admin/clientes/restaurar-template', requireAuth, async (req, res) => {
+  const tenant = await repo.getTenant(Number(req.body.id));
+  if (!tenant) return res.redirect('/admin/clientes?msg=' + encodeURIComponent('Cliente não encontrado.') + '&type=err');
+  const seg = await repo.getTenantSegment(tenant.id);
+  if (!seg) return res.redirect('/admin/clientes?msg=' + encodeURIComponent('Cliente sem ramo definido.') + '&type=err');
+  const segment = await repo.getSegment(seg.id);
+  if (!segment?.template_json) return res.redirect('/admin/clientes?msg=' + encodeURIComponent('Template do ramo não encontrado.') + '&type=err');
+  await catalog.saveTenantCatalog(tenant.id, segment.template_json);
+  res.redirect('/admin/clientes?msg=' + encodeURIComponent(`Catálogo do cliente "${tenant.name}" restaurado para o template do ramo ${seg.emoji} ${seg.name}.`));
 });
 
 // ======================================================

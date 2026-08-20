@@ -428,9 +428,9 @@
   "store": {
     "currency": "BRL",
     "currency_symbol": "R$",
-    "min_order": 50,
+    "min_order": 0,
     "delivery_free_full": 0,
-    "delivery_fee": 15,
+    "delivery_fee": 0,
     "pix_discount_percent": 0,
     "installments_max": 6,
     "payment_methods": [
