@@ -125,9 +125,7 @@ async function seedSegments() {
   for (const t of templates) {
     const exists = await query('SELECT id FROM segments WHERE name = $1', [t.name]);
     if (exists.rows[0]) {
-      const template = t.tpl();
-      await query('UPDATE segments SET template_json = $1 WHERE id = $2', [JSON.stringify(template), exists.rows[0].id]);
-      await syncSegmentFlowToTenants(exists.rows[0].id, template);
+      await query('UPDATE segments SET template_json = $1 WHERE id = $2', [JSON.stringify(t.tpl()), exists.rows[0].id]);
       continue;
     }
     await createSegment(t.name, t.emoji, t.tpl());
@@ -137,26 +135,6 @@ async function seedSegments() {
   const vendas = await query("SELECT id FROM segments WHERE name = 'vendas'");
   if (vendas.rows[0]) {
     await query('UPDATE tenants SET segment_id = $1 WHERE segment_id IS NULL', [vendas.rows[0].id]);
-  }
-}
-
-/**
- * Sincroniza apenas os campos de fluxo (messages/buttons/questionnaires) do
- * template do segmento para os catálogos dos tenants existentes — preservando
- * categorias, produtos, empresa e configurações de loja de cada cliente.
- */
-async function syncSegmentFlowToTenants(segmentId, template) {
-  const patch = {};
-  for (const f of ['messages', 'buttons', 'questionnaires']) {
-    if (template[f] !== undefined) patch[f] = template[f];
-  }
-  if (!Object.keys(patch).length) return;
-  const tenants = await query('SELECT id FROM tenants WHERE segment_id = $1', [segmentId]);
-  for (const t of tenants.rows) {
-    const catRes = await query('SELECT catalog_json FROM tenant_catalogs WHERE tenant_id = $1', [t.id]);
-    if (!catRes.rows[0]?.catalog_json) continue;
-    const merged = { ...catRes.rows[0].catalog_json, ...patch };
-    await query('UPDATE tenant_catalogs SET catalog_json = $1, updated_at = NOW() WHERE tenant_id = $2', [JSON.stringify(merged), t.id]);
   }
 }
 
