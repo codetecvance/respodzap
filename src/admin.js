@@ -1353,6 +1353,17 @@ router.post('/admin/segmentos/template', requireAuth, async (req, res) => {
   }
 });
 
+router.get('/admin/segmentos/seed', requireAuth, async (req, res) => {
+  try {
+    await repo.seedSegments();
+    const segments = await repo.getSegments();
+    const names = segments.map(s => `${s.emoji} ${s.name}`).join(', ');
+    res.json({ ok: true, segments: names, count: segments.length });
+  } catch (e) {
+    res.json({ ok: false, error: e.message, stack: e.stack });
+  }
+});
+
 // ======================================================
 //  ASSINATURAS (somente admin)
 // ======================================================
