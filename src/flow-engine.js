@@ -46,6 +46,13 @@ const ST = {
 
 async function _menu(tenant, lead) {
   const cat = await catalog.loadTenantCatalog(tenant.id);
+  const seg = tenant.segment_name || '';
+  if (seg === 'baterias') {
+    const welcome = await catalog.msg(tenant.id, 'welcome', { nome: lead.full_name || '', empresa: cat.company?.display_name || 'Loja' });
+    await ws.sendText(lead.phone, welcome, tenant);
+    await repo.setFlowState(lead.id, ST.MENU);
+    return;
+  }
   const showSOS = cat.categories?.some(c => c.id === 'servicos') || cat.categories?.flatMap(c => c.products || []).some(p => p.id === 'sos-chupeta');
   const buttons = [
     { id: 'MENU_SHOP', title: await catalog.getButton(tenant.id, 'menu_shop') },
@@ -589,16 +596,40 @@ async function showPlanDetail(tenant, lead, productId, planId) {
 
 async function _handleVehicleBrand(tenant, lead, text) {
   const brand = (text || '').trim();
-  if (!brand) return ws.sendText(lead.phone, 'Por favor, digite a marca do seu veículo (ex: Volkswagen, Fiat, Chevrolet):', tenant);
+  if (!brand) return ws.sendText(lead.phone, await catalog.msg(tenant.id, 'ask_brand'), tenant);
   const db = await catalog.loadVehicleDatabase();
-  const match = db.marcas?.find(m => m.marca.toLowerCase().includes(brand.toLowerCase()));
-  if (!match) return ws.sendText(lead.phone, `Marca "${brand}" não encontrada. Tente novamente ou digite *menu* para voltar.`, tenant);
+  let match = db.marcas?.find(m => m.marca.toLowerCase() === brand.toLowerCase());
+  if (!match) match = db.marcas?.find(m => m.marca.toLowerCase().includes(brand.toLowerCase()) || brand.toLowerCase().includes(m.marca.toLowerCase()));
+  if (!match) {
+    const suggestions = db.marcas?.filter(m => {
+      const a = m.marca.toLowerCase();
+      const b = brand.toLowerCase();
+      return a[0] === b[0] || levenshtein(a, b) <= 3;
+    }).slice(0, 5).map(m => m.marca) || [];
+    let msg = `Marca "${brand}" não encontrada.`;
+    if (suggestions.length) msg += `\n\nVocê quis dizer: *${suggestions.join(', ')}*?`;
+    msg += '\n\nTente novamente ou digite *menu* para voltar.';
+    return ws.sendText(lead.phone, msg, tenant);
+  }
   const survey = (await repo.getSurvey(lead.id)) || {};
   survey.vehicleBrand = match.marca;
   await repo.setSurvey(lead.id, survey);
   await repo.setFlowState(lead.id, ST.VEHICLE_MODEL);
   const modelos = match.modelos?.slice(0, 20).map((m, i) => `${i + 1}. ${m.modelo} (${m.anos})`).join('\n');
-  return ws.sendText(lead.phone, `🚗 *${match.marca}*\n\n${modelos || 'Nenhum modelo encontrado.'}\n\nDigite o modelo e ano do seu veículo:`, tenant);
+  return ws.sendText(lead.phone, await catalog.msg(tenant.id, 'ask_model', { marca: match.marca, modelos: modelos || 'Nenhum modelo encontrado.' }), tenant);
+}
+
+function levenshtein(a, b) {
+  const m = a.length, n = b.length;
+  const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + (a[i - 1] !== b[j - 1] ? 1 : 0));
+    }
+  }
+  return dp[m][n];
 }
 
 async function _handleVehicleModel(tenant, lead, text) {
@@ -615,19 +646,18 @@ async function _handleVehicleModel(tenant, lead, text) {
   const extraInfo = year ? ` (${year})` : '';
   if (result.encontrado) {
     await repo.setFlowState(lead.id, ST.BATTERY_SUGGESTION);
-    const msg = `✅ *Bateria recomendada para ${result.marca} ${result.modelo}${extraInfo}:*\n\n🔋 ${result.bateria}\n\nDeseja:\n1️⃣ Ver detalhes da bateria\n2️⃣ Consultar preço\n3️⃣ Pedir SOS Chupeta (instalação no local)\n4️⃣ Voltar ao menu`;
-    return ws.sendText(lead.phone, msg, tenant);
+    return ws.sendText(lead.phone, await catalog.msg(tenant.id, 'battery_found', { marca: result.marca, modelo: `${result.modelo}${extraInfo}`, bateria: result.bateria }), tenant);
   }
-  await ws.sendText(lead.phone, `❌ Não encontrei bateria para "${brand} ${modelText}".\n\nVou transferir para atendimento humanizado.`, tenant);
+  await ws.sendText(lead.phone, await catalog.msg(tenant.id, 'vehicle_not_found'), tenant);
   const { notifyTenant } = require('./notify');
-  await notifyTenant(tenant, 'CONSULTA BATERIA', `Cliente: ${lead.full_name || lead.phone}\nVeículo: ${brand} ${modelText}\nWhatsApp: ${lead.phone}`, lead.phone);
+  await notifyTenant(tenant, 'CONSULTA BATERIA', `Cliente: ${lead.full_name || lead.phone}\nWhatsApp: ${lead.phone}\nVeículo: ${brand} ${modelText}`, lead.phone);
   await repo.setFlowState(lead.id, ST.MENU);
   return _menu(tenant, lead);
 }
 
 async function _handleBatterySuggestion(tenant, lead, text) {
   const answer = (text || '').trim();
-  if (answer === '1' || answer.toLowerCase().includes('detalhe')) {
+  if (answer === '1') {
     const survey = (await repo.getSurvey(lead.id)) || {};
     const brand = survey.vehicleBrand || '';
     const modelText = survey.vehicleModel || '';
@@ -639,21 +669,19 @@ async function _handleBatterySuggestion(tenant, lead, text) {
     await repo.setFlowState(lead.id, ST.MENU);
     return _menu(tenant, lead);
   }
-  if (answer === '2' || answer.toLowerCase().includes('preço') || answer.toLowerCase().includes('preco') || answer.toLowerCase().includes('valor')) {
-    await ws.sendText(lead.phone, '💰 Para consultar preço, envie sua região ou bairro que verificamos a disponibilidade!', tenant);
-    await repo.setFlowState(lead.id, ST.MENU);
-    return _menu(tenant, lead);
-  }
-  if (answer === '3' || answer.toLowerCase().includes('sos')) {
+  if (answer === '2') {
     await repo.setFlowState(lead.id, ST.SOS_CHUPETA);
-    return ws.sendText(lead.phone, '🆘 *SOS CHUPETA — INSTALAÇÃO NO LOCAL*\n\nQual seu endereço completo?\n(rua, número, bairro, cidade)', tenant);
+    return ws.sendText(lead.phone, await catalog.msg(tenant.id, 'ask_sos_address'), tenant);
+  }
+  if (answer === '3') {
+    return _menu(tenant, lead);
   }
   return _menu(tenant, lead);
 }
 
 async function _handleSOSChupeta(tenant, lead, text) {
   const address = (text || '').trim();
-  if (!address) return ws.sendText(lead.phone, 'Por favor, informe seu endereço completo (rua, número, bairro, cidade):', tenant);
+  if (!address) return ws.sendText(lead.phone, await catalog.msg(tenant.id, 'ask_sos_address'), tenant);
   const survey = (await repo.getSurvey(lead.id)) || {};
   const brand = survey.vehicleBrand || 'Não informado';
   const model = survey.vehicleModel || 'Não informado';
@@ -662,7 +690,7 @@ async function _handleSOSChupeta(tenant, lead, text) {
   const corpo = `🚨 *SOS CHUPETA*\n\nCliente: ${lead.full_name || lead.phone}\nWhatsApp: ${lead.phone}\nVeículo: ${brand} ${model}\nEndereço: ${address}`;
   await notifyTenant(tenant, titulo, corpo, lead.phone);
   await repo.setFlowState(lead.id, ST.MENU);
-  await ws.sendText(lead.phone, `✅ *SOS CHUPETA CONFIRMADO!*\n\n📍 Endereço: ${address}\n🚗 Veículo: ${brand} ${model}\n\n⏱️ Nossa equipe vai entrar em contato em instantes para confirmar a chegada.`, tenant);
+  await ws.sendText(lead.phone, await catalog.msg(tenant.id, 'sos_confirmed', { endereco: address, veiculo: `${brand} ${model}` }), tenant);
   return _menu(tenant, lead);
 }
 
@@ -694,7 +722,7 @@ async function processIncoming(tenant, phone, text, payload, messageId, numberId
   if (payload) {
     if (payload === 'MENU_SHOP') return _categories(tenant, lead);
     if (payload === 'MENU_SERVICES') return _categories(tenant, lead);
-    if (payload === 'MENU_SOS') { await repo.setFlowState(lead.id, ST.SOS_CHUPETA); return ws.sendText(phone, '🆘 *SOS CHUPETA ATIVADO*\n\nQual seu endereço completo? (rua, número, bairro, cidade)', tenant); }
+    if (payload === 'MENU_SOS') { await repo.setFlowState(lead.id, ST.SOS_CHUPETA); return ws.sendText(phone, await catalog.msg(tenant.id, 'ask_sos_address'), tenant); }
     if (payload === 'MENU_SUPPORT') { await repo.setFlowState(lead.id, ST.SUPPORT_NAME); return ws.sendText(phone, await catalog.msg(tenant.id, 'ask_support_name'), tenant); }
     if (payload === 'MENU_TRACK') {
       const orders = await repo.getLeadOrders(tenant.id, lead.id);
@@ -717,7 +745,24 @@ async function processIncoming(tenant, phone, text, payload, messageId, numberId
     if (payload === 'PAY_PIX') return _processPayment(tenant, lead, 'pix');
     if (payload === 'PAY_CREDIT') return _processPayment(tenant, lead, 'credit');
     if (payload === 'PAY_DEBIT') return _processPayment(tenant, lead, 'debit');
-    if (payload.startsWith('QUOTE_')) { const pid = payload.slice(6); const prod = await catalog.findProduct(tenant.id, pid); if (prod?.sob_consulta) { const s = (await repo.getSurvey(lead.id)) || {}; s.quote = pid; await repo.setSurvey(lead.id, s); await repo.setFlowState(lead.id, ST.SOB_CONSULTA_NAME); return ws.sendText(phone, 'Ótimo! Qual é o seu nome?', tenant); } return _menu(tenant, lead); }
+    if (payload.startsWith('QUOTE_')) { const pid = payload.slice(6); const prod = await catalog.findProduct(tenant.id, pid); if (prod?.sob_consulta) { const s = (await repo.getSurvey(lead.id)) || {}; s.quote = pid; await repo.setSurvey(lead.id, s); await repo.setFlowState(lead.id, ST.SOB_CONSULTA_NAME); return ws.sendText(phone, 'Ótimo! Qual é o seu nome?', tenant);   }
+  if (state === ST.MENU && tenant.segment_name === 'baterias' && /^\d$/.test((text || '').trim())) {
+    const opt = text.trim();
+    if (opt === '1') {
+      await repo.setFlowState(lead.id, ST.VEHICLE_BRAND);
+      return ws.sendText(lead.phone, await catalog.msg(tenant.id, 'ask_brand'), tenant);
+    }
+    if (opt === '2') {
+      await repo.setFlowState(lead.id, ST.SUPPORT_NAME);
+      return ws.sendText(lead.phone, await catalog.msg(tenant.id, 'ask_support_name'), tenant);
+    }
+    if (opt === '3') {
+      await repo.setFlowState(lead.id, ST.SOS_CHUPETA);
+      return ws.sendText(lead.phone, await catalog.msg(tenant.id, 'ask_sos_address'), tenant);
+    }
+  }
+  return _menu(tenant, lead);
+}
     return _menu(tenant, lead);
   }
   const state = lead.flow_state;

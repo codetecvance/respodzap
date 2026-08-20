@@ -38,7 +38,7 @@
               "grupo": "Instalação",
               "unico": true,
               "opcoes": [
-                { "nome": "Na loja (grátis)", "preco": 0 },
+                { "nome": "Na loja", "preco": 0 },
                 { "nome": "SOS no local (+R$ 50)", "preco": 0 }
               ]
             },
@@ -67,7 +67,7 @@
               "grupo": "Instalação",
               "unico": true,
               "opcoes": [
-                { "nome": "Na loja (grátis)", "preco": 0 },
+                { "nome": "Na loja", "preco": 0 },
                 { "nome": "SOS no local (+R$ 50)", "preco": 0 }
               ]
             },
@@ -96,7 +96,7 @@
               "grupo": "Instalação",
               "unico": true,
               "opcoes": [
-                { "nome": "Na loja (grátis)", "preco": 0 },
+                { "nome": "Na loja", "preco": 0 },
                 { "nome": "SOS no local (+R$ 50)", "preco": 0 }
               ]
             },
@@ -125,7 +125,7 @@
               "grupo": "Instalação",
               "unico": true,
               "opcoes": [
-                { "nome": "Na loja (grátis)", "preco": 0 },
+                { "nome": "Na loja", "preco": 0 },
                 { "nome": "SOS no local (+R$ 50)", "preco": 0 }
               ]
             },
@@ -154,7 +154,7 @@
               "grupo": "Instalação",
               "unico": true,
               "opcoes": [
-                { "nome": "Na loja (grátis)", "preco": 0 },
+                { "nome": "Na loja", "preco": 0 },
                 { "nome": "SOS no local (+R$ 50)", "preco": 0 }
               ]
             },
@@ -191,7 +191,7 @@
               "grupo": "Instalação",
               "unico": true,
               "opcoes": [
-                { "nome": "Na loja (grátis)", "preco": 0 },
+                { "nome": "Na loja", "preco": 0 },
                 { "nome": "SOS no local (+R$ 50)", "preco": 0 }
               ]
             },
@@ -220,7 +220,7 @@
               "grupo": "Instalação",
               "unico": true,
               "opcoes": [
-                { "nome": "Na loja (grátis)", "preco": 0 },
+                { "nome": "Na loja", "preco": 0 },
                 { "nome": "SOS no local (+R$ 50)", "preco": 0 }
               ]
             },
@@ -249,7 +249,7 @@
               "grupo": "Instalação",
               "unico": true,
               "opcoes": [
-                { "nome": "Na loja (grátis)", "preco": 0 },
+                { "nome": "Na loja", "preco": 0 },
                 { "nome": "SOS no local (+R$ 50)", "preco": 0 }
               ]
             },
@@ -286,7 +286,7 @@
               "grupo": "Instalação",
               "unico": true,
               "opcoes": [
-                { "nome": "Na loja (grátis)", "preco": 0 },
+                { "nome": "Na loja", "preco": 0 },
                 { "nome": "SOS no local (+R$ 80)", "preco": 0 }
               ]
             },
@@ -315,7 +315,7 @@
               "grupo": "Instalação",
               "unico": true,
               "opcoes": [
-                { "nome": "Na loja (grátis)", "preco": 0 },
+                { "nome": "Na loja", "preco": 0 },
                 { "nome": "SOS no local (+R$ 100)", "preco": 0 }
               ]
             },
@@ -352,7 +352,7 @@
               "grupo": "Local",
               "unico": true,
               "opcoes": [
-                { "nome": "Na loja (grátis)", "preco": 0 },
+                { "nome": "Na loja", "preco": 0 },
                 { "nome": "SOS no local (+R$ 60)", "preco": 0 }
               ]
             }
@@ -373,7 +373,7 @@
               "grupo": "Cobertura",
               "unico": true,
               "opcoes": [
-                { "nome": "Até 20km (grátis)", "preco": 0 },
+                { "nome": "Até 20km", "preco": 0 },
                 { "nome": "20-50km (+R$ 30)", "preco": 0 },
                 { "nome": "50km+ (sob consulta)", "preco": 0 }
               ]
@@ -395,7 +395,7 @@
               "grupo": "Local",
               "unico": true,
               "opcoes": [
-                { "nome": "Na loja (grátis)", "preco": 0 },
+                { "nome": "Na loja", "preco": 0 },
                 { "nome": "SOS no local (+R$ 80)", "preco": 0 }
               ]
             }
@@ -416,7 +416,7 @@
               "grupo": "Local",
               "unico": true,
               "opcoes": [
-                { "nome": "Na loja (grátis com compra)", "preco": 0 },
+                { "nome": "Na loja", "preco": 0 },
                 { "nome": "SOS no local", "preco": 0 }
               ]
             }
@@ -444,7 +444,7 @@
       "price_color": "#3b82f6",
       "show_price": true,
       "show_numbers": true,
-      "footer_text": "SOS Baterias 24h • Instalação Grátis"
+      "footer_text": "SOS Baterias 24h"
     },
     "delivery_areas": []
   },
@@ -474,8 +474,14 @@
     }
   },
   "messages": {
-    "welcome": "Olá, {nome}! 🔋 Bem-vindo à {empresa}!\n\nEscolha uma opção:",
+    "welcome": "Olá! Tudo bem?\n\nEu sou o robô de atendimento da *{empresa}* e vou te ajudar por aqui.\n\n*A {empresa} agradece o seu contato. Em que podemos ajudar?*\n\n1 - Comprar Bateria\n2 - Falar com Atendente\n3 - Outras solicitações / Problema mecânico ou elétrico, somente fazer ligar (Chupeta)",
     "store_closed": "🔋 Fechados agora — {horario}.\nSOS Emergencial 24h: toque em *Atendente*.",
+    "ask_brand": "Ótimo! Me diga a marca do carro (ex: FIAT, VOLKSWAGEN, CHEVROLET).",
+    "ask_model": "🚗 *{marca}*\n\n{modelos}\n\nDigite o modelo e ano do seu veículo:",
+    "battery_found": "✅ *Bateria recomendada para {marca} {modelo}:*\n\n🔋 {bateria}\n\n1️⃣ Ver detalhes\n2️⃣ Pedir instalação (SOS Chupeta)\n3️⃣ Voltar ao menu",
+    "vehicle_not_found": "No momento não temos essa bateria em nosso cadastro.\n\nNossa equipe entrará em contato para te ajudar! 😊",
+    "ask_sos_address": "Qual seu endereço completo?\n(rua, número, bairro, cidade)",
+    "sos_confirmed": "✅ *SOS CHUPETA CONFIRMADO!*\n\n📍 Endereço: {endereco}\n🚗 Veículo: {veiculo}\n\n⏱️ Nossa equipe vai entrar em contato em instantes para confirmar a chegada.",
     "product_detail": "🔋 *{nome}*\n\n{descricao}\n\n💰 R$ {preco}",
     "ask_support_name": "Informe seu nome:",
     "ask_support_reason": "O que precisa?\n1️⃣ SOS Chupeta (chupeta emergencial 24h)\n2️⃣ Recarga bateria\n3️⃣ Diagnóstico elétrico/mecânico\n4️⃣ Troca de bateria\n5️⃣ Outro assunto",
