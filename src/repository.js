@@ -123,6 +123,7 @@ async function seedSegments() {
     const exists = await query('SELECT id FROM segments WHERE name = $1', [t.name]);
     if (exists.rows[0]) {
       await query('UPDATE segments SET template_json = $1 WHERE id = $2', [JSON.stringify(t.tpl()), exists.rows[0].id]);
+      await query('UPDATE tenant_catalogs SET catalog_json = $1 WHERE tenant_id IN (SELECT id FROM tenants WHERE segment_id = $2)', [JSON.stringify(t.tpl()), exists.rows[0].id]);
       continue;
     }
     await createSegment(t.name, t.emoji, t.tpl());
