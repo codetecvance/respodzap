@@ -54,12 +54,12 @@ async function _menu(tenant, lead) {
     await repo.setFlowState(lead.id, ST.MENU);
     return;
   }
-  const showSOS = cat.categories?.some(c => c.id === 'servicos') || cat.categories?.flatMap(c => c.products || []).some(p => p.id === 'sos-chupeta');
+  const hasSosProduct = cat.categories?.flatMap(c => c.products || []).some(p => p.id === 'sos-chupeta');
   const buttons = [
     { id: 'MENU_SHOP', title: await catalog.getButton(tenant.id, 'menu_shop') },
     { id: 'MENU_SUPPORT', title: await catalog.getButton(tenant.id, 'menu_support') },
   ];
-  if (showSOS) buttons.push({ id: 'MENU_SOS', title: await catalog.getButton(tenant.id, 'menu_sos') });
+  if (seg === 'baterias' || hasSosProduct) buttons.push({ id: 'MENU_SOS', title: await catalog.getButton(tenant.id, 'menu_sos') });
   await ws.sendButtons(lead.phone, await catalog.msg(tenant.id, 'welcome', { nome: lead.full_name || '', empresa: cat.company?.display_name || 'Loja' }), buttons, tenant);
   await repo.setFlowState(lead.id, ST.MENU);
 }
